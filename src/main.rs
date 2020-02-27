@@ -60,7 +60,7 @@ struct Scanner<'a> {
 }
 
 impl Scanner<'_> {
-    fn new<'a>(content: &'a String) -> Scanner<'a> {
+    pub fn new<'a>(content: &'a String) -> Scanner<'a> {
         let mut chars = content.chars();
         let peek = chars.next();
         Scanner{
@@ -76,48 +76,89 @@ impl Scanner<'_> {
 
     fn is_single_special_char(&self, c: char) -> bool {
         match c {
-            '&' | '+' | '-' | '=' | '#' | '(' | ')' | '[' | ']' | ',' | ';' | '.'  | '~' | '*' => true,
+            '&' | '+' | '-' | '=' | '#' | ')' | '[' | ']' | ',' | ';' | '.'  | '~' | '*' => true,
             _ => false
         }
     }
 
     fn is_first_special_char_of_combination(&self, c: char) -> bool {
         match c {
-            '<' | '>' | ':' => true,
+            '<' | '>' | ':' | '(' => true,
             _ => false
         }
     }
 
-    fn scan<'a>(&mut self) -> Option<Token> {
-        match self.peek {
-            Some(s) if s == ' ' || s == '\t' => {
-                self.read_next();
-                return self.scan();
-            },
-            Some(nl) if nl == '\n' => {
-                self.line = self.line + 1;
-                self.read_next();
-                return self.scan();
-            },
-            Some(d) if d.is_digit(10) => {
-                let mut v = d.to_digit(10).unwrap();
-                loop {
+    fn skip_whitespace(&mut self) -> Option<Token> {
+        self.read_next();
+        return self.scan();
+    }
+
+    fn skip_newline(&mut self) -> Option<Token> {
+        self.line = self.line + 1;
+        self.read_next();
+        return self.scan();        
+    }
+
+    fn scan_number(&mut self, d: char) -> Option<Token> {
+        let mut v = d.to_digit(10).unwrap();
+        loop {
+            self.read_next();
+            match self.peek {
+                Some(d) => {
+                    match d.to_digit(10) {
+                        Some(n) => {
+                            v = 10*v + n;
+                        }
+                        _ => { break; }
+                    }
+                },
+                None => { break; }
+            }
+        }
+        return Some(Token::Int(v));
+    }
+
+    fn skip_comment(&mut self) -> Option<Token> {
+        loop {
+            self.read_next();
+            match self.peek{
+                Some('*') => {
                     self.read_next();
                     match self.peek {
-                        Some(d) => {
-                            match d.to_digit(10) {
-                                Some(n) => {
-                                    v = 10*v + n;
-                                }
-                                _ => { break; }
-                            }
-                        },  
-                        None => { break; } 
+                        Some(')') => {
+                            self.read_next();
+                            return self.scan()
+                        },
+                        Some(_) => {
+                            continue;
+                        }
+                        None => {
+                            panic!("Unfinished comment");
+                        }
                     }
+                },
+                Some(_) => {
+                    continue;
+                },
+                None => {
+                    panic!("Unfinished comment")
                 }
-                return Some(Token::Int(v));
+            }
+        }
+    }
+
+    pub fn scan<'a>(&mut self) -> Option<Token> {
+        match self.peek {
+            Some(s) if s == ' ' || s == '\t' => {
+                return self.skip_whitespace()
             },
-            Some(c) if c.is_alphanumeric( )=> {
+            Some(nl) if nl == '\n' => {
+                return self.skip_newline()
+            },
+            Some(d) if d.is_digit(10) => {
+                return self.scan_number(d)
+            },
+            Some(c) if c.is_alphanumeric()=> {
                 let mut w = String::from(c.to_string());
                 loop {
                     self.read_next();
@@ -169,7 +210,6 @@ impl Scanner<'_> {
                     ',' => Some(Token::Comma),
                     ';' => Some(Token::Semicolon),
                     ')' => Some(Token::Rparen),
-                    '(' => Some(Token::Lparen),
                     ']' => Some(Token::Rbrak),
                     '[' => Some(Token::Lbrak),
                     '~' => Some(Token::Not),
@@ -182,6 +222,12 @@ impl Scanner<'_> {
                 self.read_next();
 
                 match (c, self.peek) {
+                    ('(', Some('*')) => {
+                        return self.skip_comment()
+                    },
+                    ('(', _) => {
+                       return Some(Token::Lparen) 
+                    },
                     ('>', Some('=')) => {
                         self.read_next();
                         return Some(Token::Geq);
@@ -215,8 +261,10 @@ impl Scanner<'_> {
 fn main() {
 
     let raw_content = r#"
-    (* TODO(pht) Handle comments *)
+    (* A sample of Oberon code *)
     MODULE Samples;
+
+     (* Multiply three integers together *)
      PROCEDURE Multiply*;
        VAR x, y, z: INTEGER;
      BEGIN OpenInput; ReadInt(x); ReadInt(y); z := 0;
