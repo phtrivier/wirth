@@ -47,10 +47,10 @@ pub enum Token {
     Procedure,
     Begin,
     Module,
-    Eof
 }
 
 pub enum ScanError {
+    UnfinishedComment(),
     PrematureEof(u32),
     InvalidChar(char, u32)
 }
@@ -94,18 +94,18 @@ impl Scanner<'_> {
         }
     }
 
-    fn skip_whitespace(&mut self) -> Result<Token, ScanError> {
+    fn skip_whitespace(&mut self) -> Result<Option<Token>, ScanError> {
         self.read_next();
         return self.scan();
     }
 
-    fn skip_newline(&mut self) -> Option<Token> {
+    fn skip_newline(&mut self) -> Result<Option<Token>, ScanError> {
         self.line = self.line + 1;
         self.read_next();
         return self.scan();        
     }
 
-    fn scan_number(&mut self, d: char) -> Option<Token> {
+    fn scan_number(&mut self, d: char) -> Result<Option<Token>, ScanError> {
         let mut v = d.to_digit(10).unwrap();
         loop {
             self.read_next();
@@ -121,10 +121,10 @@ impl Scanner<'_> {
                 None => { break; }
             }
         }
-        return Some(Token::Int(v));
+        return Ok(Some(Token::Int(v)));
     }
 
-    fn skip_comment(&mut self) -> Option<Token> {
+    fn skip_comment(&mut self) -> Result<Option<Token>, ScanError> {
         loop {
             self.read_next();
             match self.peek{
@@ -139,7 +139,7 @@ impl Scanner<'_> {
                             continue;
                         }
                         None => {
-                            panic!("Unfinished comment");
+                            return Err(ScanError::UnfinishedComment());
                         }
                     }
                 },
@@ -147,13 +147,13 @@ impl Scanner<'_> {
                     continue;
                 },
                 None => {
-                    panic!("Unfinished comment")
+                    return Err(ScanError::UnfinishedComment());
                 }
             }
         }
     }
 
-    pub fn scan<'a>(&mut self) -> Option<Token> {
+    pub fn scan<'a>(&mut self) ->  Result<Option<Token>, ScanError> {
         match self.peek {
             Some(s) if s == ' ' || s == '\t' => {
                 return self.skip_whitespace()
@@ -176,7 +176,7 @@ impl Scanner<'_> {
                     }
                 }
 
-                return match w.as_str() {
+                let token = match w.as_str() {
                     "DIV" => Some(Token::Div),
                     "MOD" => Some(Token::Mod),
                     "OR" => Some(Token::Or),
@@ -200,26 +200,26 @@ impl Scanner<'_> {
                     "MODULE" => Some(Token::Module),
                     "TRUE" => Some(Token::True),
                     "FALSE" => Some(Token::False),
-
                     _ => Some(Token::Ident(w))
                 };
+                return Ok(token)
             },
             Some(c) if self.is_single_special_char(c) => {
                 let result = match c {
-                    '&' => Some(Token::And),
-                    '+' => Some(Token::Plus),
-                    '-' => Some(Token::Minus),
-                    '=' => Some(Token::Eql),
-                    '#' => Some(Token::Neq),
-                    '*' => Some(Token::Times),
-                    '.' => Some(Token::Period),
-                    ',' => Some(Token::Comma),
-                    ';' => Some(Token::Semicolon),
-                    ')' => Some(Token::Rparen),
-                    ']' => Some(Token::Rbrak),
-                    '[' => Some(Token::Lbrak),
-                    '~' => Some(Token::Not),
-                    _ => panic!("#1 Unexpected char {:?}", c)
+                    '&' => Ok(Some(Token::And)),
+                    '+' => Ok(Some(Token::Plus)),
+                    '-' => Ok(Some(Token::Minus)),
+                    '=' => Ok(Some(Token::Eql)),
+                    '#' => Ok(Some(Token::Neq)),
+                    '*' => Ok(Some(Token::Times)),
+                    '.' => Ok(Some(Token::Period)),
+                    ',' => Ok(Some(Token::Comma)),
+                    ';' => Ok(Some(Token::Semicolon)),
+                    ')' => Ok(Some(Token::Rparen)),
+                    ']' => Ok(Some(Token::Rbrak)),
+                    '[' => Ok(Some(Token::Lbrak)),
+                    '~' => Ok(Some(Token::Not)),
+                    _ => Err(ScanError::InvalidChar(c, self.line()))
                 };
                 self.read_next();
                 return result;
@@ -232,34 +232,33 @@ impl Scanner<'_> {
                         return self.skip_comment()
                     },
                     ('(', _) => {
-                       return Some(Token::Lparen) 
+                        return Ok(Some(Token::Lparen)) 
                     },
                     ('>', Some('=')) => {
                         self.read_next();
-                        return Some(Token::Geq);
+                        return Ok(Some(Token::Geq));
                     },
                     ('>', _) => {
-                        return Some(Token::Gtr);
+                        return Ok(Some(Token::Gtr));
                     },
                     ('<', Some('=')) => {
                         self.read_next();
-                        return Some(Token::Leq);
+                        return Ok(Some(Token::Leq));
                     },
                     ('<', _) => {
-                        return Some(Token::Lss);
+                        return Ok(Some(Token::Lss));
                     },
                     (':', Some('=')) => {
                         self.read_next();
-                        return Some(Token::Becomes);
+                        return Ok(Some(Token::Becomes));
                     },
                     (':', _) => {
-                        return Some(Token::Colon);
+                        return Ok(Some(Token::Colon));
                     }
                     _ => panic!("#2 Unexpected char {:?}", self.peek)
                 };
-
             },
-            _ => None
+            _ => Ok(None)
         } 
     }
 }

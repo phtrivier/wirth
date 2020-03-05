@@ -30,9 +30,14 @@ fn main() {
 
     let mut scanner = Scanner::new(&content);
 
-    let mut token = scanner.scan();
-    while !token.is_none() {
+    let mut scanned = scanner.scan();
+    loop {
+      if let Ok(Some(token)) = scanned {
         println!("Line {} - Token: {:?}", scanner.line(), token);
-        token = scanner.scan()
+        scanned = scanner.scan();
+      } else {
+        println!("Line {} - Scanned: {:?}", scanner.line(), scanned);
+        break;
+      }
     }
 }
