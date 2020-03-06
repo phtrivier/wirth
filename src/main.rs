@@ -6,10 +6,30 @@ use scanner::Scanner;
  * A sort of Oberon Compiler
  */
 
+fn parse_content(content: String) {
+  let mut scanner = Scanner::new(&content);
+
+  let mut scanned = scanner.scan();
+  loop {
+    match scanned {
+      Ok(None) => {
+        break;
+      }
+      Ok(Some(token)) => {
+        println!("Line {} - Token: {:?}", scanner.line(), token);
+        scanned = scanner.scan();
+      }
+      Err(err) => {
+        println!("Line {} - Scanning error: {:?}", scanner.line(), err);
+        break;
+      }
+    }
+  }
+}
 
 fn main() {
 
-    let raw_content = r#"
+    let _raw_content = r#"
     (* A sample of Oberon code *)
     MODULE Samples;
 
@@ -26,18 +46,11 @@ fn main() {
     END Samples;
     "#;
 
-    let content = String::from(raw_content);
+    // let content = String::from(raw_content);
+    // parse_content(content);
 
-    let mut scanner = Scanner::new(&content);
-
-    let mut scanned = scanner.scan();
-    loop {
-      if let Ok(Some(token)) = scanned {
-        println!("Line {} - Token: {:?}", scanner.line(), token);
-        scanned = scanner.scan();
-      } else {
-        println!("Line {} - Scanned: {:?}", scanner.line(), scanned);
-        break;
-      }
-    }
+    let broken_content = String::from(r#"
+    MODULE (*
+    "#);
+    parse_content(broken_content);
 }

@@ -49,9 +49,9 @@ pub enum Token {
     Module,
 }
 
+#[derive(Debug)]
 pub enum ScanError {
     UnfinishedComment(),
-    PrematureEof(u32),
     InvalidChar(char, u32)
 }
 
