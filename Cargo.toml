@@ -1,6 +1,6 @@
 [package]
-name = "chap02"
-version = "0.1.0"
+name = "wirth"
+version = "0.0.1"
 authors = ["Pierre-Henri Trivier <phtrivier@yahoo.fr>"]
 edition = "2018"
 

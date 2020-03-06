@@ -2,6 +2,11 @@ mod scanner;
 
 use scanner::Scanner;
 
+use std::env;
+use std::io::BufReader;
+use std::fs::File;
+use std::io::prelude::*;
+
 /**
  * A sort of Oberon Compiler
  */
@@ -21,36 +26,25 @@ fn parse_content(content: String) {
       }
       Err(err) => {
         println!("Line {} - Scanning error: {:?}", scanner.line(), err);
-        break;
+        std::process::exit(-1)
       }
     }
   }
 }
 
 fn main() {
-
-    let _raw_content = r#"
-    (* A sample of Oberon code *)
-    MODULE Samples;
-
-     (* Multiply three integers together *)
-     PROCEDURE Multiply*;
-       VAR x, y, z: INTEGER;
-     BEGIN OpenInput; ReadInt(x); ReadInt(y); z := 0;
-       WHILE x > 0 DO
-         IF x MOD 2 = 1 THEN z := z + y END ;
-         y := 2*y; x := x DIV 2
-       END ;
-       WriteInt(x, 4); WriteInt(y, 4); WriteInt(z, 6); WriteLn
-     END Multiply;
-    END Samples;
-    "#;
-
-    // let content = String::from(raw_content);
-    // parse_content(content);
-
-    let broken_content = String::from(r#"
-    MODULE (*
-    "#);
-    parse_content(broken_content);
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+      println!("Usage:");
+      println!("  wirth [FILE]"); 
+      println!("");
+      println!("Missing argument [FILE]");
+      std::process::exit(-1);
+    }
+    let filename = &args[1];
+    let file = File::open(filename).expect("Unable to open file");
+    let mut buf_reader = BufReader::new(file);
+    let mut contents = String::new();
+    buf_reader.read_to_string(&mut contents).expect("Unable to read file content");
+    parse_content(contents);
 }
