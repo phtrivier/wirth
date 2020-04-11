@@ -153,7 +153,7 @@ impl Scanner<'_> {
         }
     }
 
-    pub fn scan<'a>(&mut self) ->  Result<Option<Token>, ScanError> {
+    pub fn scan(&mut self) ->  Result<Option<Token>, ScanError> {
         match self.peek {
             Some(s) if s == ' ' || s == '\t' => {
                 return self.skip_whitespace()
@@ -200,7 +200,7 @@ impl Scanner<'_> {
                     "MODULE" => Some(Token::Module),
                     "TRUE" => Some(Token::True),
                     "FALSE" => Some(Token::False),
-                    _ => Some(Token::Ident(w))
+                    _ => Some(Token::Ident(w.clone()))
                 };
                 return Ok(token)
             },

@@ -2,16 +2,17 @@ use crate::scanner::Scanner;
 use crate::scanner::Token;
 use crate::scanner::ScanError;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum ParseError {
-    ScanError(ScanError),
+    ScanError,
     UnexpectedToken,
     PrematureEOF
 }
 
 pub struct Parser<'a> {
     scanner: Scanner<'a>,
-    token: Token
+    token: Token,
+    result: Result<(), ParseError>
 }
 
 impl Parser<'_> {
@@ -25,27 +26,43 @@ impl Parser<'_> {
                 println!("Initial token {:?}", token);
                 let mut parser = Parser{
                         scanner: scanner,
-                        token: token
+                        token: token,
+                        result: Ok(())
                 };
                 // return parser.expression();
                 // return parser.term()
-                return parser.selector()
+                match parser.selector() {
+                    Ok(_) => Ok(()),
+                    // NOTE that the Err returned here is *not* the same as the 
+                    // Err that was created by the parser, since we want to 
+                    // return non-local data.
+                    Err(_) => Err(ParseError::ScanError)
+                }
             }
             Ok(None) => Err(ParseError::PrematureEOF),
-            Err(scan_error) => Err(ParseError::ScanError(scan_error))
+            // TODO(pht) find a way to associate the ScanError to the parse error, otherwise it's lost :/
+            Err(_scan_error) => Err(ParseError::ScanError)
         };
     }
 
-    fn next(&mut self) -> Result<(), ParseError> {
+    fn next(&mut self) -> () {
         match self.scanner.scan() {
             Ok(Some(token)) => {
                 println!("Next token {:?}", token);
                 self.token = token;
-                return Ok(());
+                self.result = Ok(());
             },
-            Ok(None) => Ok(()),
-            Err(scan_error) => Err(ParseError::ScanError(scan_error))
+            Ok(None) => {
+                self.result = Ok(());
+            },
+            Err(_scan_error) => {
+                self.result = Err(ParseError::ScanError)
+            }
         }
+    }
+
+    fn current(&mut self) -> Result<(), ParseError> {
+        return self.result;
     }
 
     fn expression(&mut self) -> Result<(), ParseError> {
@@ -65,50 +82,41 @@ impl Parser<'_> {
         loop {
             match self.token {
                 Token::Lbrak => {
-                    let n = self.next();
-                    match n {
-                        Ok(_) => {
-                            let e = self.expression();
-                            match e {
-                                Ok(_) => {
-                                    match self.token {
-                                        Token::Rbrak => {
-                                            return self.next()
-                                        }
-                                        _ => {
-                                            return Err(ParseError::UnexpectedToken);
-                                        }
-                                    }
-                                },
-                                Err(_) => return e
-                            }
-                        }
-                        Err(_) => return n
-                    }
-                }
-                Token::Period => {
-                    let n = self.next();
-                    match n {
-                        Ok(_) => {
+                    self.next();
+                    if let Ok(_) = self.current() {
+                        if let Ok(_) = self.expression() {
                             match self.token {
-                                Token::Ident(_) => {
-                                    let n = self.next();
-                                    match n {
-                                        Ok(_) => {
-                                            continue;
-                                        },
-                                        Err(_) => {
-                                            return n;
-                                        }
-                                    }
+                                Token::Rbrak => {
+                                    self.next();
+                                    return self.current()
                                 }
                                 _ => {
-                                    return Err(ParseError::UnexpectedToken)
+                                    return Err(ParseError::UnexpectedToken);
                                 }
                             }
                         }
-                        Err(_) => return n
                     }
+                    return self.current()
+                }
+                Token::Period => {
+                    self.next();
+                    if let Ok(_) = self.current() {
+                        match self.token {
+                            Token::Ident(_) => {
+                                self.next();
+                                if let Ok(_) = self.current() {
+                                    continue;
+                                } else {
+                                    return self.current();
+                                }
+
+                            }
+                            _ => {
+                                return Err(ParseError::UnexpectedToken)
+                            }
+                        }
+                    }
+                    return self.current()
                 }
                 _ => {
                     return Err(ParseError::UnexpectedToken);
@@ -120,19 +128,11 @@ impl Parser<'_> {
     fn term(&mut self) -> Result<(), ParseError> {
         match self.token {
             Token::Int(_n) => {
-                return self.next();
+                self.next();
+                return self.current();
             }
             _ => Err(ParseError::UnexpectedToken)
         }
     }
 
 }
-
-
-// impl Parser<'_> {
-
-//     pub fn parse<'a>(content: &'a String) -> Result<(), ParseError> {
-//         Err(ParseError::PrematureEOF)
-//     }
-
-// }
