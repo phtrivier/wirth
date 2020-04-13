@@ -2,9 +2,12 @@ use crate::scanner::Scanner;
 use crate::scanner::Token;
 use crate::scanner::ScanError;
 
+// NOTE(pht) I have to make this copyable otherwise, returning a ParseError as the
+// right side of the error is cumbersome.
+// But copying should be okay for this.
 #[derive(Debug, Copy, Clone)]
 pub enum ParseError {
-    ScanError,
+    ScanError(ScanError),
     UnexpectedToken,
     PrematureEOF
 }
@@ -33,15 +36,12 @@ impl Parser<'_> {
                 // return parser.term()
                 match parser.selector() {
                     Ok(_) => Ok(()),
-                    // NOTE that the Err returned here is *not* the same as the 
-                    // Err that was created by the parser, since we want to 
-                    // return non-local data.
-                    Err(_) => Err(ParseError::ScanError)
+                    e => e
                 }
             }
             Ok(None) => Err(ParseError::PrematureEOF),
             // TODO(pht) find a way to associate the ScanError to the parse error, otherwise it's lost :/
-            Err(_scan_error) => Err(ParseError::ScanError)
+            Err(scan_error) => Err(ParseError::ScanError(scan_error))
         };
     }
 
@@ -55,8 +55,8 @@ impl Parser<'_> {
             Ok(None) => {
                 self.result = Ok(());
             },
-            Err(_scan_error) => {
-                self.result = Err(ParseError::ScanError)
+            Err(scan_error) => {
+                self.result = Err(ParseError::ScanError(scan_error))
             }
         }
     }

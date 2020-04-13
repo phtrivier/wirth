@@ -49,7 +49,7 @@ pub enum Token {
     Module,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum ScanError {
     UnfinishedComment(),
     InvalidChar(char, u32)
