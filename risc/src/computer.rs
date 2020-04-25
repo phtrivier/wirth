@@ -5,8 +5,8 @@ enum Opcode {
 }
 
 pub struct Computer {
-    regs: [u32; 16],
-    mem: [u32; 4096]
+    pub regs: [u32; 16],
+    pub mem: [u32; 4096]
 }
 
 impl Computer {
@@ -17,7 +17,7 @@ impl Computer {
         }
     }
 
-    pub fn dumpRegs(&self) {
+    pub fn dump_regs(&self) {
         for (index, reg) in self.regs.iter().enumerate() {
             println!("REG {:02}: 0x{:04X} 0b{:32b}", index, reg, reg)
         }

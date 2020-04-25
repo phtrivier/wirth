@@ -3,12 +3,15 @@ use iced::{
     Element, Length, PaneGrid, Scrollable, Settings, Text,
 };
 
+use risc::computer;
+
 pub fn main() {
     Gui::run(Settings::default())
 }
 
 struct Gui {
     panes_grid_state: pane_grid::State<Content>,
+    computer: computer::Computer
 }
 
 enum PaneType {
@@ -30,6 +33,7 @@ impl Application for Gui {
         (
             Gui {
                 panes_grid_state: panes_grid_state,
+                computer: computer::Computer::new()
             },
             Command::none(),
         )
@@ -44,8 +48,10 @@ impl Application for Gui {
     }
 
     fn view(&mut self) -> Element<Self::Message> {
+        let computer = &mut self.computer;
+
         let pane_grid = PaneGrid::new(&mut self.panes_grid_state, |pane, content, _focus| {
-            content.view(pane)
+            content.view(pane, computer)
         })
         .width(Length::Fill)
         .height(Length::Fill);
@@ -59,50 +65,62 @@ impl Application for Gui {
 }
 
 struct Content {
-    paneType: PaneType,
+    pane_type: PaneType,
     scroll: scrollable::State,
 }
 
 impl Content {
-    fn new(paneType: PaneType) -> Self {
+    fn new(pane_type: PaneType) -> Self {
         Content {
-            paneType: paneType,
+            pane_type: pane_type,
             scroll: scrollable::State::new(),
         }
     }
-    fn view(&mut self, _pane: pane_grid::Pane) -> Element<Message> {
+    fn view(&mut self, _pane: pane_grid::Pane, computer: &computer::Computer) -> Element<Message> {
 
-        match self.paneType {
+        match self.pane_type {
             PaneType::Registers => {
-                let content = Scrollable::new(&mut self.scroll)
-                .width(Length::Fill)
-                .spacing(10)
-                .align_items(Align::Center)
-                .push(Text::new("Registers").size(30));
-        
-                Container::new(content)
-                    .width(Length::Fill)
-                    .height(Length::Fill)
-                    .padding(5)
-                    .center_y()
-                    .into()
+                self.registers_content(computer)
             }
 
             PaneType::Memory => {
-                let content = Scrollable::new(&mut self.scroll)
-                .width(Length::Fill)
-                .spacing(10)
-                .align_items(Align::Center)
-                .push(Text::new("Memory").size(30));
-        
-                Container::new(content)
-                    .width(Length::Fill)
-                    .height(Length::Fill)
-                    .padding(5)
-                    .center_y()
-                    .into()
+                self.memory_content()
             }
         }
 
+    }
+
+    fn registers_content(&mut self, computer: &computer::Computer) -> Element<Message> {
+        let mut content = Scrollable::new(&mut self.scroll)
+        .width(Length::Fill)
+        .spacing(10)
+        .align_items(Align::Center)
+        .push(Text::new("Registers").size(30));
+
+        for (index, reg) in computer.regs.iter().enumerate() {
+            content = content.push(Text::new(format!("REG {:02}: 0x{:04X} 0b{:32b}", index, reg, reg)));
+        }
+
+        Container::new(content)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(5)
+            // .center_y()
+            .into()
+    }
+
+    fn memory_content(&mut self) -> Element<Message> {
+        let content = Scrollable::new(&mut self.scroll)
+        .width(Length::Fill)
+        .spacing(10)
+        .align_items(Align::Center)
+        .push(Text::new("Memory").size(30));
+
+        Container::new(content)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(5)
+            .center_y()
+            .into()
     }
 }
