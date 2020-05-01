@@ -1,3 +1,3 @@
 [workspace]
-members=["cli", "gui", "compiler", "risc"]
+members=["cli", "gui", "gui-raylib", "compiler", "risc"]
 exclude=[]

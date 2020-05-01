@@ -1,8 +1,10 @@
+/*
 enum Opcode {
     MOV = 0,
     MVN = 1,
     ADD = 2
 }
+*/
 
 pub struct Computer {
     pub regs: [u32; 16],
