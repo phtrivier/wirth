@@ -1,126 +1,51 @@
-use iced::{
-    executor, pane_grid::Axis, pane_grid, scrollable, Align, Application, Command, Container,
-    Element, Length, PaneGrid, Scrollable, Settings, Text,
-};
+use raylib::prelude::*;
 
 use risc::computer;
 
-pub fn main() {
-    Gui::run(Settings::default())
-}
+const INTERLINE : f32 = 20.0;
 
-struct Gui {
-    panes_grid_state: pane_grid::State<Content>,
-    computer: computer::Computer
-}
+fn main() {
+    let (mut rl, thread) = raylib::init()
+        .resizable()
+        .size(640*2, 480*2)
+        .title("Bye, World")
+        .build();
 
-enum PaneType {
-    Registers,
-    Memory
-}
+    // https://en.wikipedia.org/wiki/Wikipedia:Zenburn
+    let background = Color::from_hex("3F3F3F").unwrap();
+    let foreground = Color::from_hex("DCDCCC").unwrap();
 
-type Message = ();
+    let font = rl
+        .load_font_ex(&thread, "fonts/DroidSansMono.ttf", 32, FontLoadEx::Default(256))
+        .expect("couldn't load font");
 
-impl Application for Gui {
-    type Executor = executor::Null;
-    type Flags = ();
-    type Message = Message;
+    while !rl.window_should_close() {
+        let mut d = rl.begin_drawing(&thread);
 
-    fn new(_flags: ()) -> (Gui, Command<Self::Message>) {
-        let (mut panes_grid_state, pane1) = pane_grid::State::new(Content::new(PaneType::Registers));
-        panes_grid_state.split(Axis::Vertical, &pane1, Content::new(PaneType::Memory));
+        let mut c = computer::Computer::new();
+        c.regs[0] = 16;
 
-        (
-            Gui {
-                panes_grid_state: panes_grid_state,
-                computer: computer::Computer::new()
-            },
-            Command::none(),
-        )
-    }
+        d.clear_background(background);
 
-    fn title(&self) -> String {
-        String::from("Wirth RISC Computer GUI")
-    }
+        d.draw_text_ex(&font, "Registers",
+            Vector2::new(10.0, 20.0),
+            32.0, 1.0, foreground);
 
-    fn update(&mut self, _message: Self::Message) -> Command<Self::Message> {
-        Command::none()
-    }
+        let size = font.base_size()  as f32 / 2.0;
 
-    fn view(&mut self) -> Element<Self::Message> {
-        let computer = &mut self.computer;
+        let mut i = 0;
+        let mut y : f32 = 32.0;
+        while i < 15 {
+            y = y + 1.5 * INTERLINE;
 
-        let pane_grid = PaneGrid::new(&mut self.panes_grid_state, |pane, content, _focus| {
-            content.view(pane, computer)
-        })
-        .width(Length::Fill)
-        .height(Length::Fill);
+            let reg = c.regs[i];
+            let text = format!("REG {:02}: 0x{:04X} {:032b}", i, reg, reg);
 
-        Container::new(pane_grid)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .padding(10)
-            .into()
-    }
-}
-
-struct Content {
-    pane_type: PaneType,
-    scroll: scrollable::State,
-}
-
-impl Content {
-    fn new(pane_type: PaneType) -> Self {
-        Content {
-            pane_type: pane_type,
-            scroll: scrollable::State::new(),
-        }
-    }
-    fn view(&mut self, _pane: pane_grid::Pane, computer: &computer::Computer) -> Element<Message> {
-
-        match self.pane_type {
-            PaneType::Registers => {
-                self.registers_content(computer)
-            }
-
-            PaneType::Memory => {
-                self.memory_content()
-            }
+            d.draw_text_ex(&font, &text,
+                Vector2::new(10.0, y),
+                size , 1.0, foreground);
+            i = i + 1;
         }
 
-    }
-
-    fn registers_content(&mut self, computer: &computer::Computer) -> Element<Message> {
-        let mut content = Scrollable::new(&mut self.scroll)
-        .width(Length::Fill)
-        .spacing(10)
-        .align_items(Align::Center)
-        .push(Text::new("Registers").size(30));
-
-        for (index, reg) in computer.regs.iter().enumerate() {
-            content = content.push(Text::new(format!("REG {:02}: 0x{:04X} 0b{:32b}", index, reg, reg)));
-        }
-
-        Container::new(content)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .padding(5)
-            // .center_y()
-            .into()
-    }
-
-    fn memory_content(&mut self) -> Element<Message> {
-        let content = Scrollable::new(&mut self.scroll)
-        .width(Length::Fill)
-        .spacing(10)
-        .align_items(Align::Center)
-        .push(Text::new("Memory").size(30));
-
-        Container::new(content)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .padding(5)
-            .center_y()
-            .into()
     }
 }
