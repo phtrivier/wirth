@@ -37,7 +37,8 @@ pub enum OpCode {
     SUB = 3,
     MUL = 4,
     DIV = 5,
-    MOD = 6
+    MOD = 6,
+    CMP = 7
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -49,6 +50,7 @@ pub enum Instruction {
     Mul {a: Register, b: Register, c: Register},
     Div {a: Register, b: Register, c: Register},
     Mod {a: Register, b: Register, c: Register},
+    Cmp {b: Register, c: Register}
 }
 
 #[derive(Debug)]
@@ -65,7 +67,8 @@ impl Instruction {
             Instruction::Sub{a, b, c} => Instruction::encode_f0(OpCode::SUB, a, b as u8, c),
             Instruction::Mul{a, b, c} => Instruction::encode_f0(OpCode::MUL, a, b as u8, c),
             Instruction::Div{a, b, c} => Instruction::encode_f0(OpCode::DIV, a, b as u8, c),
-            Instruction::Mod{a, b, c} => Instruction::encode_f0(OpCode::MOD, a, b as u8, c)
+            Instruction::Mod{a, b, c} => Instruction::encode_f0(OpCode::MOD, a, b as u8, c),
+            Instruction::Cmp{b, c} => Instruction::encode_f0(OpCode::CMP, Register::R0, b as u8, c)
         }
     }
 
@@ -108,35 +111,44 @@ impl Instruction {
         }
         let parsed_c = Register::try_from(raw_c.unwrap());
 
-        if let (Ok(op), Ok(a), Ok(c)) = (parsed_op, parsed_a, parsed_c) {
-            match op {
-                OpCode::MOV => return Ok(Instruction::Mov{a: a, b: b, c: c}),
-                OpCode::MVN => return Ok(Instruction::Mvn{a: a, b: b, c: c}),
+        if parsed_op.is_err() || parsed_a.is_err() || parsed_c.is_err() {
+            return fail;
+        }
 
-                OpCode::ADD => {
-                    if let Ok(b) = Register::try_from(b) {
-                        return Ok(Instruction::Add{a, b, c});
-                    }
-                },
-                OpCode::SUB => {
-                    if let Ok(b) = Register::try_from(b) {
-                        return Ok(Instruction::Sub{a, b, c});
-                    }
-                },
-                OpCode::MUL => {
-                    if let Ok(b) = Register::try_from(b) {
-                        return Ok(Instruction::Mul{a, b, c});
-                    }
-                },
-                OpCode::DIV => {
-                    if let Ok(b) = Register::try_from(b) {
-                        return Ok(Instruction::Div{a, b, c});
-                    }
-                },
-                OpCode::MOD => {
-                    if let Ok(b) = Register::try_from(b) {
-                        return Ok(Instruction::Mod{a, b, c});
-                    }
+        let (op, a, c) = (parsed_op.unwrap(), parsed_a.unwrap(), parsed_c.unwrap());
+
+        match op {
+            OpCode::MOV => return Ok(Instruction::Mov{a: a, b: b, c: c}),
+            OpCode::MVN => return Ok(Instruction::Mvn{a: a, b: b, c: c}),
+
+            OpCode::ADD => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Add{a, b, c});
+                }
+            },
+            OpCode::SUB => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Sub{a, b, c});
+                }
+            },
+            OpCode::MUL => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Mul{a, b, c});
+                }
+            },
+            OpCode::DIV => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Div{a, b, c});
+                }
+            },
+            OpCode::MOD => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Mod{a, b, c});
+                }
+            }
+            OpCode::CMP => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Cmp{b, c});
                 }
             }
         }

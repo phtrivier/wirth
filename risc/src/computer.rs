@@ -4,14 +4,20 @@ use crate::instructions::Instruction;
 pub struct Computer {
     pub regs: [i32; 16],
     // NOTE(pht) memory is represented as an array of words, so byte-addressing is implicit.
-    pub mem: [i32; 4096]
+    pub mem: [i32; 4096],
+
+    // Test flags
+    pub z_test: bool,
+    pub neg_test: bool
 }
 
 impl Computer {
     pub fn new() -> Computer {
         Computer {
             regs: [0; 16],
-            mem: [0; 4096]
+            mem: [0; 4096],
+            z_test: false,
+            neg_test: false
         }
     }
 
@@ -61,7 +67,13 @@ impl Computer {
             Instruction::Mod{a, b, c} => {
                 self.regs[a as usize] = self.regs[b as usize] % self.regs[c as usize];
             }
-            // _ => {}
+            Instruction::Cmp{b, c} => {
+                let (reg_b, reg_c) = (self.regs[b as usize], self.regs[c as usize]);
+                println!("Comparing {:?}={:?} with {:?}={:?}", b, reg_b, c, reg_c);
+                self.z_test = reg_b == reg_c;
+                self.neg_test = reg_b < reg_c;
+                println!("Z={:?}, N={:?}", self.z_test, self.neg_test);
+            }
         }
     }
 }
@@ -116,6 +128,35 @@ mod tests {
 
         }
 
+        #[test]
+        fn test_execute_register_compare(){
+            let mut c = Computer::new();
+            c.regs[0] = 0;
+            c.regs[1] = 10;
+            c.regs[2] = 32;
+
+            c.execute_instruction(Instruction::Cmp{b: Register::R1, c: Register::R2});
+            // R.b == R.c ?
+            assert_eq!(false, c.z_test);
+            // R.b < R.c ?
+            assert_eq!(true, c.neg_test);
+
+            c.regs[1] = 10;
+            c.regs[2] = 10;
+            c.execute_instruction(Instruction::Cmp{b: Register::R1, c: Register::R2});
+            // R.b == R.c ?
+            assert_eq!(true, c.z_test);
+            // R.b < R.c ?
+            assert_eq!(false, c.neg_test);
+
+            c.regs[1] = -32;
+            c.regs[2] = 10;
+            c.execute_instruction(Instruction::Cmp{b: Register::R1, c: Register::R2});
+            // R.b == R.c ?
+            assert_eq!(false, c.z_test);
+            // R.b < R.c ?
+            assert_eq!(true, c.neg_test);
+        }
     }
 
     #[test]
