@@ -74,6 +74,27 @@ impl Computer {
                 self.neg_test = reg_b < reg_c;
                 println!("Z={:?}, N={:?}", self.z_test, self.neg_test);
             }
+            Instruction::Movi{a, b, im} => {
+                self.regs[a as usize] = im << b;
+            }
+            Instruction::Mvni{a, b, im} => {
+                self.regs[a as usize] = -(im << b);
+            }
+            Instruction::Addi{a, b, im} => {
+                self.regs[a as usize] = self.regs[b as usize] + im;
+            }
+            Instruction::Subi{a, b, im} => {
+                self.regs[a as usize] = self.regs[b as usize] - im;
+            }
+            Instruction::Muli{a, b, im} => {
+                self.regs[a as usize] = self.regs[b as usize] * im;
+            }
+            Instruction::Divi{a, b, im} => {
+                self.regs[a as usize] = self.regs[b as usize] / im;
+            }
+            Instruction::Modi{a, b, im} => {
+                self.regs[a as usize] = self.regs[b as usize] % im;
+            }
         }
     }
 }
@@ -98,6 +119,19 @@ mod tests {
 
             c.execute_instruction(Instruction::Mvn{a: Register::R0, b: 2, c: Register::R2});
             assert_eq!(-168, c.regs[0])
+        }
+
+        #[test]
+        fn test_execute_immediate_move_instruction() {
+            let mut c = Computer::new();
+            c.regs[0] = 0;
+            c.execute_instruction(Instruction::Movi{a: Register::R0, b: 1, im: 42});
+            assert_eq!(84, c.regs[0]);
+
+            let mut c = Computer::new();
+            c.regs[0] = 0;
+            c.execute_instruction(Instruction::Mvni{a: Register::R0, b: 2, im: 42});
+            assert_eq!(-168, c.regs[0]);
         }
 
         #[test]
@@ -127,6 +161,35 @@ mod tests {
             assert_eq!(2, c.regs[0]);
 
         }
+
+        #[test]
+        fn test_execute_immediate_arithmetic_instructions() {
+            let mut c = Computer::new();
+            c.regs[0] = 0;
+            c.regs[1] = 10;
+            c.regs[2] = 32;
+            // R.a = R.b + im
+            c.execute_instruction(Instruction::Addi{a: Register::R0, b: Register::R1, im: 32});
+            assert_eq!(42, c.regs[0]);
+
+            // R.a = R.b - im
+            c.execute_instruction(Instruction::Subi{a: Register::R0, b: Register::R1, im: 32});
+            assert_eq!(-22, c.regs[0]);
+
+            // R.a = R.b * im
+            c.execute_instruction(Instruction::Muli{a: Register::R0, b: Register::R1, im: 32});
+            assert_eq!(320, c.regs[0]);
+
+            // R.a = R.b / im
+            c.execute_instruction(Instruction::Divi{a: Register::R0, b: Register::R2, im: 10});
+            assert_eq!(3, c.regs[0]);
+
+            // R.a = R.b % im
+            c.execute_instruction(Instruction::Modi{a: Register::R0, b: Register::R2, im: 10});
+            assert_eq!(2, c.regs[0]);
+
+        }
+
 
         #[test]
         fn test_execute_register_compare(){

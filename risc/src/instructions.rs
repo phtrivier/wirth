@@ -38,7 +38,14 @@ pub enum OpCode {
     MUL = 4,
     DIV = 5,
     MOD = 6,
-    CMP = 7
+    CMP = 7,
+    MOVI = 16,
+    MVNI = 17,
+    ADDI = 18,
+    SUBI = 19,
+    MULI = 20,
+    DIVI = 21,
+    MODI = 22
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -50,7 +57,15 @@ pub enum Instruction {
     Mul {a: Register, b: Register, c: Register},
     Div {a: Register, b: Register, c: Register},
     Mod {a: Register, b: Register, c: Register},
-    Cmp {b: Register, c: Register}
+    Cmp {b: Register, c: Register},
+    Movi { a: Register, b: u8, im: i32 },
+    Mvni { a: Register, b: u8, im: i32 },
+    Addi {a: Register, b: Register, im: i32},
+    Subi {a: Register, b: Register, im: i32},
+    Muli {a: Register, b: Register, im: i32},
+    Divi {a: Register, b: Register, im: i32},
+    Modi {a: Register, b: Register, im: i32},
+
 }
 
 #[derive(Debug)]
@@ -68,7 +83,15 @@ impl Instruction {
             Instruction::Mul{a, b, c} => Instruction::encode_f0(OpCode::MUL, a, b as u8, c),
             Instruction::Div{a, b, c} => Instruction::encode_f0(OpCode::DIV, a, b as u8, c),
             Instruction::Mod{a, b, c} => Instruction::encode_f0(OpCode::MOD, a, b as u8, c),
-            Instruction::Cmp{b, c} => Instruction::encode_f0(OpCode::CMP, Register::R0, b as u8, c)
+            Instruction::Cmp{b, c} => Instruction::encode_f0(OpCode::CMP, Register::R0, b as u8, c),
+
+            Instruction::Movi{a, b, im} => Instruction::encode_f1(OpCode::MOVI, a, b, im),
+            Instruction::Mvni{a, b, im} => Instruction::encode_f1(OpCode::MVNI, a, b, im),
+            Instruction::Addi{a, b, im} => Instruction::encode_f1(OpCode::ADD, a, b as u8, im),
+            Instruction::Subi{a, b, im} => Instruction::encode_f1(OpCode::SUB, a, b as u8, im),
+            Instruction::Muli{a, b, im} => Instruction::encode_f1(OpCode::MUL, a, b as u8, im),
+            Instruction::Divi{a, b, im} => Instruction::encode_f1(OpCode::DIV, a, b as u8, im),
+            Instruction::Modi{a, b, im} => Instruction::encode_f1(OpCode::MOD, a, b as u8, im),
         }
     }
 
@@ -78,6 +101,16 @@ impl Instruction {
             |  (a as i32) * (2 as i32).pow(32 - 2 - 4 - 4)
             |  (b as i32) * (2 as i32).pow(32 - 2 - 4 - 4 - 4)
             |  (c as i32)
+            as i32;
+    }
+
+    fn encode_f1(opcode: OpCode, a: Register, b: u8, im: i32) -> i32 {
+        // 00(2) [op](4) a(4) b(4) padding(14) c(4)
+        return 0b01_0000_0000_0000_00_00_00_00_00_00_00_00_00
+            | (opcode as i32) * (2 as i32).pow(32 - 2 - 4)
+            |  (a as i32) * (2 as i32).pow(32 - 2 - 4 - 4)
+            |  (b as i32) * (2 as i32).pow(32 - 2 - 4 - 4 - 4)
+            |  im
             as i32;
     }
 
@@ -115,6 +148,11 @@ impl Instruction {
             return fail;
         }
 
+        let mut im = i % 0x40000;
+        if im > 0x20000 {
+            im = im - 0x40000;
+        }
+
         let (op, a, c) = (parsed_op.unwrap(), parsed_a.unwrap(), parsed_c.unwrap());
 
         match op {
@@ -149,6 +187,39 @@ impl Instruction {
             OpCode::CMP => {
                 if let Ok(b) = Register::try_from(b) {
                     return Ok(Instruction::Cmp{b, c});
+                }
+            }
+
+            OpCode::MOVI => {
+                return Ok(Instruction::Movi{a, b, im});
+            }
+            OpCode::MVNI => {
+                return Ok(Instruction::Mvni{a, b, im});
+            }
+
+            OpCode::ADDI => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Addi{a, b, im});
+                }
+            }
+            OpCode::SUBI => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Subi{a, b, im});
+                }
+            }
+            OpCode::MULI => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Muli{a, b, im});
+                }
+            }
+            OpCode::DIVI => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Divi{a, b, im});
+                }
+            }
+            OpCode::MODI => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Modi{a, b, im});
                 }
             }
         }
