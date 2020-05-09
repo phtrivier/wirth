@@ -33,13 +33,22 @@ pub enum Register {
 pub enum OpCode {
     MOV = 0,
     MVN = 1,
-//    ADD = 2
+    ADD = 2,
+    SUB = 3,
+    MUL = 4,
+    DIV = 5,
+    MOD = 6
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Instruction {
-    Mov {a: Register, b: u32, c: Register},
-    Mvn {a: Register, b: u32, c: Register}
+    Mov {a: Register, b: u8, c: Register},
+    Mvn {a: Register, b: u8, c: Register},
+    Add {a: Register, b: Register, c: Register},
+    Sub {a: Register, b: Register, c: Register},
+    Mul {a: Register, b: Register, c: Register},
+    Div {a: Register, b: Register, c: Register},
+    Mod {a: Register, b: Register, c: Register},
 }
 
 #[derive(Debug)]
@@ -51,11 +60,16 @@ impl Instruction {
     pub fn encode(i : Instruction) -> i32 {
         match i {
             Instruction::Mov{a, b, c} => Instruction::encode_f0(OpCode::MOV, a, b, c),
-            Instruction::Mvn{a, b, c} => Instruction::encode_f0(OpCode::MVN, a, b, c)
+            Instruction::Mvn{a, b, c} => Instruction::encode_f0(OpCode::MVN, a, b, c),
+            Instruction::Add{a, b, c} => Instruction::encode_f0(OpCode::ADD, a, b as u8, c),
+            Instruction::Sub{a, b, c} => Instruction::encode_f0(OpCode::SUB, a, b as u8, c),
+            Instruction::Mul{a, b, c} => Instruction::encode_f0(OpCode::MUL, a, b as u8, c),
+            Instruction::Div{a, b, c} => Instruction::encode_f0(OpCode::DIV, a, b as u8, c),
+            Instruction::Mod{a, b, c} => Instruction::encode_f0(OpCode::MOD, a, b as u8, c)
         }
     }
 
-    fn encode_f0(opcode: OpCode, a: Register, b: u32, c: Register) -> i32 {
+    fn encode_f0(opcode: OpCode, a: Register, b: u8, c: Register) -> i32 {
         // 00(2) [op](4) a(4) b(4) padding(14) c(4)
         return (opcode as i32) * (2 as i32).pow(32 - 2 - 4)
             |  (a as i32) * (2 as i32).pow(32 - 2 - 4 - 4)
@@ -86,7 +100,7 @@ impl Instruction {
         }
         let parsed_a = Register::try_from(raw_a.unwrap());
 
-        let b = ((i / 0x40000) % 0x10) as u32;
+        let b = ((i / 0x40000) % 0x10) as u8;
 
         let raw_c = u8::try_from(i % 0x40000);
         if raw_c.is_err() {
@@ -98,6 +112,32 @@ impl Instruction {
             match op {
                 OpCode::MOV => return Ok(Instruction::Mov{a: a, b: b, c: c}),
                 OpCode::MVN => return Ok(Instruction::Mvn{a: a, b: b, c: c}),
+
+                OpCode::ADD => {
+                    if let Ok(b) = Register::try_from(b) {
+                        return Ok(Instruction::Add{a, b, c});
+                    }
+                },
+                OpCode::SUB => {
+                    if let Ok(b) = Register::try_from(b) {
+                        return Ok(Instruction::Sub{a, b, c});
+                    }
+                },
+                OpCode::MUL => {
+                    if let Ok(b) = Register::try_from(b) {
+                        return Ok(Instruction::Mul{a, b, c});
+                    }
+                },
+                OpCode::DIV => {
+                    if let Ok(b) = Register::try_from(b) {
+                        return Ok(Instruction::Div{a, b, c});
+                    }
+                },
+                OpCode::MOD => {
+                    if let Ok(b) = Register::try_from(b) {
+                        return Ok(Instruction::Mod{a, b, c});
+                    }
+                }
             }
         }
 

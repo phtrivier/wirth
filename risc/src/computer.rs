@@ -46,6 +46,21 @@ impl Computer {
                 let index_c = c as usize;
                 self.regs[index_a] = - (self.regs[index_c] << b);
             }
+            Instruction::Add{a, b, c} => {
+                self.regs[a as usize] = self.regs[b as usize] + self.regs[c as usize];
+            }
+            Instruction::Sub{a, b, c} => {
+                self.regs[a as usize] = self.regs[b as usize] - self.regs[c as usize];
+            }
+            Instruction::Mul{a, b, c} => {
+                self.regs[a as usize] = self.regs[b as usize] * self.regs[c as usize];
+            }
+            Instruction::Div{a, b, c} => {
+                self.regs[a as usize] = self.regs[b as usize] / self.regs[c as usize];
+            }
+            Instruction::Mod{a, b, c} => {
+                self.regs[a as usize] = self.regs[b as usize] % self.regs[c as usize];
+            }
             // _ => {}
         }
     }
@@ -62,21 +77,43 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_execute_mov_instruction() {
+        fn test_execute_register_move_instruction() {
             let mut c = Computer::new();
             c.regs[0] = 0;
             c.regs[2] = 42;
             c.execute_instruction(Instruction::Mov{a: Register::R0, b: 1, c: Register::R2});
-            assert_eq!(84, c.regs[0])
+            assert_eq!(84, c.regs[0]);
+
+            c.execute_instruction(Instruction::Mvn{a: Register::R0, b: 2, c: Register::R2});
+            assert_eq!(-168, c.regs[0])
         }
 
         #[test]
-        fn test_execute_mvn_instruction() {
+        fn test_execute_register_arithmetic_instructions() {
             let mut c = Computer::new();
             c.regs[0] = 0;
-            c.regs[2] = 42;
-            c.execute_instruction(Instruction::Mvn{a: Register::R0, b: 2, c: Register::R2});
-            assert_eq!(-168, c.regs[0])
+            c.regs[1] = 10;
+            c.regs[2] = 32;
+            // R.a = R.b + R.c
+            c.execute_instruction(Instruction::Add{a: Register::R0, b: Register::R1, c: Register::R2});
+            assert_eq!(42, c.regs[0]);
+
+            // R.a = R.b - R.c
+            c.execute_instruction(Instruction::Sub{a: Register::R0, b: Register::R1, c: Register::R2});
+            assert_eq!(-22, c.regs[0]);
+
+            // R.a = R.b * R.c
+            c.execute_instruction(Instruction::Mul{a: Register::R0, b: Register::R1, c: Register::R2});
+            assert_eq!(320, c.regs[0]);
+
+            // R.a = R.b / R.c
+            c.execute_instruction(Instruction::Div{a: Register::R0, b: Register::R2, c: Register::R1});
+            assert_eq!(3, c.regs[0]);
+
+            // R.a = R.b % R.c
+            c.execute_instruction(Instruction::Mod{a: Register::R0, b: Register::R2, c: Register::R1});
+            assert_eq!(2, c.regs[0]);
+
         }
 
     }
