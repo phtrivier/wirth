@@ -113,6 +113,38 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_extract_im_disp_c_part() {
+        let inst = 0b00_0001_0001_0001_10_00_00_00_00_00_00_1110;
+
+        // Get c as a register index (the first four bits)
+        let c_as_register_index = inst % 0x10;
+        assert_eq!(0b00_0000_0000_0000_00_00_00_00_00_00_00_1110, c_as_register_index);
+
+        // Get the 18 bits part after the 'f', 'op', 'a' and 'b'
+        let im = inst % 0x40000;
+        assert_eq!(0b00_0000_0000_0000_10_00_00_00_00_00_00_1110, im);
+        // The immediate value can ve seen as an integer, by default the sign is in the first bit of the whole thing, I suppose
+        assert_eq!(131086, im);
+
+        // The value after which we need to do sign extension
+        let f1_sign_limit = 0x20000;
+        assert_eq!(131072, f1_sign_limit);
+        assert_eq!(0b00_0000_0000_0000_10_00_00_00_00_00_00_0000, f1_sign_limit);
+
+        let neg_im = f1_sign_limit + 1;
+        assert_eq!(131073, neg_im);
+        let neg_im_with_sign_extension = neg_im - 0x40000;
+        assert_eq!("11111111111111100000000000000001", format!("{:032b}", neg_im_with_sign_extension));
+        assert_eq!(-131071, neg_im_with_sign_extension);
+
+        // NOTE: same thing goes for extension for the bigger instructions
+        // except sign_limit = 0x2000000 and you decrement by 0x4000000
+
+        // Yes, remember that sign extension is a weird businnes...
+        assert_eq!("11111111111111111111111111111111", format!("{:032b}", -1));
+    }
+
+    #[test]
     fn test_encode_f0_instructions() {
         assert_both(Instruction::Mov{a: Register::R2, b: 5, c: Register::R1}, 0b00_0000_0010_0101_00000000000000_0001);
         assert_both(Instruction::Mvn{a: Register::R3, b: 2, c: Register::R4}, 0b00_0001_0011_0010_00000000000000_0100);
