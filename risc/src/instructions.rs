@@ -13,7 +13,6 @@ pub enum Register {
     R2 = 2,
     R3 = 3,
     R4 = 4,
-/*
     R5 = 5,
     R6 = 6,
     R7 = 7,
@@ -25,7 +24,6 @@ pub enum Register {
     R13 = 13,
     R14 = 14,
     R15 = 15
-*/
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, TryFromPrimitive)]
@@ -53,8 +51,21 @@ pub enum OpCode {
     LDW = 32,
     POP = 34,
     STW = 36,
-    PSH = 38
-   
+    PSH = 38,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, TryFromPrimitive)]
+#[repr(u8)]
+pub enum BranchOpCode {
+    BEQ = 48,
+    BNE = 49,
+    BLT = 50,
+    BGE = 51,
+    BLE = 52,
+    BGT = 53,
+    BR = 56,
+    BSR = 57,
+    RET = 58,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -84,11 +95,15 @@ pub enum Instruction {
     Psh {a: Register, b: Register, disp: i32},
 
     Stw {a: Register, b: Register, disp: i32},
+
+    Branch{ o: BranchOpCode, dest: i32 }
+    
+
 }
 
 #[derive(Debug)]
 pub enum InstructionParseError {
-    InvalidInstruction(i32)
+    InvalidInstruction(u32)
 }
 
 impl Instruction {
@@ -118,6 +133,8 @@ impl Instruction {
             Instruction::Pop{a, b, disp} => Instruction::encode_f2(OpCode::POP, a, b as u8, disp),
             Instruction::Psh{a, b, disp} => Instruction::encode_f2(OpCode::PSH, a, b as u8, disp),
             Instruction::Stw{a, b, disp} => Instruction::encode_f2(OpCode::STW, a, b as u8, disp),
+
+            Instruction::Branch{o, dest} => Instruction::encode_f3(o, dest)
         }
     }
 
@@ -152,7 +169,16 @@ impl Instruction {
             as u32;
     }
 
-    pub fn parse(i : i32) -> Result<Instruction, InstructionParseError> {
+    fn encode_f3(opcode: BranchOpCode, dest: i32) -> u32 {
+        // 11(2) [op](4) dest (28)
+        // But warning, the op code is too big to fit on 4 bits
+        return 0b11_0000_00_00_00_00_00_00_00_00_00_00_00_00_00
+            | ((opcode as u32) % 0x10) << (32 - 2 - 4)
+            | dest
+            as u32;
+    }
+
+    pub fn parse(i : u32) -> Result<Instruction, InstructionParseError> {
         /*
          opc := IR DIV 4000000H MOD 40H;
         a := IR DIV 400000H MOD 10H;
@@ -190,109 +216,118 @@ impl Instruction {
         if im > 0x20000 {
             im = im - 0x40000;
         }
+        let parsed_im = i32::try_from(im);
 
         let (op, a, c) = (parsed_op.unwrap(), parsed_a.unwrap(), parsed_c.unwrap());
+
+        // Ok, parsing would be *much* easier with opcodes that would be simple integers :/
 
         match op {
             OpCode::MOV => return Ok(Instruction::Mov{a: a, b: b, c: c}),
             OpCode::MVN => return Ok(Instruction::Mvn{a: a, b: b, c: c}),
+            _ => ()
+        }
 
-            OpCode::ADD => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Add{a, b, c});
+        if let Ok(im) = parsed_im {
+            match op {
+                OpCode::MOVI => {
+                    return Ok(Instruction::Movi{a, b, im});
                 }
-            },
-            OpCode::SUB => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Sub{a, b, c});
+                OpCode::MVNI => {
+                    return Ok(Instruction::Mvni{a, b, im});
                 }
-            },
-            OpCode::MUL => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Mul{a, b, c});
-                }
-            },
-            OpCode::DIV => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Div{a, b, c});
-                }
-            },
-            OpCode::MOD => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Mod{a, b, c});
-                }
-            }
-            OpCode::CMP => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Cmp{b, c});
-                }
-            }
-
-            OpCode::MOVI => {
-                return Ok(Instruction::Movi{a, b, im});
-            }
-            OpCode::MVNI => {
-                return Ok(Instruction::Mvni{a, b, im});
-            }
-
-            OpCode::ADDI => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Addi{a, b, im});
-                }
-            }
-            OpCode::SUBI => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Subi{a, b, im});
-                }
-            }
-            OpCode::MULI => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Muli{a, b, im});
-                }
-            }
-            OpCode::DIVI => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Divi{a, b, im});
-                }
-            }
-            OpCode::MODI => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Modi{a, b, im});
-                }
-            }
-            OpCode::CMPI => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Cmpi{b, im});
-                }
-            }
-
-            OpCode::CHKI => {
-                return Ok(Instruction::Chki{a, im});
-            }
-
-            OpCode::LDW => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Ldw{a, b, disp: im});
-                }
-            }
-
-            OpCode::POP => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Pop{a, b, disp: im});
-                }
-            }
-            OpCode::PSH => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Psh{a, b, disp: im});
-                }
-            }
-            OpCode::STW => {
-                if let Ok(b) = Register::try_from(b) {
-                    return Ok(Instruction::Stw{a, b, disp: im});
-                }
+                _ => ()
             }
         }
 
+        if let Ok(b) = Register::try_from(b) {
+            match op {
+                OpCode::ADD => {
+                    return Ok(Instruction::Add{a, b, c});
+                },
+                OpCode::SUB => {
+                    return Ok(Instruction::Sub{a, b, c});
+                },
+                OpCode::MUL => {
+                    return Ok(Instruction::Mul{a, b, c});
+                },
+                OpCode::DIV => {
+                    return Ok(Instruction::Div{a, b, c});
+                },
+                OpCode::MOD => {
+                    return Ok(Instruction::Mod{a, b, c});
+                }
+                OpCode::CMP => {
+                    return Ok(Instruction::Cmp{b, c});
+                }
+                _ => ()
+            }
+        }
+
+        if let (Ok(b), Ok(im)) = (Register::try_from(b), parsed_im) {
+            match op {
+                OpCode::ADDI => {
+                    return Ok(Instruction::Addi{a, b, im});
+                }
+                OpCode::SUBI => {
+                    return Ok(Instruction::Subi{a, b, im});
+                }
+                OpCode::MULI => {
+                    return Ok(Instruction::Muli{a, b, im});
+                }
+                OpCode::DIVI => {
+                    return Ok(Instruction::Divi{a, b, im});
+                }
+                OpCode::MODI => {
+                    return Ok(Instruction::Modi{a, b, im});
+                }
+                OpCode::CMPI => {
+                    return Ok(Instruction::Cmpi{b, im});
+                }
+
+                OpCode::CHKI => {
+                    return Ok(Instruction::Chki{a, im});
+                }
+
+                OpCode::LDW => {
+                    if let Ok(b) = Register::try_from(b) {
+                        return Ok(Instruction::Ldw{a, b, disp: im});
+                    }
+                }
+
+                OpCode::POP => {
+                    if let Ok(b) = Register::try_from(b) {
+                        return Ok(Instruction::Pop{a, b, disp: im});
+                    }
+                }
+                OpCode::PSH => {
+                    if let Ok(b) = Register::try_from(b) {
+                        return Ok(Instruction::Psh{a, b, disp: im});
+                    }
+                }
+                OpCode::STW => {
+                    if let Ok(b) = Register::try_from(b) {
+                        return Ok(Instruction::Stw{a, b, disp: im});
+                    }
+                }
+
+                _ => ()
+            }
+        }
+
+        let mut dest = i % 0x40000;
+        if dest > 0x2000000 {
+            dest = dest - 0x4000000
+        }
+        let parsed_dest = i32::try_from(dest);
+        let parsed_branch_op = BranchOpCode::try_from(raw_op.unwrap());
+
+        println!("Parsed dest :{:?}, parsed branch op {:?}", parsed_dest, parsed_branch_op);
+
+        if let (Ok(branch_op), Ok(dest)) = (parsed_branch_op, parsed_dest) {
+            return Ok(Instruction::Branch{o: branch_op, dest: dest})
+        }
+ 
         return fail;
 
     }
@@ -342,17 +377,24 @@ mod tests {
         assert_both(Instruction::Mvn{a: Register::R3, b: 2, c: Register::R4}, 0b00_0001_0011_0010_00000000000000_0100);
     }
 
-    fn assert_both(inst: Instruction, i: i32) {
+    #[test]
+    fn test_encode_f3_instructions() {
+        assert_both(Instruction::Branch{o: BranchOpCode::BEQ, dest: 4}, 0b11_0000_00000000000000000000000100);
+
+    }
+
+
+    fn assert_both(inst: Instruction, i: u32) {
         assert_encoded(inst, i);
         assert_parsed(inst, i);
     }
 
-    fn assert_encoded(inst: Instruction, expected : i32) {
+    fn assert_encoded(inst: Instruction, expected : u32) {
         let actual = Instruction::encode(inst);
         assert_eq!(format!("{:032b}", expected), format!("{:032b}", actual))
     }
 
-    fn assert_parsed(expected: Instruction, i: i32) {
+    fn assert_parsed(expected: Instruction, i: u32) {
         let parsed = Instruction::parse(i).unwrap();
         assert_eq!(expected, parsed)
     }

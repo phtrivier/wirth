@@ -32,7 +32,7 @@ impl Computer {
         let ir : i32 = self.mem[next_pc_address as usize];
 
         // NOTE(pht): we panic if instruction is invalid.
-        let instruction = Instruction::parse(ir).unwrap();
+        let instruction = Instruction::parse(ir as u32).unwrap();
 
         self.execute_instruction(instruction);
 
@@ -121,6 +121,7 @@ impl Computer {
             Instruction::Stw{a, b, disp} => {
                 self.mem[(self.regs[b as usize] + disp) as usize] = self.regs[a as usize];
             }
+            _ => ()
         }
     }
 }
