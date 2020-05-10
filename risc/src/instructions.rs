@@ -46,7 +46,15 @@ pub enum OpCode {
     MULI = 20,
     DIVI = 21,
     MODI = 22,
-    CMPI = 23
+    CMPI = 23,
+
+    CHKI = 24,
+
+    LDW = 32,
+    POP = 34,
+    STW = 36,
+    PSH = 38
+   
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -59,6 +67,7 @@ pub enum Instruction {
     Div {a: Register, b: Register, c: Register},
     Mod {a: Register, b: Register, c: Register},
     Cmp {b: Register, c: Register},
+
     Movi { a: Register, b: u8, im: i32 },
     Mvni { a: Register, b: u8, im: i32 },
     Addi {a: Register, b: Register, im: i32},
@@ -67,6 +76,14 @@ pub enum Instruction {
     Divi {a: Register, b: Register, im: i32},
     Modi {a: Register, b: Register, im: i32},
     Cmpi {b: Register, im: i32},
+
+    Chki {a: Register, im: i32},
+
+    Ldw {a: Register, b: Register, disp: i32},
+    Pop {a: Register, b: Register, disp: i32},
+    Psh {a: Register, b: Register, disp: i32},
+
+    Stw {a: Register, b: Register, disp: i32},
 }
 
 #[derive(Debug)]
@@ -75,7 +92,7 @@ pub enum InstructionParseError {
 }
 
 impl Instruction {
-    pub fn encode(i : Instruction) -> i32 {
+    pub fn encode(i : Instruction) -> u32 {
         match i {
             Instruction::Mov{a, b, c} => Instruction::encode_f0(OpCode::MOV, a, b, c),
             Instruction::Mvn{a, b, c} => Instruction::encode_f0(OpCode::MVN, a, b, c),
@@ -93,27 +110,46 @@ impl Instruction {
             Instruction::Muli{a, b, im} => Instruction::encode_f1(OpCode::MULI, a, b as u8, im),
             Instruction::Divi{a, b, im} => Instruction::encode_f1(OpCode::DIVI, a, b as u8, im),
             Instruction::Modi{a, b, im} => Instruction::encode_f1(OpCode::MODI, a, b as u8, im),
-            Instruction::Cmpi{b, im } => Instruction::encode_f1(OpCode::CMPI, Register::R0, b as u8, im)
+            Instruction::Cmpi{b, im } => Instruction::encode_f1(OpCode::CMPI, Register::R0, b as u8, im),
+
+            Instruction::Chki{a, im} => Instruction::encode_f1(OpCode::CHKI, a, 0, im),
+
+            Instruction::Ldw{a, b, disp} => Instruction::encode_f2(OpCode::LDW, a, b as u8, disp),
+            Instruction::Pop{a, b, disp} => Instruction::encode_f2(OpCode::POP, a, b as u8, disp),
+            Instruction::Psh{a, b, disp} => Instruction::encode_f2(OpCode::PSH, a, b as u8, disp),
+            Instruction::Stw{a, b, disp} => Instruction::encode_f2(OpCode::STW, a, b as u8, disp),
         }
     }
 
-    fn encode_f0(opcode: OpCode, a: Register, b: u8, c: Register) -> i32 {
-        // 00(2) [op](4) a(4) b(4) padding(14) c(4)
-        return (opcode as i32) * (2 as i32).pow(32 - 2 - 4)
-            |  (a as i32) * (2 as i32).pow(32 - 2 - 4 - 4)
-            |  (b as i32) * (2 as i32).pow(32 - 2 - 4 - 4 - 4)
-            |  (c as i32)
-            as i32;
+    fn encode_f0(opcode: OpCode, a: Register, b: u8, c: Register) -> u32 {
+        // 00(2) [op](4) a(4) b(4) im (18)
+        return 0b00_0000_0000_0000_00_00_00_00_00_00_00_00_00
+            | (opcode as u32) << (32 - 2 - 4)
+            | (a as u32) << (32 - 2 - 4 - 4)
+            | (b as u32) << (32 - 2 - 4 - 4 - 4)
+            | (c as u32)
+            as u32;
     }
 
-    fn encode_f1(opcode: OpCode, a: Register, b: u8, im: i32) -> i32 {
-        // 00(2) [op](4) a(4) b(4) padding(14) c(4)
+    fn encode_f1(opcode: OpCode, a: Register, b: u8, im: i32) -> u32 {
+
+        // 01(2) [op](4) a(4) b(4) im (18)
         return 0b01_0000_0000_0000_00_00_00_00_00_00_00_00_00
-            | (opcode as i32) * (2 as i32).pow(32 - 2 - 4)
-            |  (a as i32) * (2 as i32).pow(32 - 2 - 4 - 4)
-            |  (b as i32) * (2 as i32).pow(32 - 2 - 4 - 4 - 4)
-            |  im
-            as i32;
+            | (opcode as u32) << (32 - 2 - 4)
+            | (a as u32) << (32 - 2 - 4 - 4)
+            | (b as u32) << (32 - 2 - 4 - 4 - 4)
+            | im
+            as u32;
+    }
+
+    fn encode_f2(opcode: OpCode, a: Register, b: u8, disp: i32) -> u32 {
+        // 10(2) [op](4) a(4) b(4) disp (18)
+        return 0b10_0000_0000_0000_00_00_00_00_00_00_00_00_00
+            | (opcode as u32) << (32 - 2 - 4)
+            | (a as u32) << (32 - 2 - 4 - 4)
+            | (b as u32) << (32 - 2 - 4 - 4 - 4)
+            | disp
+            as u32;
     }
 
     pub fn parse(i : i32) -> Result<Instruction, InstructionParseError> {
@@ -227,6 +263,32 @@ impl Instruction {
             OpCode::CMPI => {
                 if let Ok(b) = Register::try_from(b) {
                     return Ok(Instruction::Cmpi{b, im});
+                }
+            }
+
+            OpCode::CHKI => {
+                return Ok(Instruction::Chki{a, im});
+            }
+
+            OpCode::LDW => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Ldw{a, b, disp: im});
+                }
+            }
+
+            OpCode::POP => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Pop{a, b, disp: im});
+                }
+            }
+            OpCode::PSH => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Psh{a, b, disp: im});
+                }
+            }
+            OpCode::STW => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Stw{a, b, disp: im});
                 }
             }
         }
