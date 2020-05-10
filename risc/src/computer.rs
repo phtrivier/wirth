@@ -69,10 +69,8 @@ impl Computer {
             }
             Instruction::Cmp{b, c} => {
                 let (reg_b, reg_c) = (self.regs[b as usize], self.regs[c as usize]);
-                println!("Comparing {:?}={:?} with {:?}={:?}", b, reg_b, c, reg_c);
                 self.z_test = reg_b == reg_c;
                 self.neg_test = reg_b < reg_c;
-                println!("Z={:?}, N={:?}", self.z_test, self.neg_test);
             }
             Instruction::Movi{a, b, im} => {
                 self.regs[a as usize] = im << b;
@@ -94,6 +92,11 @@ impl Computer {
             }
             Instruction::Modi{a, b, im} => {
                 self.regs[a as usize] = self.regs[b as usize] % im;
+            }
+            Instruction::Cmpi{b, im} => {
+                let reg_b = self.regs[b as usize];
+                self.z_test = reg_b == im;
+                self.neg_test = reg_b < im;
             }
         }
     }
@@ -215,6 +218,31 @@ mod tests {
             c.regs[1] = -32;
             c.regs[2] = 10;
             c.execute_instruction(Instruction::Cmp{b: Register::R1, c: Register::R2});
+            // R.b == R.c ?
+            assert_eq!(false, c.z_test);
+            // R.b < R.c ?
+            assert_eq!(true, c.neg_test);
+        }
+
+        #[test]
+        fn test_execute_immediate_compare(){
+            let mut c = Computer::new();
+            c.regs[0] = 0;
+            c.regs[1] = 10;
+
+            c.execute_instruction(Instruction::Cmpi{b: Register::R1, im: -32});
+            // R.b == R.c ?
+            assert_eq!(false, c.z_test);
+            // R.b < R.c ?
+            assert_eq!(false, c.neg_test);
+
+            c.execute_instruction(Instruction::Cmpi{b: Register::R1, im: 10});
+            // R.b == R.c ?
+            assert_eq!(true, c.z_test);
+            // R.b < R.c ?
+            assert_eq!(false, c.neg_test);
+
+            c.execute_instruction(Instruction::Cmpi{b: Register::R1, im: 32});
             // R.b == R.c ?
             assert_eq!(false, c.z_test);
             // R.b < R.c ?

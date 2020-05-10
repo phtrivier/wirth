@@ -45,7 +45,8 @@ pub enum OpCode {
     SUBI = 19,
     MULI = 20,
     DIVI = 21,
-    MODI = 22
+    MODI = 22,
+    CMPI = 23
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -65,7 +66,7 @@ pub enum Instruction {
     Muli {a: Register, b: Register, im: i32},
     Divi {a: Register, b: Register, im: i32},
     Modi {a: Register, b: Register, im: i32},
-
+    Cmpi {b: Register, im: i32},
 }
 
 #[derive(Debug)]
@@ -87,11 +88,12 @@ impl Instruction {
 
             Instruction::Movi{a, b, im} => Instruction::encode_f1(OpCode::MOVI, a, b, im),
             Instruction::Mvni{a, b, im} => Instruction::encode_f1(OpCode::MVNI, a, b, im),
-            Instruction::Addi{a, b, im} => Instruction::encode_f1(OpCode::ADD, a, b as u8, im),
-            Instruction::Subi{a, b, im} => Instruction::encode_f1(OpCode::SUB, a, b as u8, im),
-            Instruction::Muli{a, b, im} => Instruction::encode_f1(OpCode::MUL, a, b as u8, im),
-            Instruction::Divi{a, b, im} => Instruction::encode_f1(OpCode::DIV, a, b as u8, im),
-            Instruction::Modi{a, b, im} => Instruction::encode_f1(OpCode::MOD, a, b as u8, im),
+            Instruction::Addi{a, b, im} => Instruction::encode_f1(OpCode::ADDI, a, b as u8, im),
+            Instruction::Subi{a, b, im} => Instruction::encode_f1(OpCode::SUBI, a, b as u8, im),
+            Instruction::Muli{a, b, im} => Instruction::encode_f1(OpCode::MULI, a, b as u8, im),
+            Instruction::Divi{a, b, im} => Instruction::encode_f1(OpCode::DIVI, a, b as u8, im),
+            Instruction::Modi{a, b, im} => Instruction::encode_f1(OpCode::MODI, a, b as u8, im),
+            Instruction::Cmpi{b, im } => Instruction::encode_f1(OpCode::CMPI, Register::R0, b as u8, im)
         }
     }
 
@@ -220,6 +222,11 @@ impl Instruction {
             OpCode::MODI => {
                 if let Ok(b) = Register::try_from(b) {
                     return Ok(Instruction::Modi{a, b, im});
+                }
+            }
+            OpCode::CMPI => {
+                if let Ok(b) = Register::try_from(b) {
+                    return Ok(Instruction::Cmpi{b, im});
                 }
             }
         }
