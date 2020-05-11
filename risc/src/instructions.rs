@@ -7,28 +7,7 @@ use num_enum::TryFromPrimitive;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, TryFromPrimitive)]
 #[repr(u8)]
-pub enum Register {
-    R0 = 0,
-    R1 = 1,
-    R2 = 2,
-    R3 = 3,
-    R4 = 4,
-    R5 = 5,
-    R6 = 6,
-    R7 = 7,
-    R8 = 8,
-    R9 = 9,
-    R10 = 10,
-    R11 = 11,
-    R12 = 12,
-    R13 = 13,
-    R14 = 14,
-    R15 = 15
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq, TryFromPrimitive)]
-#[repr(u8)]
-pub enum OpCode {
+pub enum RegisterOpCode {
     MOV = 0,
     MVN = 1,
     ADD = 2,
@@ -37,6 +16,11 @@ pub enum OpCode {
     DIV = 5,
     MOD = 6,
     CMP = 7,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, TryFromPrimitive)]
+#[repr(u8)]
+pub enum RegisterImOpCode {
     MOVI = 16,
     MVNI = 17,
     ADDI = 18,
@@ -45,9 +29,12 @@ pub enum OpCode {
     DIVI = 21,
     MODI = 22,
     CMPI = 23,
+    CHKI = 24
+}
 
-    CHKI = 24,
-
+#[derive(Debug, Copy, Clone, Eq, PartialEq, TryFromPrimitive)]
+#[repr(u8)]
+pub enum MemoryOpCode {
     LDW = 32,
     POP = 34,
     STW = 36,
@@ -70,6 +57,11 @@ pub enum BranchOpCode {
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Instruction {
+    Register{o: RegisterOpCode, a: usize, b: usize, c: usize},
+    RegisterIm{o : RegisterImOpCode, a: usize, b: usize, im: usize},
+    Memory{o: MemoryOpCode, a: usize, b: usize, disp: usize},
+    Branch{ o: BranchOpCode, disp: i32 }
+/*
     Mov {a: Register, b: u8, c: Register},
     Mvn {a: Register, b: u8, c: Register},
     Add {a: Register, b: Register, c: Register},
@@ -95,9 +87,9 @@ pub enum Instruction {
     Psh {a: Register, b: Register, disp: i32},
 
     Stw {a: Register, b: Register, disp: i32},
+*/
 
-    Branch{ o: BranchOpCode, dest: i32 }
-    
+
 
 }
 
@@ -109,6 +101,12 @@ pub enum InstructionParseError {
 impl Instruction {
     pub fn encode(i : Instruction) -> u32 {
         match i {
+            Instruction::Register{o, a, b, c} => Instruction::encode_f0(o, a, b, c),
+            Instruction::RegisterIm{o, a, b, im} => Instruction::encode_f1(o, a, b, im),
+            Instruction::Memory{o, a, b, disp} => Instruction::encode_f2(o, a, b, disp),
+            Instruction::Branch{o, disp} => Instruction::encode_f3(o, disp),
+
+            /*
             Instruction::Mov{a, b, c} => Instruction::encode_f0(OpCode::MOV, a, b, c),
             Instruction::Mvn{a, b, c} => Instruction::encode_f0(OpCode::MVN, a, b, c),
             Instruction::Add{a, b, c} => Instruction::encode_f0(OpCode::ADD, a, b as u8, c),
@@ -135,46 +133,46 @@ impl Instruction {
             Instruction::Stw{a, b, disp} => Instruction::encode_f2(OpCode::STW, a, b as u8, disp),
 
             Instruction::Branch{o, dest} => Instruction::encode_f3(o, dest)
+*/
         }
     }
 
-    fn encode_f0(opcode: OpCode, a: Register, b: u8, c: Register) -> u32 {
+    fn encode_f0(opcode: RegisterOpCode, a: usize, b: u32, c: u32) -> u32 {
         // 00(2) [op](4) a(4) b(4) im (18)
         return 0b00_0000_0000_0000_00_00_00_00_00_00_00_00_00
             | (opcode as u32) << (32 - 2 - 4)
             | (a as u32) << (32 - 2 - 4 - 4)
-            | (b as u32) << (32 - 2 - 4 - 4 - 4)
-            | (c as u32)
+            | b << (32 - 2 - 4 - 4 - 4)
+            | c
             as u32;
     }
 
-    fn encode_f1(opcode: OpCode, a: Register, b: u8, im: i32) -> u32 {
-
+    fn encode_f1(opcode: u32, a: u32, b: u32, im: i32) -> u32 {
         // 01(2) [op](4) a(4) b(4) im (18)
         return 0b01_0000_0000_0000_00_00_00_00_00_00_00_00_00
-            | (opcode as u32) << (32 - 2 - 4)
-            | (a as u32) << (32 - 2 - 4 - 4)
-            | (b as u32) << (32 - 2 - 4 - 4 - 4)
+            | opcode << (32 - 2 - 4)
+            | a << (32 - 2 - 4 - 4)
+            | b << (32 - 2 - 4 - 4 - 4)
             | im
             as u32;
     }
 
-    fn encode_f2(opcode: OpCode, a: Register, b: u8, disp: i32) -> u32 {
+    fn encode_f2(opcode: u32, a: u32, b: u32, disp: i32) -> u32 {
         // 10(2) [op](4) a(4) b(4) disp (18)
         return 0b10_0000_0000_0000_00_00_00_00_00_00_00_00_00
-            | (opcode as u32) << (32 - 2 - 4)
-            | (a as u32) << (32 - 2 - 4 - 4)
-            | (b as u32) << (32 - 2 - 4 - 4 - 4)
+            | opcode << (32 - 2 - 4)
+            | a << (32 - 2 - 4 - 4)
+            | b << (32 - 2 - 4 - 4 - 4)
             | disp
             as u32;
     }
 
-    fn encode_f3(opcode: BranchOpCode, dest: i32) -> u32 {
+    fn encode_f3(opcode: u32, disp: i32) -> u32 {
         // 11(2) [op](4) dest (28)
         // But warning, the op code is too big to fit on 4 bits
         return 0b11_0000_00_00_00_00_00_00_00_00_00_00_00_00_00
-            | ((opcode as u32) % 0x10) << (32 - 2 - 4)
-            | dest
+            | (opcode % 0x10) << (32 - 2 - 4)
+            | disp
             as u32;
     }
 
@@ -327,7 +325,7 @@ impl Instruction {
         if let (Ok(branch_op), Ok(dest)) = (parsed_branch_op, parsed_dest) {
             return Ok(Instruction::Branch{o: branch_op, dest: dest})
         }
- 
+
         return fail;
 
     }
