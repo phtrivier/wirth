@@ -1,5 +1,5 @@
 // A RISC Computer.
-use crate::instructions::Instruction;
+use crate::instructions::*;
 
 pub struct Computer {
     pub regs: [i32; 16],
@@ -41,6 +41,21 @@ impl Computer {
     }
 
     pub fn execute_instruction(&mut self, i: Instruction) {
+
+        match i {
+            Instruction::Register{o, a, b , c} => {
+                match o {
+                    RegisterOpCode::MOV => {
+                        self.regs[a] = self.regs[c] << b;
+                    }
+                    _ => ()
+                }
+
+
+            }
+            _ => ()
+        }
+        /*
         match i {
             Instruction::Mov{a, b, c} => {
                 let index_a = a as usize;
@@ -123,6 +138,7 @@ impl Computer {
             }
             _ => ()
         }
+         */
     }
 }
 
@@ -130,21 +146,25 @@ impl Computer {
 mod tests {
 
     use super::*;
-    use crate::instructions::Register;
 
     mod execute_registers_instruction {
 
         use super::*;
+        use crate::instructions::Instruction::*;
+        use crate::instructions::RegisterOpCode::*;
+        use crate::instructions::RegisterImOpCode::*;
+        use crate::instructions::MemoryOpCode::*;
+        use crate::instructions::BranchOpCode::*;
 
         #[test]
         fn test_execute_register_move_instruction() {
             let mut c = Computer::new();
             c.regs[0] = 0;
             c.regs[2] = 42;
-            c.execute_instruction(Instruction::Mov{a: Register::R0, b: 1, c: Register::R2});
+            c.execute_instruction(Register{o: MOV, a: 0, b: 1, c: 2});
             assert_eq!(84, c.regs[0]);
 
-            c.execute_instruction(Instruction::Mvn{a: Register::R0, b: 2, c: Register::R2});
+            c.execute_instruction(Register{o: MVN, a: 0, b: 2, c: 2});
             assert_eq!(-168, c.regs[0])
         }
 
@@ -152,12 +172,12 @@ mod tests {
         fn test_execute_immediate_move_instruction() {
             let mut c = Computer::new();
             c.regs[0] = 0;
-            c.execute_instruction(Instruction::Movi{a: Register::R0, b: 1, im: 42});
+            c.execute_instruction(RegisterIm{o: MOVI, a: 0, b: 1, im: 42});
             assert_eq!(84, c.regs[0]);
 
             let mut c = Computer::new();
             c.regs[0] = 0;
-            c.execute_instruction(Instruction::Mvni{a: Register::R0, b: 2, im: 42});
+            c.execute_instruction(RegisterIm{o: MVNI, a: 0, b: 2, im: 42});
             assert_eq!(-168, c.regs[0]);
         }
 
@@ -168,27 +188,31 @@ mod tests {
             c.regs[1] = 10;
             c.regs[2] = 32;
             // R.a = R.b + R.c
-            c.execute_instruction(Instruction::Add{a: Register::R0, b: Register::R1, c: Register::R2});
+            c.execute_instruction(Register{o: ADD, a: 0, b: 1, c: 2});
             assert_eq!(42, c.regs[0]);
 
             // R.a = R.b - R.c
-            c.execute_instruction(Instruction::Sub{a: Register::R0, b: Register::R1, c: Register::R2});
+            c.execute_instruction(Register{o: SUB, a: 0, b: 1, c: 2});
             assert_eq!(-22, c.regs[0]);
 
             // R.a = R.b * R.c
-            c.execute_instruction(Instruction::Mul{a: Register::R0, b: Register::R1, c: Register::R2});
+            c.execute_instruction(Register{o: MUL, a: 0, b: 1, c: 2});
             assert_eq!(320, c.regs[0]);
 
             // R.a = R.b / R.c
-            c.execute_instruction(Instruction::Div{a: Register::R0, b: Register::R2, c: Register::R1});
+            c.execute_instruction(Register{o: DIV, a: 0, b: 2, c: 1});
             assert_eq!(3, c.regs[0]);
 
             // R.a = R.b % R.c
-            c.execute_instruction(Instruction::Mod{a: Register::R0, b: Register::R2, c: Register::R1});
+            c.execute_instruction(Register{o: MOD, a: 0, b: 2, c: 1});
             assert_eq!(2, c.regs[0]);
 
         }
 
+    }
+}
+
+/*
         #[test]
         fn test_execute_immediate_arithmetic_instructions() {
             let mut c = Computer::new();
@@ -196,23 +220,23 @@ mod tests {
             c.regs[1] = 10;
             c.regs[2] = 32;
             // R.a = R.b + im
-            c.execute_instruction(Instruction::Addi{a: Register::R0, b: Register::R1, im: 32});
+            c.execute_instruction(Instruction::Addi{a: 0, b: 1, im: 32});
             assert_eq!(42, c.regs[0]);
 
             // R.a = R.b - im
-            c.execute_instruction(Instruction::Subi{a: Register::R0, b: Register::R1, im: 32});
+            c.execute_instruction(Instruction::Subi{a: 0, b: 1, im: 32});
             assert_eq!(-22, c.regs[0]);
 
             // R.a = R.b * im
-            c.execute_instruction(Instruction::Muli{a: Register::R0, b: Register::R1, im: 32});
+            c.execute_instruction(Instruction::Muli{a: 0, b: 1, im: 32});
             assert_eq!(320, c.regs[0]);
 
             // R.a = R.b / im
-            c.execute_instruction(Instruction::Divi{a: Register::R0, b: Register::R2, im: 10});
+            c.execute_instruction(Instruction::Divi{a: 0, b: 2, im: 10});
             assert_eq!(3, c.regs[0]);
 
             // R.a = R.b % im
-            c.execute_instruction(Instruction::Modi{a: Register::R0, b: Register::R2, im: 10});
+            c.execute_instruction(Instruction::Modi{a: 0, b: 2, im: 10});
             assert_eq!(2, c.regs[0]);
 
         }
@@ -225,7 +249,7 @@ mod tests {
             c.regs[1] = 10;
             c.regs[2] = 32;
 
-            c.execute_instruction(Instruction::Cmp{b: Register::R1, c: Register::R2});
+            c.execute_instruction(Instruction::Cmp{b: 1, c: 2});
             // R.b == R.c ?
             assert_eq!(false, c.z_test);
             // R.b < R.c ?
@@ -233,7 +257,7 @@ mod tests {
 
             c.regs[1] = 10;
             c.regs[2] = 10;
-            c.execute_instruction(Instruction::Cmp{b: Register::R1, c: Register::R2});
+            c.execute_instruction(Instruction::Cmp{b: 1, c: 2});
             // R.b == R.c ?
             assert_eq!(true, c.z_test);
             // R.b < R.c ?
@@ -241,7 +265,7 @@ mod tests {
 
             c.regs[1] = -32;
             c.regs[2] = 10;
-            c.execute_instruction(Instruction::Cmp{b: Register::R1, c: Register::R2});
+            c.execute_instruction(Instruction::Cmp{b: 1, c: 2});
             // R.b == R.c ?
             assert_eq!(false, c.z_test);
             // R.b < R.c ?
@@ -254,19 +278,19 @@ mod tests {
             c.regs[0] = 0;
             c.regs[1] = 10;
 
-            c.execute_instruction(Instruction::Cmpi{b: Register::R1, im: -32});
+            c.execute_instruction(Instruction::Cmpi{b: 1, im: -32});
             // R.b == R.c ?
             assert_eq!(false, c.z_test);
             // R.b < R.c ?
             assert_eq!(false, c.neg_test);
 
-            c.execute_instruction(Instruction::Cmpi{b: Register::R1, im: 10});
+            c.execute_instruction(Instruction::Cmpi{b: 1, im: 10});
             // R.b == R.c ?
             assert_eq!(true, c.z_test);
             // R.b < R.c ?
             assert_eq!(false, c.neg_test);
 
-            c.execute_instruction(Instruction::Cmpi{b: Register::R1, im: 32});
+            c.execute_instruction(Instruction::Cmpi{b: 1, im: 32});
             // R.b == R.c ?
             assert_eq!(false, c.z_test);
             // R.b < R.c ?
@@ -277,14 +301,14 @@ mod tests {
         fn test_execute_chki() {
             let mut c = Computer::new();
             c.regs[0] = 30;
-            c.execute_instruction(Instruction::Chki{a: Register::R0, im: 32});
+            c.execute_instruction(Instruction::Chki{a: 0, im: 32});
             assert_eq!(c.regs[0], 30);
 
-            c.execute_instruction(Instruction::Chki{a: Register::R0, im: 15});
+            c.execute_instruction(Instruction::Chki{a: 0, im: 15});
             assert_eq!(c.regs[0], 0);
 
             c.regs[0] = -10;
-            c.execute_instruction(Instruction::Chki{a: Register::R0, im: 15});
+            c.execute_instruction(Instruction::Chki{a: 0, im: 15});
             assert_eq!(c.regs[0], 0);
         }
     }
@@ -303,7 +327,7 @@ mod tests {
             // Or at least I'm goint to assume that
             c.mem[14] = 42;
 
-            c.execute_instruction(Instruction::Ldw{a: Register::R0, b: Register::R1, disp: 4});
+            c.execute_instruction(Instruction::Ldw{a: 0, b: 1, disp: 4});
             assert_eq!(c.regs[0], 42);
 
             // TODO(pht) LDB is not implemented, but will it be needed ?
@@ -318,14 +342,14 @@ mod tests {
 
             // NOTE(pht) : the instruction description for PSH and POP are
             // not the same as the implementation.
-            // We'll trust the implementations: 
+            // We'll trust the implementations:
             // ```
             // PSH:
             //  DEC(R[b], c);
             //  M[(R[b]) DIV 4] := R[a]
             //
             // ```
-            c.execute_instruction(Instruction::Psh{a: Register::R0, b: Register::R1, disp: 1});
+            c.execute_instruction(Instruction::Psh{a: 0, b: 1, disp: 1});
             assert_eq!(c.regs[1], 9);
             assert_eq!(c.mem[9], 42);
 
@@ -335,7 +359,7 @@ mod tests {
             //  R[a] := M[(R[b]) DIV 4];
             //  INC(R[b], c)
             // ```
-            c.execute_instruction(Instruction::Pop{a: Register::R0, b: Register::R1, disp: 1});
+            c.execute_instruction(Instruction::Pop{a: 0, b: 1, disp: 1});
             assert_eq!(c.regs[0], 42);
             assert_eq!(c.regs[1], 10);
 
@@ -349,7 +373,7 @@ mod tests {
             c.regs[1] = 10;
 
             // M[(R[b] + c) DIV 4] := R[a]
-            c.execute_instruction(Instruction::Stw{a: Register::R0, b: Register::R1, disp: 2});
+            c.execute_instruction(Instruction::Stw{a: 0, b: 1, disp: 2});
             assert_eq!(c.mem[12], 42);
         }
 
@@ -360,10 +384,10 @@ mod tests {
         let mut c = Computer::new();
 
         // Prepare memory
-        let instruction = Instruction::Mov{a: Register::R0, b: 1, c: Register::R2};
+        let instruction = Instruction::Mov{a: 0, b: 1, c: 2};
         let instruction_data = Instruction::encode(instruction);
 
-        // NOTE(pht): strictly speaking, the instructions is an u32, 
+        // NOTE(pht): strictly speaking, the instructions is an u32,
         // but it's only here to do bitpacking; so this cast is required.
         c.mem[1] = instruction_data as i32;
 
@@ -392,3 +416,4 @@ mod tests {
 
 
 }
+*/

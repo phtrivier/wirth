@@ -58,9 +58,9 @@ pub enum BranchOpCode {
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Instruction {
     Register{o: RegisterOpCode, a: usize, b: usize, c: usize},
-    RegisterIm{o : RegisterImOpCode, a: usize, b: usize, im: usize},
+    RegisterIm{o : RegisterImOpCode, a: usize, b: usize, im: i32},
     Memory{o: MemoryOpCode, a: usize, b: usize, disp: usize},
-    Branch{ o: BranchOpCode, disp: i32 }
+    Branch{ o: BranchOpCode, disp: usize }
 /*
     Mov {a: Register, b: u8, c: Register},
     Mvn {a: Register, b: u8, c: Register},
@@ -137,41 +137,41 @@ impl Instruction {
         }
     }
 
-    fn encode_f0(opcode: RegisterOpCode, a: usize, b: u32, c: u32) -> u32 {
+    fn encode_f0(opcode: RegisterOpCode, a: usize, b: usize, c: usize) -> u32 {
         // 00(2) [op](4) a(4) b(4) im (18)
         return 0b00_0000_0000_0000_00_00_00_00_00_00_00_00_00
             | (opcode as u32) << (32 - 2 - 4)
             | (a as u32) << (32 - 2 - 4 - 4)
-            | b << (32 - 2 - 4 - 4 - 4)
+            | (b as u32) << (32 - 2 - 4 - 4 - 4)
             | c
             as u32;
     }
 
-    fn encode_f1(opcode: u32, a: u32, b: u32, im: i32) -> u32 {
+    fn encode_f1(opcode: RegisterImOpCode, a: usize, b: usize, im: i32) -> u32 {
         // 01(2) [op](4) a(4) b(4) im (18)
         return 0b01_0000_0000_0000_00_00_00_00_00_00_00_00_00
-            | opcode << (32 - 2 - 4)
-            | a << (32 - 2 - 4 - 4)
-            | b << (32 - 2 - 4 - 4 - 4)
+            | (opcode as u32) << (32 - 2 - 4)
+            | (a as u32) << (32 - 2 - 4 - 4)
+            | (b as u32) << (32 - 2 - 4 - 4 - 4)
             | im
             as u32;
     }
 
-    fn encode_f2(opcode: u32, a: u32, b: u32, disp: i32) -> u32 {
+    fn encode_f2(opcode: MemoryOpCode, a: usize, b: usize, disp: usize) -> u32 {
         // 10(2) [op](4) a(4) b(4) disp (18)
         return 0b10_0000_0000_0000_00_00_00_00_00_00_00_00_00
-            | opcode << (32 - 2 - 4)
-            | a << (32 - 2 - 4 - 4)
-            | b << (32 - 2 - 4 - 4 - 4)
+            | (opcode as u32) << (32 - 2 - 4)
+            | (a as u32) << (32 - 2 - 4 - 4)
+            | (b as u32) << (32 - 2 - 4 - 4 - 4)
             | disp
             as u32;
     }
 
-    fn encode_f3(opcode: u32, disp: i32) -> u32 {
+    fn encode_f3(opcode: BranchOpCode, disp: usize) -> u32 {
         // 11(2) [op](4) dest (28)
         // But warning, the op code is too big to fit on 4 bits
         return 0b11_0000_00_00_00_00_00_00_00_00_00_00_00_00_00
-            | (opcode % 0x10) << (32 - 2 - 4)
+            | ((opcode as u32) % 0x10) << (32 - 2 - 4)
             | disp
             as u32;
     }
@@ -184,149 +184,35 @@ impl Instruction {
         c := IR MOD 40000H
         */
 
-        let fail = Err(InstructionParseError::InvalidInstruction(i));
+        let op = (i / 0x4000000) as u8;
+        let a = ((i / 0x400000) % 0x10) as usize;
+        let b = ((i / 0x40000) % 0x10) as usize;
+        let c = (i % 0x40000) as usize;
 
-        let raw_op = u8::try_from(i / 0x4000000);
-        if raw_op.is_err() {
-            return fail;
-        }
-        let parsed_op = OpCode::try_from(raw_op.unwrap());
-
-        let raw_a = u8::try_from((i / 0x400000) % 0x10);
-        if raw_a.is_err() {
-            return fail;
-        }
-        let parsed_a = Register::try_from(raw_a.unwrap());
-
-        let b = ((i / 0x40000) % 0x10) as u8;
-
-        let raw_c = u8::try_from(i % 0x40000);
-        if raw_c.is_err() {
-            return fail;
-        }
-        let parsed_c = Register::try_from(raw_c.unwrap());
-
-        if parsed_op.is_err() || parsed_a.is_err() || parsed_c.is_err() {
-            return fail;
-        }
-
-        let mut im = i % 0x40000;
+        let mut im = (i % 0x40000) as i32;
         if im > 0x20000 {
             im = im - 0x40000;
         }
-        let parsed_im = i32::try_from(im);
 
-        let (op, a, c) = (parsed_op.unwrap(), parsed_a.unwrap(), parsed_c.unwrap());
-
-        // Ok, parsing would be *much* easier with opcodes that would be simple integers :/
-
-        match op {
-            OpCode::MOV => return Ok(Instruction::Mov{a: a, b: b, c: c}),
-            OpCode::MVN => return Ok(Instruction::Mvn{a: a, b: b, c: c}),
-            _ => ()
+        let mut disp = (i % 0x40000) as usize;
+        if disp > 0x2000000 {
+            disp = disp - 0x4000000
         }
 
-        if let Ok(im) = parsed_im {
-            match op {
-                OpCode::MOVI => {
-                    return Ok(Instruction::Movi{a, b, im});
-                }
-                OpCode::MVNI => {
-                    return Ok(Instruction::Mvni{a, b, im});
-                }
-                _ => ()
-            }
+        if let Ok(o) = RegisterOpCode::try_from(op) {
+            return Ok(Instruction::Register{o: o, a, b, c})
+        }
+        if let Ok(o) = RegisterImOpCode::try_from(op) {
+            return Ok(Instruction::RegisterIm{o: o, a, b, im})
+        }
+        if let Ok(o) = MemoryOpCode::try_from(op) {
+            return Ok(Instruction::Memory{o, a, b, disp})
+        }
+        if let Ok(o) = BranchOpCode::try_from(op)  {
+            return Ok(Instruction::Branch{o, disp})
         }
 
-        if let Ok(b) = Register::try_from(b) {
-            match op {
-                OpCode::ADD => {
-                    return Ok(Instruction::Add{a, b, c});
-                },
-                OpCode::SUB => {
-                    return Ok(Instruction::Sub{a, b, c});
-                },
-                OpCode::MUL => {
-                    return Ok(Instruction::Mul{a, b, c});
-                },
-                OpCode::DIV => {
-                    return Ok(Instruction::Div{a, b, c});
-                },
-                OpCode::MOD => {
-                    return Ok(Instruction::Mod{a, b, c});
-                }
-                OpCode::CMP => {
-                    return Ok(Instruction::Cmp{b, c});
-                }
-                _ => ()
-            }
-        }
-
-        if let (Ok(b), Ok(im)) = (Register::try_from(b), parsed_im) {
-            match op {
-                OpCode::ADDI => {
-                    return Ok(Instruction::Addi{a, b, im});
-                }
-                OpCode::SUBI => {
-                    return Ok(Instruction::Subi{a, b, im});
-                }
-                OpCode::MULI => {
-                    return Ok(Instruction::Muli{a, b, im});
-                }
-                OpCode::DIVI => {
-                    return Ok(Instruction::Divi{a, b, im});
-                }
-                OpCode::MODI => {
-                    return Ok(Instruction::Modi{a, b, im});
-                }
-                OpCode::CMPI => {
-                    return Ok(Instruction::Cmpi{b, im});
-                }
-
-                OpCode::CHKI => {
-                    return Ok(Instruction::Chki{a, im});
-                }
-
-                OpCode::LDW => {
-                    if let Ok(b) = Register::try_from(b) {
-                        return Ok(Instruction::Ldw{a, b, disp: im});
-                    }
-                }
-
-                OpCode::POP => {
-                    if let Ok(b) = Register::try_from(b) {
-                        return Ok(Instruction::Pop{a, b, disp: im});
-                    }
-                }
-                OpCode::PSH => {
-                    if let Ok(b) = Register::try_from(b) {
-                        return Ok(Instruction::Psh{a, b, disp: im});
-                    }
-                }
-                OpCode::STW => {
-                    if let Ok(b) = Register::try_from(b) {
-                        return Ok(Instruction::Stw{a, b, disp: im});
-                    }
-                }
-
-                _ => ()
-            }
-        }
-
-        let mut dest = i % 0x40000;
-        if dest > 0x2000000 {
-            dest = dest - 0x4000000
-        }
-        let parsed_dest = i32::try_from(dest);
-        let parsed_branch_op = BranchOpCode::try_from(raw_op.unwrap());
-
-        println!("Parsed dest :{:?}, parsed branch op {:?}", parsed_dest, parsed_branch_op);
-
-        if let (Ok(branch_op), Ok(dest)) = (parsed_branch_op, parsed_dest) {
-            return Ok(Instruction::Branch{o: branch_op, dest: dest})
-        }
-
-        return fail;
+        return Err(InstructionParseError::InvalidInstruction(i));
 
     }
 
@@ -371,14 +257,13 @@ mod tests {
 
     #[test]
     fn test_encode_f0_instructions() {
-        assert_both(Instruction::Mov{a: Register::R2, b: 5, c: Register::R1}, 0b00_0000_0010_0101_00000000000000_0001);
-        assert_both(Instruction::Mvn{a: Register::R3, b: 2, c: Register::R4}, 0b00_0001_0011_0010_00000000000000_0100);
+        assert_both(Instruction::Register{o: RegisterOpCode::MOV , a: 2, b: 5, c: 1}, 0b00_0000_0010_0101_00000000000000_0001);
+        assert_both(Instruction::Register{o: RegisterOpCode::MVN, a: 3, b: 2, c: 4}, 0b00_0001_0011_0010_00000000000000_0100);
     }
 
     #[test]
     fn test_encode_f3_instructions() {
-        assert_both(Instruction::Branch{o: BranchOpCode::BEQ, dest: 4}, 0b11_0000_00000000000000000000000100);
-
+        assert_both(Instruction::Branch{o: BranchOpCode::BEQ, disp: 4}, 0b11_0000_00000000000000000000000100);
     }
 
 
