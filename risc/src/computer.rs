@@ -48,97 +48,92 @@ impl Computer {
                     RegisterOpCode::MOV => {
                         self.regs[a] = self.regs[c] << b;
                     }
-                    _ => ()
-                }
-
-
-            }
-            _ => ()
-        }
-        /*
-        match i {
-            Instruction::Mov{a, b, c} => {
-                let index_a = a as usize;
-                let index_c = c as usize;
-                self.regs[index_a] = self.regs[index_c] << b;
-            }
-            Instruction::Mvn{a, b, c} => {
-                let index_a = a as usize;
-                let index_c = c as usize;
-                self.regs[index_a] = - (self.regs[index_c] << b);
-            }
-            Instruction::Add{a, b, c} => {
-                self.regs[a as usize] = self.regs[b as usize] + self.regs[c as usize];
-            }
-            Instruction::Sub{a, b, c} => {
-                self.regs[a as usize] = self.regs[b as usize] - self.regs[c as usize];
-            }
-            Instruction::Mul{a, b, c} => {
-                self.regs[a as usize] = self.regs[b as usize] * self.regs[c as usize];
-            }
-            Instruction::Div{a, b, c} => {
-                self.regs[a as usize] = self.regs[b as usize] / self.regs[c as usize];
-            }
-            Instruction::Mod{a, b, c} => {
-                self.regs[a as usize] = self.regs[b as usize] % self.regs[c as usize];
-            }
-            Instruction::Cmp{b, c} => {
-                let (reg_b, reg_c) = (self.regs[b as usize], self.regs[c as usize]);
-                self.z_test = reg_b == reg_c;
-                self.neg_test = reg_b < reg_c;
-            }
-            Instruction::Movi{a, b, im} => {
-                self.regs[a as usize] = im << b;
-            }
-            Instruction::Mvni{a, b, im} => {
-                self.regs[a as usize] = -(im << b);
-            }
-            Instruction::Addi{a, b, im} => {
-                self.regs[a as usize] = self.regs[b as usize] + im;
-            }
-            Instruction::Subi{a, b, im} => {
-                self.regs[a as usize] = self.regs[b as usize] - im;
-            }
-            Instruction::Muli{a, b, im} => {
-                self.regs[a as usize] = self.regs[b as usize] * im;
-            }
-            Instruction::Divi{a, b, im} => {
-                self.regs[a as usize] = self.regs[b as usize] / im;
-            }
-            Instruction::Modi{a, b, im} => {
-                self.regs[a as usize] = self.regs[b as usize] % im;
-            }
-            Instruction::Cmpi{b, im} => {
-                let reg_b = self.regs[b as usize];
-                self.z_test = reg_b == im;
-                self.neg_test = reg_b < im;
-            }
-
-            Instruction::Chki{a, im} => {
-                let reg_a = self.regs[a as usize];
-                if reg_a < 0 || reg_a > im {
-                    self.regs[a as usize] = 0;
+                    RegisterOpCode::MVN => {
+                        self.regs[a] = - (self.regs[c] << b);
+                    }
+                    RegisterOpCode::ADD  => {
+                        self.regs[a] = self.regs[b] + self.regs[c];
+                    }
+                    RegisterOpCode::SUB  => {
+                        self.regs[a] = self.regs[b] - self.regs[c];
+                    }
+                    RegisterOpCode::MUL  => {
+                        self.regs[a] = self.regs[b] * self.regs[c];
+                    }
+                    RegisterOpCode::DIV  => {
+                        self.regs[a] = self.regs[b] / self.regs[c];
+                    }
+                    RegisterOpCode::MOD  => {
+                        self.regs[a] = self.regs[b] % self.regs[c];
+                    }
+                    RegisterOpCode::CMP => {
+                        let (reg_b, reg_c) = (self.regs[b], self.regs[c]);
+                        self.z_test = reg_b == reg_c;
+                        self.neg_test = reg_b < reg_c;
+                    }
                 }
             }
+            Instruction::RegisterIm{o, a, b, im} => {
+                match o {
+                    RegisterImOpCode::MOVI => {
+                        self.regs[a] = im << b;
+                    }
+                    RegisterImOpCode::MVNI => {
+                        self.regs[a] = - (im << b);
+                    }
+                    RegisterImOpCode::ADDI  => {
+                        self.regs[a] = self.regs[b] + im;
+                    }
+                    RegisterImOpCode::SUBI  => {
+                        self.regs[a] = self.regs[b] - im;
+                    }
+                    RegisterImOpCode::MULI  => {
+                        self.regs[a] = self.regs[b] * im;
+                    }
+                    RegisterImOpCode::DIVI  => {
+                        self.regs[a] = self.regs[b] / im;
+                    }
+                    RegisterImOpCode::MODI  => {
+                        self.regs[a] = self.regs[b] % im;
+                    }
+                    RegisterImOpCode::CMPI => {
+                        let reg_b = self.regs[b];
+                        self.z_test = reg_b == im;
+                        self.neg_test = reg_b < im;
+                    }
+                    RegisterImOpCode::CHKI => {
+                        let reg_a = self.regs[a];
+                        if reg_a < 0 || reg_a > im {
+                            self.regs[a] = 0;
+                        }
+                    }
+                }
+            }
+            Instruction::Memory{ o, a, b, disp} => {
+                match o {
+                    MemoryOpCode::LDW => {
+                        let b_add = self.regs[b] as usize;
+                        self.regs[a] = self.mem[(b_add + disp) as usize];
+                    }
+                    MemoryOpCode::POP => {
+                        self.regs[a] = self.mem[self.regs[b] as usize];
+                        self.regs[b] = ((self.regs[b] as usize) + disp) as i32;
 
-            Instruction::Ldw{a, b, disp} => {
-                let b_add = self.regs[b as usize];
-                self.regs[a as usize] = self.mem[(b_add + disp) as usize];
+                    }
+                    MemoryOpCode::PSH => {
+                        self.regs[b] = ((self.regs[b] as usize) - disp) as i32;
+                        self.mem[self.regs[b] as usize] = self.regs[a];
+                    }
+                    MemoryOpCode::STW => {
+                        self.mem[((self.regs[b] as usize) + disp)] = self.regs[a];
+                    }
+                }
             }
-            Instruction::Pop{a, b, disp} => {
-                self.regs[a as usize] = self.mem[self.regs[b as usize] as usize];
-                self.regs[b as usize] = self.regs[b as usize] + disp;
-            }
-            Instruction::Psh{a, b, disp} => {
-                self.regs[b as usize] = self.regs[b as usize] - disp;
-                self.mem[self.regs[b as usize] as usize] = self.regs[a as usize];
-            }
-            Instruction::Stw{a, b, disp} => {
-                self.mem[(self.regs[b as usize] + disp) as usize] = self.regs[a as usize];
-            }
+
+            // TODO(pht) branch instructions !
             _ => ()
         }
-         */
+
     }
 }
 
@@ -146,15 +141,15 @@ impl Computer {
 mod tests {
 
     use super::*;
+    use crate::instructions::Instruction::*;
+    use crate::instructions::RegisterOpCode::*;
+    use crate::instructions::RegisterImOpCode::*;
+    use crate::instructions::MemoryOpCode::*;
+//    use crate::instructions::BranchOpCode::*;
 
     mod execute_registers_instruction {
 
         use super::*;
-        use crate::instructions::Instruction::*;
-        use crate::instructions::RegisterOpCode::*;
-        use crate::instructions::RegisterImOpCode::*;
-        use crate::instructions::MemoryOpCode::*;
-        use crate::instructions::BranchOpCode::*;
 
         #[test]
         fn test_execute_register_move_instruction() {
@@ -209,38 +204,32 @@ mod tests {
 
         }
 
-    }
-}
-
-/*
         #[test]
         fn test_execute_immediate_arithmetic_instructions() {
             let mut c = Computer::new();
             c.regs[0] = 0;
             c.regs[1] = 10;
-            c.regs[2] = 32;
-            // R.a = R.b + im
-            c.execute_instruction(Instruction::Addi{a: 0, b: 1, im: 32});
+
+            c.execute_instruction(RegisterIm{o: ADDI, a: 0, b: 1, im: 32});
             assert_eq!(42, c.regs[0]);
 
             // R.a = R.b - im
-            c.execute_instruction(Instruction::Subi{a: 0, b: 1, im: 32});
+            c.execute_instruction(RegisterIm{o: SUBI, a: 0, b: 1, im: 32});
             assert_eq!(-22, c.regs[0]);
 
             // R.a = R.b * im
-            c.execute_instruction(Instruction::Muli{a: 0, b: 1, im: 32});
+            c.execute_instruction(RegisterIm{o: MULI, a: 0, b: 1, im: 32});
             assert_eq!(320, c.regs[0]);
 
             // R.a = R.b / im
-            c.execute_instruction(Instruction::Divi{a: 0, b: 2, im: 10});
+            c.execute_instruction(RegisterIm{o: DIVI, a: 0, b: 1, im: 3});
             assert_eq!(3, c.regs[0]);
 
             // R.a = R.b % im
-            c.execute_instruction(Instruction::Modi{a: 0, b: 2, im: 10});
-            assert_eq!(2, c.regs[0]);
+            c.execute_instruction(RegisterIm{o: MODI, a: 0, b: 1, im: 3});
+            assert_eq!(1, c.regs[0]);
 
         }
-
 
         #[test]
         fn test_execute_register_compare(){
@@ -249,7 +238,7 @@ mod tests {
             c.regs[1] = 10;
             c.regs[2] = 32;
 
-            c.execute_instruction(Instruction::Cmp{b: 1, c: 2});
+            c.execute_instruction(Register{o: CMP, a: 0, b: 1, c: 2});
             // R.b == R.c ?
             assert_eq!(false, c.z_test);
             // R.b < R.c ?
@@ -257,7 +246,7 @@ mod tests {
 
             c.regs[1] = 10;
             c.regs[2] = 10;
-            c.execute_instruction(Instruction::Cmp{b: 1, c: 2});
+            c.execute_instruction(Register{o: CMP, a: 0, b: 1, c: 2});
             // R.b == R.c ?
             assert_eq!(true, c.z_test);
             // R.b < R.c ?
@@ -265,7 +254,7 @@ mod tests {
 
             c.regs[1] = -32;
             c.regs[2] = 10;
-            c.execute_instruction(Instruction::Cmp{b: 1, c: 2});
+            c.execute_instruction(Register{o: CMP, a: 0, b: 1, c: 2});
             // R.b == R.c ?
             assert_eq!(false, c.z_test);
             // R.b < R.c ?
@@ -278,22 +267,16 @@ mod tests {
             c.regs[0] = 0;
             c.regs[1] = 10;
 
-            c.execute_instruction(Instruction::Cmpi{b: 1, im: -32});
-            // R.b == R.c ?
+            c.execute_instruction(RegisterIm{o: CMPI, a: 0, b: 1, im: -32});
             assert_eq!(false, c.z_test);
-            // R.b < R.c ?
             assert_eq!(false, c.neg_test);
 
-            c.execute_instruction(Instruction::Cmpi{b: 1, im: 10});
-            // R.b == R.c ?
+            c.execute_instruction(RegisterIm{o: CMPI, a: 0, b: 1, im: 10});
             assert_eq!(true, c.z_test);
-            // R.b < R.c ?
             assert_eq!(false, c.neg_test);
 
-            c.execute_instruction(Instruction::Cmpi{b: 1, im: 32});
-            // R.b == R.c ?
+            c.execute_instruction(RegisterIm{o: CMPI, a: 0, b: 1, im: 32});
             assert_eq!(false, c.z_test);
-            // R.b < R.c ?
             assert_eq!(true, c.neg_test);
         }
 
@@ -301,14 +284,14 @@ mod tests {
         fn test_execute_chki() {
             let mut c = Computer::new();
             c.regs[0] = 30;
-            c.execute_instruction(Instruction::Chki{a: 0, im: 32});
+            c.execute_instruction(RegisterIm{o: CHKI, b: 0, a: 0, im: 32});
             assert_eq!(c.regs[0], 30);
 
-            c.execute_instruction(Instruction::Chki{a: 0, im: 15});
+            c.execute_instruction(RegisterIm{o: CHKI, b: 0, a: 0, im: 15});
             assert_eq!(c.regs[0], 0);
 
             c.regs[0] = -10;
-            c.execute_instruction(Instruction::Chki{a: 0, im: 15});
+            c.execute_instruction(RegisterIm{o: CHKI, b: 0, a: 0, im: 15});
             assert_eq!(c.regs[0], 0);
         }
     }
@@ -327,7 +310,7 @@ mod tests {
             // Or at least I'm goint to assume that
             c.mem[14] = 42;
 
-            c.execute_instruction(Instruction::Ldw{a: 0, b: 1, disp: 4});
+            c.execute_instruction(Memory{o: LDW, a: 0, b: 1, disp: 4});
             assert_eq!(c.regs[0], 42);
 
             // TODO(pht) LDB is not implemented, but will it be needed ?
@@ -349,7 +332,7 @@ mod tests {
             //  M[(R[b]) DIV 4] := R[a]
             //
             // ```
-            c.execute_instruction(Instruction::Psh{a: 0, b: 1, disp: 1});
+            c.execute_instruction(Memory{o: PSH, a: 0, b: 1, disp: 1});
             assert_eq!(c.regs[1], 9);
             assert_eq!(c.mem[9], 42);
 
@@ -359,7 +342,7 @@ mod tests {
             //  R[a] := M[(R[b]) DIV 4];
             //  INC(R[b], c)
             // ```
-            c.execute_instruction(Instruction::Pop{a: 0, b: 1, disp: 1});
+            c.execute_instruction(Memory{o: POP, a: 0, b: 1, disp: 1});
             assert_eq!(c.regs[0], 42);
             assert_eq!(c.regs[1], 10);
 
@@ -373,10 +356,19 @@ mod tests {
             c.regs[1] = 10;
 
             // M[(R[b] + c) DIV 4] := R[a]
-            c.execute_instruction(Instruction::Stw{a: 0, b: 1, disp: 2});
+            c.execute_instruction(Memory{o: STW, a: 0, b: 1, disp: 2});
             assert_eq!(c.mem[12], 42);
         }
 
+    }
+
+    mod execute_branch_instructions {
+        use super::*;
+
+        #[test]
+        fn test_branch_instructions() {
+            // TODO(pht)
+        }
     }
 
     #[test]
@@ -384,7 +376,7 @@ mod tests {
         let mut c = Computer::new();
 
         // Prepare memory
-        let instruction = Instruction::Mov{a: 0, b: 1, c: 2};
+        let instruction = Register{o: MOV, a: 0, b: 1, c: 2};
         let instruction_data = Instruction::encode(instruction);
 
         // NOTE(pht): strictly speaking, the instructions is an u32,
@@ -416,4 +408,3 @@ mod tests {
 
 
 }
-*/
