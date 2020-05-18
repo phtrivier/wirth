@@ -61,36 +61,6 @@ pub enum Instruction {
     RegisterIm{o : RegisterImOpCode, a: usize, b: usize, im: i32},
     Memory{o: MemoryOpCode, a: usize, b: usize, disp: usize},
     Branch{ o: BranchOpCode, disp: usize }
-/*
-    Mov {a: Register, b: u8, c: Register},
-    Mvn {a: Register, b: u8, c: Register},
-    Add {a: Register, b: Register, c: Register},
-    Sub {a: Register, b: Register, c: Register},
-    Mul {a: Register, b: Register, c: Register},
-    Div {a: Register, b: Register, c: Register},
-    Mod {a: Register, b: Register, c: Register},
-    Cmp {b: Register, c: Register},
-
-    Movi { a: Register, b: u8, im: i32 },
-    Mvni { a: Register, b: u8, im: i32 },
-    Addi {a: Register, b: Register, im: i32},
-    Subi {a: Register, b: Register, im: i32},
-    Muli {a: Register, b: Register, im: i32},
-    Divi {a: Register, b: Register, im: i32},
-    Modi {a: Register, b: Register, im: i32},
-    Cmpi {b: Register, im: i32},
-
-    Chki {a: Register, im: i32},
-
-    Ldw {a: Register, b: Register, disp: i32},
-    Pop {a: Register, b: Register, disp: i32},
-    Psh {a: Register, b: Register, disp: i32},
-
-    Stw {a: Register, b: Register, disp: i32},
-*/
-
-
-
 }
 
 #[derive(Debug)]
@@ -105,35 +75,6 @@ impl Instruction {
             Instruction::RegisterIm{o, a, b, im} => Instruction::encode_f1(o, a, b, im),
             Instruction::Memory{o, a, b, disp} => Instruction::encode_f2(o, a, b, disp),
             Instruction::Branch{o, disp} => Instruction::encode_f3(o, disp),
-
-            /*
-            Instruction::Mov{a, b, c} => Instruction::encode_f0(OpCode::MOV, a, b, c),
-            Instruction::Mvn{a, b, c} => Instruction::encode_f0(OpCode::MVN, a, b, c),
-            Instruction::Add{a, b, c} => Instruction::encode_f0(OpCode::ADD, a, b as u8, c),
-            Instruction::Sub{a, b, c} => Instruction::encode_f0(OpCode::SUB, a, b as u8, c),
-            Instruction::Mul{a, b, c} => Instruction::encode_f0(OpCode::MUL, a, b as u8, c),
-            Instruction::Div{a, b, c} => Instruction::encode_f0(OpCode::DIV, a, b as u8, c),
-            Instruction::Mod{a, b, c} => Instruction::encode_f0(OpCode::MOD, a, b as u8, c),
-            Instruction::Cmp{b, c} => Instruction::encode_f0(OpCode::CMP, Register::R0, b as u8, c),
-
-            Instruction::Movi{a, b, im} => Instruction::encode_f1(OpCode::MOVI, a, b, im),
-            Instruction::Mvni{a, b, im} => Instruction::encode_f1(OpCode::MVNI, a, b, im),
-            Instruction::Addi{a, b, im} => Instruction::encode_f1(OpCode::ADDI, a, b as u8, im),
-            Instruction::Subi{a, b, im} => Instruction::encode_f1(OpCode::SUBI, a, b as u8, im),
-            Instruction::Muli{a, b, im} => Instruction::encode_f1(OpCode::MULI, a, b as u8, im),
-            Instruction::Divi{a, b, im} => Instruction::encode_f1(OpCode::DIVI, a, b as u8, im),
-            Instruction::Modi{a, b, im} => Instruction::encode_f1(OpCode::MODI, a, b as u8, im),
-            Instruction::Cmpi{b, im } => Instruction::encode_f1(OpCode::CMPI, Register::R0, b as u8, im),
-
-            Instruction::Chki{a, im} => Instruction::encode_f1(OpCode::CHKI, a, 0, im),
-
-            Instruction::Ldw{a, b, disp} => Instruction::encode_f2(OpCode::LDW, a, b as u8, disp),
-            Instruction::Pop{a, b, disp} => Instruction::encode_f2(OpCode::POP, a, b as u8, disp),
-            Instruction::Psh{a, b, disp} => Instruction::encode_f2(OpCode::PSH, a, b as u8, disp),
-            Instruction::Stw{a, b, disp} => Instruction::encode_f2(OpCode::STW, a, b as u8, disp),
-
-            Instruction::Branch{o, dest} => Instruction::encode_f3(o, dest)
-*/
         }
     }
 

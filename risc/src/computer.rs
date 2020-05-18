@@ -129,9 +129,52 @@ impl Computer {
                     }
                 }
             }
-
-            // TODO(pht) branch instructions !
-            _ => ()
+            Instruction::Branch { o, disp } => {
+                match o {
+                    BranchOpCode::BEQ => {
+                        if self.z_test {
+                            self.regs[15] = self.regs[15] + (disp as i32);
+                        }
+                    }
+                    BranchOpCode::BLT => {
+                        if self.neg_test {
+                            self.regs[15] = self.regs[15] + (disp as i32);
+                        }
+                    }
+                    BranchOpCode::BLE => {
+                        if self.neg_test || self.z_test {
+                            self.regs[15] = self.regs[15] + (disp as i32);
+                        }
+                    }
+                    BranchOpCode::BNE => {
+                        if !self.z_test {
+                            self.regs[15] = self.regs[15] + (disp as i32);
+                        }
+                    }
+                    BranchOpCode::BGE => {
+                        if !self.neg_test {
+                            self.regs[15] = self.regs[15] + (disp as i32);
+                        }
+                    }
+                    BranchOpCode::BGT => {
+                        if !self.neg_test && !self.z_test {
+                            self.regs[15] = self.regs[15] + (disp as i32);
+                        }
+                    }
+                    BranchOpCode::BR => {
+                        self.regs[15] = self.regs[15] + (disp as i32);
+                    }
+                    BranchOpCode::BSR => {
+                        self.regs[14] = self.regs[15];
+                        self.regs[15] = self.regs[15] + (disp as i32);
+                    }
+                    BranchOpCode::RET => {
+                        // TODO(pht) If I ever get bitten, make a Ret{c: Register} command instead of taking the end of disp...
+                        let index = (disp % 0x10) as usize;
+                        self.regs[15] = self.regs[index]
+                    }
+                }
+            }
         }
 
     }
@@ -145,7 +188,7 @@ mod tests {
     use crate::instructions::RegisterOpCode::*;
     use crate::instructions::RegisterImOpCode::*;
     use crate::instructions::MemoryOpCode::*;
-//    use crate::instructions::BranchOpCode::*;
+    use crate::instructions::BranchOpCode::*;
 
     mod execute_registers_instruction {
 
@@ -367,7 +410,43 @@ mod tests {
 
         #[test]
         fn test_branch_instructions() {
-            // TODO(pht)
+            let mut c = Computer::new();
+            c.regs[0] = 42;
+            c.regs[1] = 10;
+            c.regs[15] = 40;
+
+            c.z_test = true;
+            c.execute_instruction(Branch{o: BEQ, disp: 1});
+            assert_eq!(c.regs[15], 41);
+
+            c.neg_test = true;
+            c.execute_instruction(Branch{o: BLT, disp: 2});
+            assert_eq!(c.regs[15], 43);
+
+            c.execute_instruction(Branch{o: BLE, disp: 3});
+            assert_eq!(c.regs[15], 46);
+
+            c.z_test = false;
+            c.neg_test = false;
+
+            c.execute_instruction(Branch{o: BNE, disp: 1});
+            assert_eq!(c.regs[15], 47);
+
+            c.execute_instruction(Branch{o: BGE, disp: 2});
+            assert_eq!(c.regs[15], 49);
+
+            c.execute_instruction(Branch{o: BGT, disp: 3});
+            assert_eq!(c.regs[15], 52);
+
+            c.execute_instruction(Branch{o: BR, disp: 12});
+            assert_eq!(c.regs[15], 64);
+
+            c.execute_instruction(Branch{o: BSR, disp: 10});
+            assert_eq!(c.regs[14], 64);
+            assert_eq!(c.regs[15], 74);
+
+            c.execute_instruction(Branch{o: RET, disp: 1});
+            assert_eq!(c.regs[15], 10);
         }
     }
 
@@ -399,10 +478,31 @@ mod tests {
     #[test]
     fn test_program_execution_to_end() {
 
-        // Memory:
-        // 1: Mov{a: R0, b: 1, c: R2}
+        let mut c = Computer::new();
 
-        // Should do the same as ear
+        // TODO(pht) a more ambitious program
+        // a = 5
+        // if a > 3 {
+        //    return 0
+        // } else {
+        //    return 1
+        // }
+
+        // Prepare memory
+
+        // MAIN:  MOVI $0, 5 ; R.0 = 5
+        // let instruction = RegisterIm{o: MOVI, a: 0, b: 0, im: 5};
+        // let instruction_data = Instruction::encode(instruction);
+        // c.mem[1] = instruction_data as i32;
+
+        //        CMPI $0, 3; Z <- R.0 == 3 ; N <-R.0 < 3
+        //        BLE  $0, RET1
+        // RET0   MOVI $0, 0 ; load result
+        //        MOVI $1, 0 ; load return address to end
+        //        RET  $0
+        // RET1   MOVI $0, 1 ; load result
+        //        MOVI $1, 0 ; load return address to end
+        //        RET  $0
 
     }
 
