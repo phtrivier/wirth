@@ -8,7 +8,10 @@ pub struct Computer {
 
     // Test flags
     pub z_test: bool,
-    pub neg_test: bool
+    pub neg_test: bool,
+
+    // Done flag to stop execution loop
+    pub done_flag: bool
 }
 
 impl Computer {
@@ -17,7 +20,8 @@ impl Computer {
             regs: [0; 16],
             mem: [0; 4096],
             z_test: false,
-            neg_test: false
+            neg_test: false,
+            done_flag: false
         }
     }
 
@@ -27,17 +31,33 @@ impl Computer {
         }
     }
 
-    pub fn execute(&mut self) {
-        let next_pc_address = self.regs[15] + 1; // memory is byte-address;
-        let ir : i32 = self.mem[next_pc_address as usize];
+    pub fn execute(&mut self, max: u32) {
+        self.done_flag = false;
+        self.regs[15] = 0;
 
-        // NOTE(pht): we panic if instruction is invalid.
-        let instruction = Instruction::parse(ir as u32).unwrap();
+        let mut i = 0;
 
-        self.execute_instruction(instruction);
+        loop {
+            // NOTE(pht) I might be doing this loop wrong... anyway
+            self.regs[15] = self.regs[15] + 1;
+            let next_pc_address = self.regs[15]; // memory is byte-address;
+            let ir : i32 = self.mem[next_pc_address as usize];
 
-        // TODO(pht) now add a loop with some kind of end condition, and
-        // you have yourself an actual computer !
+            // NOTE(pht): we panic if instruction is invalid.
+            let instruction = Instruction::parse(ir as u32).unwrap();
+
+            println!("Instruction {:?}", instruction);
+
+            self.execute_instruction(instruction);
+
+            println!("PC ? {:?}", self.regs[15]);
+            println!("Done ? {:?}", self.done_flag);
+
+            if i > max || self.done_flag {
+                break;
+            }
+            i = i + 1;
+        }
     }
 
     pub fn execute_instruction(&mut self, i: Instruction) {
@@ -171,7 +191,10 @@ impl Computer {
                     BranchOpCode::RET => {
                         // TODO(pht) If I ever get bitten, make a Ret{c: Register} command instead of taking the end of disp...
                         let index = (disp % 0x10) as usize;
-                        self.regs[15] = self.regs[index]
+                        self.regs[15] = self.regs[index];
+                        if self.regs[15] == 0 {
+                            self.done_flag = true;
+                        }
                     }
                 }
             }
@@ -447,32 +470,12 @@ mod tests {
 
             c.execute_instruction(Branch{o: RET, disp: 1});
             assert_eq!(c.regs[15], 10);
+
+            c.regs[1] = 0;
+            c.execute_instruction(Branch{o: RET, disp: 1});
+            assert_eq!(c.regs[15], 0);
+            assert_eq!(c.done_flag, true);
         }
-    }
-
-    #[test]
-    fn test_execute_next_instruction() {
-        let mut c = Computer::new();
-
-        // Prepare memory
-        let instruction = Register{o: MOV, a: 0, b: 1, c: 2};
-        let instruction_data = Instruction::encode(instruction);
-
-        // NOTE(pht): strictly speaking, the instructions is an u32,
-        // but it's only here to do bitpacking; so this cast is required.
-        c.mem[1] = instruction_data as i32;
-
-        // TODO(pht) c.mem[2] = Instruction::Ret(0)
-
-        // Prepare registers
-        c.regs[2] = 42;
-        c.regs[15] = 0;
-
-        // Run the code
-        c.execute();
-
-        // Check that the register was changed
-        assert_eq!(84, c.regs[0])
     }
 
     #[test]
@@ -480,6 +483,30 @@ mod tests {
 
         let mut c = Computer::new();
 
+        // MOVI $0, 5
+        let mut instruction = RegisterIm{o: MOVI, a: 0, b: 0, im: 5};
+        let mut instruction_data = Instruction::encode(instruction);
+        c.mem[1] = instruction_data as i32;
+
+        // MOVI $1, 10
+        instruction = RegisterIm{o: MOVI, a: 1, b: 0, im: 10};
+        instruction_data = Instruction::encode(instruction);
+        c.mem[2] = instruction_data as i32;
+
+        // RET $2
+        instruction = Branch{o: RET, disp: 2};
+        instruction_data = Instruction::encode(instruction);
+        c.mem[3] = instruction_data as i32;
+
+        c.execute(5);
+
+        assert_eq!(c.done_flag, true);
+        assert_eq!(c.regs[0], 5);
+        assert_eq!(c.regs[1], 10);
+    }
+
+    #[test]
+    fn test_ambitious_program() {
         // TODO(pht) a more ambitious program
         // a = 5
         // if a > 3 {
@@ -505,6 +532,5 @@ mod tests {
         //        RET  $0
 
     }
-
 
 }
