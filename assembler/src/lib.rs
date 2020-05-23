@@ -145,27 +145,59 @@ impl Assembler {
 
     fn parse_op_params(&mut self, index: u32, op: &str, params: &str) -> Result<Instruction, ParseError> {
         if let Ok(op) = RegisterOpCode::from_str(op) {
-            if let Some((a,b,c)) = self.parse_params3(params) {
+
+            // TODO(pht) CMP
+
+            if let Some((a,b,c)) = self.parse_params_a_b_c(params) {
                 let instruction = Instruction::Register { o: op, a, b, c };
                 return Ok(instruction);
             }
         }
 
         if let Ok(op) = RegisterImOpCode::from_str(op) {
-            if let Some((a,b,im)) = self.parse_params3(params) {
-                let instruction = Instruction::RegisterIm { o: op, a, b, im: im as i32 };
+
+            match op {
+                RegisterImOpCode::CHKI => if let Some((a,b,im)) = self.parse_params_a_im(params) {
+                    let instruction = Instruction::RegisterIm { o: op, a, b, im: im as i32 };
+                    return Ok(instruction);    
+                }
+                RegisterImOpCode::CMPI => if let Some((a,b,im)) = self.parse_params_b_im(params) {
+                    let instruction = Instruction::RegisterIm { o: op, a, b, im: im as i32 };
+                    return Ok(instruction);    
+                }
+                _ => {
+                    if let Some((a,b,im)) = self.parse_params_a_b_c(params) {
+                        let instruction = Instruction::RegisterIm { o: op, a, b, im: im as i32 };
+                        return Ok(instruction);
+                    }
+                }
+            }
+
+        }
+
+        if let Ok(op) = MemoryOpCode::from_str(op) {
+            if let Some((a,b,disp)) = self.parse_params_a_b_im(params) {
+                let instruction = Instruction::Memory { o: op, a, b, disp };
                 return Ok(instruction);
             }
         }
+
+        if let Ok(op) = BranchOpCode::from_str(op) {
+            if let Ok(disp) = params.parse::<i32>() {
+                let instruction = Instruction::Branch { o: op, disp};
+                return Ok(instruction)
+            }
+        }
+
         return Err(ParseError::SyntaxError { index: index });
     }
 
-    fn parse_params3(&self, params: &str) -> Option<(usize, usize, usize)> {
+    fn parse_params_a_b_c(&self, params: &str) -> Option<(usize, usize, usize)> {
         let mut split = params.split(",");
         let (a, b, c) = (split.next(), split.next(), split.next());
         println!("After splitting ({:?},{:?},{:?}", a, b, c);
         if let (Some(a), Some(b), Some(c)) = (a, b, c) {
-            let (a, b, c) = (self.parse_value(a), self.parse_value(b), self.parse_value(c));
+            let (a, b, c) = (self.parse_register(a), self.parse_register(b), self.parse_register(c));
             println!("After parsing value ({:?},{:?},{:?}", a, b, c);
             if let (Ok(a), Ok(b), Ok(c)) = (a, b, c) {
                 return Some((a,b,c))
@@ -174,14 +206,56 @@ impl Assembler {
         return None;
     }
 
-    fn parse_value(&self, s: &str) -> Result<usize, std::num::ParseIntError> {
+    fn parse_params_a_b_im(&self, params: &str) -> Option<(usize, usize, i32)> {
+        let mut split = params.split(",");
+        let (a, b, c) = (split.next(), split.next(), split.next());
+        println!("After splitting ({:?},{:?},{:?}", a, b, c);
+        if let (Some(a), Some(b), Some(c)) = (a, b, c) {
+            let (a, b, c) = (self.parse_register(a), self.parse_register(b), self.parse_im(c));
+            println!("After parsing value ({:?},{:?},{:?}", a, b, c);
+            if let (Ok(a), Ok(b), Ok(c)) = (a, b, c) {
+                return Some((a,b,c))
+            }
+        }
+        return None;
+    }
+
+    fn parse_params_b_im(&self, params: &str) -> Option<(usize, usize, i32)> {
+        let mut split = params.split(",");
+        let (b, c) = (split.next(), split.next());
+        if let (Some(b), Some(c)) = (b, c) {
+            let (b, c) = (self.parse_register(b), self.parse_im(c));
+            if let (Ok(b), Ok(c)) = (b, c) {
+                return Some((0,b,c))
+            }
+        }
+        return None;
+    }
+
+    fn parse_params_a_im(&self, params: &str) -> Option<(usize, usize, i32)> {
+        let mut split = params.split(",");
+        let (a, c) = (split.next(), split.next());
+        if let (Some(a), Some(c)) = (a, c) {
+            let (a, c) = (self.parse_register(a), self.parse_im(c));
+            if let (Ok(a), Ok(c)) = (a, c) {
+                return Some((a,0,c))
+            }
+        }
+        return None;
+    }
+
+    fn parse_register(&self, s: &str) -> Result<usize, std::num::ParseIntError> {
         if let Some(&symbol) = self.symbols.get(s) {
             return Ok(symbol as usize);
         }
-        if let Some(&disp) = self.disps.get(s) {
-            return Ok(disp as usize);
-        }
         return s.parse::<usize>();
+    }
+
+    fn parse_im(&self, s: &str) -> Result<i32, std::num::ParseIntError> {
+        if let Some(&symbol) = self.symbols.get(s) {
+            return Ok(symbol as i32);
+        }
+        return s.parse::<i32>();
     }
 }
 
@@ -275,6 +349,20 @@ mod tests {
                     im: 32,
                 },
             ),
+            (    "CMPI R1,3",
+                Instruction::RegisterIm {
+                    o: RegisterImOpCode::CMPI,
+                    a: 0,
+                    b: 1,
+                    im: 3,
+                }),
+            (    "CHKI R1,#FOO",
+                Instruction::RegisterIm {
+                    o: RegisterImOpCode::CHKI,
+                    a: 1,
+                    b: 0,
+                    im: 32,
+                }),
             (
                 "ADD R0,R1,R3",
                 Instruction::Register {
@@ -283,11 +371,40 @@ mod tests {
                     b: 1,
                     c: 3,
                 },
-            )
+            ),
+            (
+                "LDW R0,R1,#FOO",
+                Instruction::Memory{
+                    o: MemoryOpCode::LDW,
+                    a: 0,
+                    b: 1,
+                    disp: 32
+                }
+            ),
+            (
+                "BNE 15",
+                Instruction::Branch{
+                    o: BranchOpCode::BNE,
+                    disp: 15
+                }
+            )            
         ];
         for test in tests.iter() {
             let (line, expected) = test;
             assert_eq!(a.parse_instruction(0, line), Ok(*expected))
         }
+    }
+    #[test]
+    #[allow(unused)]
+    fn it_computes_relative_displacements() {
+        let mut a = Assembler::new();
+        a.parse_line(0, "#FOO 42");
+        a.parse_line(1, "MOVI R0,0,1");
+        a.parse_line(2, "@LOOP SUBI R0,0,0");
+        a.parse_line(3, "CMPI R0,0");
+        let parsed = a.parse_instruction(4, "BNE @LOOP");
+        assert_eq!(Some(1), a.origin);
+        // TODO(pht) make this pass by interpreting the @LOOP as a displacement...
+        assert_eq!(Ok(Instruction::Branch{o: BranchOpCode::BNE, disp: -2}), parsed)
     }
 }

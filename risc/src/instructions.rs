@@ -75,11 +75,11 @@ pub enum Instruction {
         o: MemoryOpCode,
         a: usize,
         b: usize,
-        disp: usize,
+        disp: i32,
     },
     Branch {
         o: BranchOpCode,
-        disp: usize,
+        disp: i32,
     },
 }
 
@@ -116,7 +116,7 @@ impl Instruction {
             | im as u32;
     }
 
-    fn encode_f2(opcode: MemoryOpCode, a: usize, b: usize, disp: usize) -> u32 {
+    fn encode_f2(opcode: MemoryOpCode, a: usize, b: usize, disp: i32) -> u32 {
         // 10(2) [op](4) a(4) b(4) disp (18)
         return 0b10_0000_0000_0000_00_00_00_00_00_00_00_00_00
             | (opcode as u32) << (32 - 2 - 4)
@@ -125,7 +125,7 @@ impl Instruction {
             | disp as u32;
     }
 
-    fn encode_f3(opcode: BranchOpCode, disp: usize) -> u32 {
+    fn encode_f3(opcode: BranchOpCode, disp: i32) -> u32 {
         // 11(2) [op](4) dest (28)
         // But warning, the op code is too big to fit on 4 bits
         return 0b11_0000_00_00_00_00_00_00_00_00_00_00_00_00_00
@@ -151,7 +151,7 @@ impl Instruction {
             im = im - 0x40000;
         }
 
-        let mut disp = (i % 0x40000) as usize;
+        let mut disp = (i % 0x40000) as i32;
         if disp > 0x2000000 {
             disp = disp - 0x4000000
         }

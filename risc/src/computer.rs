@@ -127,18 +127,18 @@ impl Computer {
             Instruction::Memory { o, a, b, disp } => match o {
                 MemoryOpCode::LDW => {
                     let b_add = self.regs[b] as usize;
-                    self.regs[a] = self.mem[(b_add + disp) as usize];
+                    self.regs[a] = self.mem[(b_add as i32 + disp) as usize];
                 }
                 MemoryOpCode::POP => {
                     self.regs[a] = self.mem[self.regs[b] as usize];
-                    self.regs[b] = ((self.regs[b] as usize) + disp) as i32;
+                    self.regs[b] = ((self.regs[b] as i32) + disp) as i32;
                 }
                 MemoryOpCode::PSH => {
-                    self.regs[b] = ((self.regs[b] as usize) - disp) as i32;
+                    self.regs[b] = self.regs[b] - disp;
                     self.mem[self.regs[b] as usize] = self.regs[a];
                 }
                 MemoryOpCode::STW => {
-                    self.mem[((self.regs[b] as usize) + disp)] = self.regs[a];
+                    self.mem[(self.regs[b] + disp) as usize] = self.regs[a];
                 }
             },
             Instruction::Branch { o, disp } => {
