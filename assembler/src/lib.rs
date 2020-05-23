@@ -41,6 +41,7 @@ We can then `encode` those instructions into a vec of i32 that can be memcopied 
 */
 
 use risc::instructions::*;
+use std::fmt;
 
 use std::collections::HashMap;
 
@@ -68,10 +69,19 @@ pub enum ParseResult {
 impl Assembler {
     #[allow(dead_code)]
     pub fn new<'a>() -> Assembler {
+
+        let mut symbols = HashMap::new(); 
+
+        for i in 0..16 {
+            symbols.insert(format!("R{}", i), i);
+        }
+
+        println!("{:?}", symbols["R0"]);
+
         Assembler{
             origin: None,
             instructions: vec![],
-            symbols: HashMap::new(),
+            symbols: symbols,
             disps: HashMap::new()
         }
     }
@@ -134,7 +144,37 @@ impl Assembler {
     }
 
     fn parse_op_params(&mut self, index: u32, op: &str, params: &str) -> Result<ParseResult, ParseError> {
-        return Ok(ParseResult::Instruction)
+     
+        match op {
+            "MOVI" => {
+                let mut split = params.split(",");
+                let (a, b, c) = (split.next(), split.next(), split.next());
+                println!("After splitting ({:?},{:?},{:?}", a,b,c);
+                if let (Some(a), Some(b), Some(c)) = (a,b,c) {
+                    let (a,b,c) = (self.parse_value(a),self.parse_value(b),self.parse_value(c));
+                    println!("After parsing value ({:?},{:?},{:?}", a,b,c);
+                    if let (Ok(a), Ok(b), Ok(c)) = (a,b,c) {
+                        let instruction = Instruction::RegisterIm{o: RegisterImOpCode::MOVI, a, b, im: c as i32};
+                        self.instructions.push(instruction);
+                        return Ok(ParseResult::Instruction)
+                    }
+                }
+
+            }
+            _ => {}
+        }
+
+        return Err(ParseError::SyntaxError{index: index})
+    }
+
+    fn parse_value(&self, s: &str) -> Result<usize, std::num::ParseIntError> {
+        if let Some(&symbol) = self.symbols.get(s) {
+            return Ok(symbol as usize);
+        }
+        if let Some(&disp) = self.disps.get(s) {
+            return Ok(disp as usize);
+        }
+        return s.parse::<usize>();
     }
 
 }
@@ -185,6 +225,6 @@ mod tests {
         assert_eq!(a.disps["@START"], 1);
         assert_eq!(Ok(ParseResult::Instruction), parsed);
 
-        assert_eq!(Instruction::RegisterIm{o: RegisterImOpCode::MOVI, a: 1, b: 42, im: 32}, a.instructions[0])
+        assert_eq!(Instruction::RegisterIm{o: RegisterImOpCode::MOVI, a: 1, b: 42, im: 32}, a.instructions[1])
     }
 }
