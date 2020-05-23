@@ -144,21 +144,34 @@ impl Assembler {
     }
 
     fn parse_op_params(&mut self, index: u32, op: &str, params: &str) -> Result<Instruction, ParseError> {
-        if let Ok(op) = RegisterImOpCode::from_str(op) {
-            let mut split = params.split(",");
-            let (a, b, c) = (split.next(), split.next(), split.next());
-            println!("After splitting ({:?},{:?},{:?}", a, b, c);
-            if let (Some(a), Some(b), Some(c)) = (a, b, c) {
-                let (a, b, c) = (self.parse_value(a), self.parse_value(b), self.parse_value(c));
-                println!("After parsing value ({:?},{:?},{:?}", a, b, c);
-                if let (Ok(a), Ok(b), Ok(c)) = (a, b, c) {
-                    let instruction = Instruction::RegisterIm { o: op, a, b, im: c as i32 };
-                    return Ok(instruction);
-                }
+        if let Ok(op) = RegisterOpCode::from_str(op) {
+            if let Some((a,b,c)) = self.parse_params3(params) {
+                let instruction = Instruction::Register { o: op, a, b, c };
+                return Ok(instruction);
             }
         }
 
+        if let Ok(op) = RegisterImOpCode::from_str(op) {
+            if let Some((a,b,im)) = self.parse_params3(params) {
+                let instruction = Instruction::RegisterIm { o: op, a, b, im: im as i32 };
+                return Ok(instruction);
+            }
+        }
         return Err(ParseError::SyntaxError { index: index });
+    }
+
+    fn parse_params3(&self, params: &str) -> Option<(usize, usize, usize)> {
+        let mut split = params.split(",");
+        let (a, b, c) = (split.next(), split.next(), split.next());
+        println!("After splitting ({:?},{:?},{:?}", a, b, c);
+        if let (Some(a), Some(b), Some(c)) = (a, b, c) {
+            let (a, b, c) = (self.parse_value(a), self.parse_value(b), self.parse_value(c));
+            println!("After parsing value ({:?},{:?},{:?}", a, b, c);
+            if let (Ok(a), Ok(b), Ok(c)) = (a, b, c) {
+                return Some((a,b,c))
+            }
+        }
+        return None;
     }
 
     fn parse_value(&self, s: &str) -> Result<usize, std::num::ParseIntError> {
@@ -232,6 +245,7 @@ mod tests {
     #[test]
     fn it_converts_lines_to_instructions() {
         let mut a = Assembler::new();
+        a.symbols.insert("#FOO".to_string(), 32);
 
         let tests = [
             (
@@ -244,7 +258,7 @@ mod tests {
                 },
             ),
             (
-                "MVNI R0,2,32 ; Some comment",
+                "MVNI R0,2,#FOO ; Some comment",
                 Instruction::RegisterIm {
                     o: RegisterImOpCode::MVNI,
                     a: 0,
@@ -252,6 +266,24 @@ mod tests {
                     im: 32,
                 },
             ),
+            (
+                "ADDI R5,R12,#FOO ; Some comment",
+                Instruction::RegisterIm {
+                    o: RegisterImOpCode::ADDI,
+                    a: 5,
+                    b: 12,
+                    im: 32,
+                },
+            ),
+            (
+                "ADD R0,R1,R3",
+                Instruction::Register {
+                    o: RegisterOpCode::ADD,
+                    a: 0,
+                    b: 1,
+                    c: 3,
+                },
+            )
         ];
         for test in tests.iter() {
             let (line, expected) = test;
