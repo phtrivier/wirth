@@ -1,6 +1,6 @@
+use crate::scanner::ScanError;
 use crate::scanner::Scanner;
 use crate::scanner::Token;
-use crate::scanner::ScanError;
 
 // NOTE(pht) I have to make this copyable otherwise, returning a ParseError as the
 // right side of the error is cumbersome.
@@ -9,13 +9,13 @@ use crate::scanner::ScanError;
 pub enum ParseError {
     ScanError(ScanError),
     UnexpectedToken,
-    PrematureEOF
+    PrematureEOF,
 }
 
 pub struct Parser<'a> {
     scanner: Scanner<'a>,
     token: Token,
-    result: Result<(), ParseError>
+    result: Result<(), ParseError>,
 }
 
 impl Parser<'_> {
@@ -27,21 +27,21 @@ impl Parser<'_> {
         return match scanner.scan() {
             Ok(Some(token)) => {
                 println!("Initial token {:?}", token);
-                let mut parser = Parser{
-                        scanner: scanner,
-                        token: token,
-                        result: Ok(())
+                let mut parser = Parser {
+                    scanner: scanner,
+                    token: token,
+                    result: Ok(()),
                 };
                 // return parser.expression();
                 // return parser.term()
                 match parser.selector() {
                     Ok(_) => Ok(()),
-                    e => e
+                    e => e,
                 }
             }
             Ok(None) => Err(ParseError::PrematureEOF),
             // TODO(pht) find a way to associate the ScanError to the parse error, otherwise it's lost :/
-            Err(scan_error) => Err(ParseError::ScanError(scan_error))
+            Err(scan_error) => Err(ParseError::ScanError(scan_error)),
         };
     }
 
@@ -51,13 +51,11 @@ impl Parser<'_> {
                 println!("Next token {:?}", token);
                 self.token = token;
                 self.result = Ok(());
-            },
+            }
             Ok(None) => {
                 self.result = Ok(());
-            },
-            Err(scan_error) => {
-                self.result = Err(ParseError::ScanError(scan_error))
             }
+            Err(scan_error) => self.result = Err(ParseError::ScanError(scan_error)),
         }
     }
 
@@ -66,7 +64,7 @@ impl Parser<'_> {
     }
 
     fn expression(&mut self) -> Result<(), ParseError> {
-        return self.term()
+        return self.term();
         // // TODO(pht) full experessions, this only support terms at the moment
         // match self.token {
         //     Token::Int(_) => {
@@ -88,7 +86,7 @@ impl Parser<'_> {
                             match self.token {
                                 Token::Rbrak => {
                                     self.next();
-                                    return self.current()
+                                    return self.current();
                                 }
                                 _ => {
                                     return Err(ParseError::UnexpectedToken);
@@ -96,7 +94,7 @@ impl Parser<'_> {
                             }
                         }
                     }
-                    return self.current()
+                    return self.current();
                 }
                 Token::Period => {
                     self.next();
@@ -109,14 +107,11 @@ impl Parser<'_> {
                                 } else {
                                     return self.current();
                                 }
-
                             }
-                            _ => {
-                                return Err(ParseError::UnexpectedToken)
-                            }
+                            _ => return Err(ParseError::UnexpectedToken),
                         }
                     }
-                    return self.current()
+                    return self.current();
                 }
                 _ => {
                     return Err(ParseError::UnexpectedToken);
@@ -131,8 +126,7 @@ impl Parser<'_> {
                 self.next();
                 return self.current();
             }
-            _ => Err(ParseError::UnexpectedToken)
+            _ => Err(ParseError::UnexpectedToken),
         }
     }
-
 }

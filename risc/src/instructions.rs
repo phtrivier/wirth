@@ -1,11 +1,13 @@
 /**
  * Computer Instruction Parsing and Encoding.
  */
+extern crate strum;
 
-use std::convert::TryFrom;
 use num_enum::TryFromPrimitive;
+use std::convert::TryFrom;
+use strum_macros::EnumString;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, TryFromPrimitive, EnumString)]
 #[repr(u8)]
 pub enum RegisterOpCode {
     MOV = 0,
@@ -18,7 +20,7 @@ pub enum RegisterOpCode {
     CMP = 7,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, TryFromPrimitive, EnumString)]
 #[repr(u8)]
 pub enum RegisterImOpCode {
     MOVI = 16,
@@ -29,10 +31,10 @@ pub enum RegisterImOpCode {
     DIVI = 21,
     MODI = 22,
     CMPI = 23,
-    CHKI = 24
+    CHKI = 24,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, TryFromPrimitive, EnumString)]
 #[repr(u8)]
 pub enum MemoryOpCode {
     LDW = 32,
@@ -41,7 +43,7 @@ pub enum MemoryOpCode {
     PSH = 38,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, TryFromPrimitive, EnumString)]
 #[repr(u8)]
 pub enum BranchOpCode {
     BEQ = 48,
@@ -57,24 +59,42 @@ pub enum BranchOpCode {
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Instruction {
-    Register{o: RegisterOpCode, a: usize, b: usize, c: usize},
-    RegisterIm{o : RegisterImOpCode, a: usize, b: usize, im: i32},
-    Memory{o: MemoryOpCode, a: usize, b: usize, disp: usize},
-    Branch{ o: BranchOpCode, disp: usize }
+    Register {
+        o: RegisterOpCode,
+        a: usize,
+        b: usize,
+        c: usize,
+    },
+    RegisterIm {
+        o: RegisterImOpCode,
+        a: usize,
+        b: usize,
+        im: i32,
+    },
+    Memory {
+        o: MemoryOpCode,
+        a: usize,
+        b: usize,
+        disp: usize,
+    },
+    Branch {
+        o: BranchOpCode,
+        disp: usize,
+    },
 }
 
 #[derive(Debug)]
 pub enum InstructionParseError {
-    InvalidInstruction(u32)
+    InvalidInstruction(u32),
 }
 
 impl Instruction {
-    pub fn encode(i : Instruction) -> u32 {
+    pub fn encode(i: Instruction) -> u32 {
         match i {
-            Instruction::Register{o, a, b, c} => Instruction::encode_f0(o, a, b, c),
-            Instruction::RegisterIm{o, a, b, im} => Instruction::encode_f1(o, a, b, im),
-            Instruction::Memory{o, a, b, disp} => Instruction::encode_f2(o, a, b, disp),
-            Instruction::Branch{o, disp} => Instruction::encode_f3(o, disp),
+            Instruction::Register { o, a, b, c } => Instruction::encode_f0(o, a, b, c),
+            Instruction::RegisterIm { o, a, b, im } => Instruction::encode_f1(o, a, b, im),
+            Instruction::Memory { o, a, b, disp } => Instruction::encode_f2(o, a, b, disp),
+            Instruction::Branch { o, disp } => Instruction::encode_f3(o, disp),
         }
     }
 
@@ -84,8 +104,7 @@ impl Instruction {
             | (opcode as u32) << (32 - 2 - 4)
             | (a as u32) << (32 - 2 - 4 - 4)
             | (b as u32) << (32 - 2 - 4 - 4 - 4)
-            | c
-            as u32;
+            | c as u32;
     }
 
     fn encode_f1(opcode: RegisterImOpCode, a: usize, b: usize, im: i32) -> u32 {
@@ -94,8 +113,7 @@ impl Instruction {
             | (opcode as u32) << (32 - 2 - 4)
             | (a as u32) << (32 - 2 - 4 - 4)
             | (b as u32) << (32 - 2 - 4 - 4 - 4)
-            | im
-            as u32;
+            | im as u32;
     }
 
     fn encode_f2(opcode: MemoryOpCode, a: usize, b: usize, disp: usize) -> u32 {
@@ -104,8 +122,7 @@ impl Instruction {
             | (opcode as u32) << (32 - 2 - 4)
             | (a as u32) << (32 - 2 - 4 - 4)
             | (b as u32) << (32 - 2 - 4 - 4 - 4)
-            | disp
-            as u32;
+            | disp as u32;
     }
 
     fn encode_f3(opcode: BranchOpCode, disp: usize) -> u32 {
@@ -113,11 +130,10 @@ impl Instruction {
         // But warning, the op code is too big to fit on 4 bits
         return 0b11_0000_00_00_00_00_00_00_00_00_00_00_00_00_00
             | ((opcode as u32) % 0x10) << (32 - 2 - 4)
-            | disp
-            as u32;
+            | disp as u32;
     }
 
-    pub fn parse(i : u32) -> Result<Instruction, InstructionParseError> {
+    pub fn parse(i: u32) -> Result<Instruction, InstructionParseError> {
         /*
          opc := IR DIV 4000000H MOD 40H;
         a := IR DIV 400000H MOD 10H;
@@ -141,22 +157,20 @@ impl Instruction {
         }
 
         if let Ok(o) = RegisterOpCode::try_from(op) {
-            return Ok(Instruction::Register{o: o, a, b, c})
+            return Ok(Instruction::Register { o: o, a, b, c });
         }
         if let Ok(o) = RegisterImOpCode::try_from(op) {
-            return Ok(Instruction::RegisterIm{o: o, a, b, im})
+            return Ok(Instruction::RegisterIm { o: o, a, b, im });
         }
         if let Ok(o) = MemoryOpCode::try_from(op) {
-            return Ok(Instruction::Memory{o, a, b, disp})
+            return Ok(Instruction::Memory { o, a, b, disp });
         }
-        if let Ok(o) = BranchOpCode::try_from(op)  {
-            return Ok(Instruction::Branch{o, disp})
+        if let Ok(o) = BranchOpCode::try_from(op) {
+            return Ok(Instruction::Branch { o, disp });
         }
 
         return Err(InstructionParseError::InvalidInstruction(i));
-
     }
-
 }
 
 #[cfg(test)]
@@ -170,7 +184,10 @@ mod tests {
 
         // Get c as a register index (the first four bits)
         let c_as_register_index = inst % 0x10;
-        assert_eq!(0b00_0000_0000_0000_00_00_00_00_00_00_00_1110, c_as_register_index);
+        assert_eq!(
+            0b00_0000_0000_0000_00_00_00_00_00_00_00_1110,
+            c_as_register_index
+        );
 
         // Get the 18 bits part after the 'f', 'op', 'a' and 'b'
         let im = inst % 0x40000;
@@ -186,7 +203,10 @@ mod tests {
         let neg_im = f1_sign_limit + 1;
         assert_eq!(131073, neg_im);
         let neg_im_with_sign_extension = neg_im - 0x40000;
-        assert_eq!("11111111111111100000000000000001", format!("{:032b}", neg_im_with_sign_extension));
+        assert_eq!(
+            "11111111111111100000000000000001",
+            format!("{:032b}", neg_im_with_sign_extension)
+        );
         assert_eq!(-131071, neg_im_with_sign_extension);
 
         // NOTE: same thing goes for extension for the bigger instructions
@@ -198,22 +218,43 @@ mod tests {
 
     #[test]
     fn test_encode_f0_instructions() {
-        assert_both(Instruction::Register{o: RegisterOpCode::MOV , a: 2, b: 5, c: 1}, 0b00_0000_0010_0101_00000000000000_0001);
-        assert_both(Instruction::Register{o: RegisterOpCode::MVN, a: 3, b: 2, c: 4}, 0b00_0001_0011_0010_00000000000000_0100);
+        assert_both(
+            Instruction::Register {
+                o: RegisterOpCode::MOV,
+                a: 2,
+                b: 5,
+                c: 1,
+            },
+            0b00_0000_0010_0101_00000000000000_0001,
+        );
+        assert_both(
+            Instruction::Register {
+                o: RegisterOpCode::MVN,
+                a: 3,
+                b: 2,
+                c: 4,
+            },
+            0b00_0001_0011_0010_00000000000000_0100,
+        );
     }
 
     #[test]
     fn test_encode_f3_instructions() {
-        assert_both(Instruction::Branch{o: BranchOpCode::BEQ, disp: 4}, 0b11_0000_00000000000000000000000100);
+        assert_both(
+            Instruction::Branch {
+                o: BranchOpCode::BEQ,
+                disp: 4,
+            },
+            0b11_0000_00000000000000000000000100,
+        );
     }
-
 
     fn assert_both(inst: Instruction, i: u32) {
         assert_encoded(inst, i);
         assert_parsed(inst, i);
     }
 
-    fn assert_encoded(inst: Instruction, expected : u32) {
+    fn assert_encoded(inst: Instruction, expected: u32) {
         let actual = Instruction::encode(inst);
         assert_eq!(format!("{:032b}", expected), format!("{:032b}", actual))
     }
@@ -222,5 +263,4 @@ mod tests {
         let parsed = Instruction::parse(i).unwrap();
         assert_eq!(expected, parsed)
     }
-
 }

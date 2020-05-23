@@ -7,6 +7,6 @@ use compiler;
 fn main() {
     match compiler::run() {
         Ok(_) => println!("Parsing successful."),
-        Err(err) => println!("Parsing error {:?}", err)
+        Err(err) => println!("Parsing error {:?}", err),
     }
 }

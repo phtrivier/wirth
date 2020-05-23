@@ -52,7 +52,7 @@ pub enum Token {
 #[derive(Debug, Copy, Clone)]
 pub enum ScanError {
     UnfinishedComment(),
-    InvalidChar(char, u32)
+    InvalidChar(char, u32),
 }
 
 pub struct Scanner<'a> {
@@ -65,10 +65,10 @@ impl Scanner<'_> {
     pub fn new<'a>(content: &'a String) -> Scanner<'a> {
         let mut chars = content.chars();
         let peek = chars.next();
-        Scanner{
+        Scanner {
             line: 1,
             peek: peek,
-            chars: chars
+            chars: chars,
         }
     }
 
@@ -82,15 +82,15 @@ impl Scanner<'_> {
 
     fn is_single_special_char(&self, c: char) -> bool {
         match c {
-            '&' | '+' | '-' | '=' | '#' | ')' | '[' | ']' | ',' | ';' | '.'  | '~' | '*' => true,
-            _ => false
+            '&' | '+' | '-' | '=' | '#' | ')' | '[' | ']' | ',' | ';' | '.' | '~' | '*' => true,
+            _ => false,
         }
     }
 
     fn is_first_special_char_of_combination(&self, c: char) -> bool {
         match c {
             '<' | '>' | ':' | '(' => true,
-            _ => false
+            _ => false,
         }
     }
 
@@ -102,7 +102,7 @@ impl Scanner<'_> {
     fn skip_newline(&mut self) -> Result<Option<Token>, ScanError> {
         self.line = self.line + 1;
         self.read_next();
-        return self.scan();        
+        return self.scan();
     }
 
     fn scan_number(&mut self, d: char) -> Result<Option<Token>, ScanError> {
@@ -110,15 +110,17 @@ impl Scanner<'_> {
         loop {
             self.read_next();
             match self.peek {
-                Some(d) => {
-                    match d.to_digit(10) {
-                        Some(n) => {
-                            v = 10*v + n;
-                        }
-                        _ => { break; }
+                Some(d) => match d.to_digit(10) {
+                    Some(n) => {
+                        v = 10 * v + n;
+                    }
+                    _ => {
+                        break;
                     }
                 },
-                None => { break; }
+                None => {
+                    break;
+                }
             }
         }
         return Ok(Some(Token::Int(v)));
@@ -127,14 +129,14 @@ impl Scanner<'_> {
     fn skip_comment(&mut self) -> Result<Option<Token>, ScanError> {
         loop {
             self.read_next();
-            match self.peek{
+            match self.peek {
                 Some('*') => {
                     self.read_next();
                     match self.peek {
                         Some(')') => {
                             self.read_next();
-                            return self.scan()
-                        },
+                            return self.scan();
+                        }
                         Some(_) => {
                             continue;
                         }
@@ -142,10 +144,10 @@ impl Scanner<'_> {
                             return Err(ScanError::UnfinishedComment());
                         }
                     }
-                },
+                }
                 Some(_) => {
                     continue;
-                },
+                }
                 None => {
                     return Err(ScanError::UnfinishedComment());
                 }
@@ -153,18 +155,12 @@ impl Scanner<'_> {
         }
     }
 
-    pub fn scan(&mut self) ->  Result<Option<Token>, ScanError> {
+    pub fn scan(&mut self) -> Result<Option<Token>, ScanError> {
         match self.peek {
-            Some(s) if s == ' ' || s == '\t' => {
-                return self.skip_whitespace()
-            },
-            Some(nl) if nl == '\n' => {
-                return self.skip_newline()
-            },
-            Some(d) if d.is_digit(10) => {
-                return self.scan_number(d)
-            },
-            Some(c) if c.is_alphanumeric()=> {
+            Some(s) if s == ' ' || s == '\t' => return self.skip_whitespace(),
+            Some(nl) if nl == '\n' => return self.skip_newline(),
+            Some(d) if d.is_digit(10) => return self.scan_number(d),
+            Some(c) if c.is_alphanumeric() => {
                 let mut w = String::from(c.to_string());
                 loop {
                     self.read_next();
@@ -172,7 +168,9 @@ impl Scanner<'_> {
                         Some(c) if c.is_alphanumeric() => {
                             w.push(c);
                         }
-                        _ => { break; }
+                        _ => {
+                            break;
+                        }
                     }
                 }
 
@@ -200,10 +198,10 @@ impl Scanner<'_> {
                     "MODULE" => Some(Token::Module),
                     "TRUE" => Some(Token::True),
                     "FALSE" => Some(Token::False),
-                    _ => Some(Token::Ident(w.clone()))
+                    _ => Some(Token::Ident(w.clone())),
                 };
-                return Ok(token)
-            },
+                return Ok(token);
+            }
             Some(c) if self.is_single_special_char(c) => {
                 let result = match c {
                     '&' => Ok(Some(Token::And)),
@@ -219,46 +217,42 @@ impl Scanner<'_> {
                     ']' => Ok(Some(Token::Rbrak)),
                     '[' => Ok(Some(Token::Lbrak)),
                     '~' => Ok(Some(Token::Not)),
-                    _ => Err(ScanError::InvalidChar(c, self.line()))
+                    _ => Err(ScanError::InvalidChar(c, self.line())),
                 };
                 self.read_next();
                 return result;
-            },
+            }
             Some(c) if self.is_first_special_char_of_combination(c) => {
                 self.read_next();
 
                 match (c, self.peek) {
-                    ('(', Some('*')) => {
-                        return self.skip_comment()
-                    },
-                    ('(', _) => {
-                        return Ok(Some(Token::Lparen)) 
-                    },
+                    ('(', Some('*')) => return self.skip_comment(),
+                    ('(', _) => return Ok(Some(Token::Lparen)),
                     ('>', Some('=')) => {
                         self.read_next();
                         return Ok(Some(Token::Geq));
-                    },
+                    }
                     ('>', _) => {
                         return Ok(Some(Token::Gtr));
-                    },
+                    }
                     ('<', Some('=')) => {
                         self.read_next();
                         return Ok(Some(Token::Leq));
-                    },
+                    }
                     ('<', _) => {
                         return Ok(Some(Token::Lss));
-                    },
+                    }
                     (':', Some('=')) => {
                         self.read_next();
                         return Ok(Some(Token::Becomes));
-                    },
+                    }
                     (':', _) => {
                         return Ok(Some(Token::Colon));
                     }
-                    _ => panic!("#2 Unexpected char {:?}", self.peek)
+                    _ => panic!("#2 Unexpected char {:?}", self.peek),
                 };
-            },
-            _ => Ok(None)
-        } 
+            }
+            _ => Ok(None),
+        }
     }
 }

@@ -41,36 +41,34 @@ We can then `encode` those instructions into a vec of i32 that can be memcopied 
 */
 
 use risc::instructions::*;
-use std::fmt;
+use std::str::FromStr;
 
 use std::collections::HashMap;
 
 #[allow(dead_code)]
 struct Assembler {
     pub instructions: Vec<Instruction>,
-    pub origin: Option<u32>, // First line in the program that contains instructions
-    pub symbols: HashMap< String, u32>, // Map of symbols like #FOO to their values
-    pub disps: HashMap<String, u32> // Map of symbols like @BAR to displacements from origin
-
+    pub origin: Option<u32>,           // First line in the program that contains instructions
+    pub symbols: HashMap<String, u32>, // Map of symbols like #FOO to their values
+    pub disps: HashMap<String, u32>,   // Map of symbols like @BAR to displacements from origin
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ParseError {
-    SyntaxError{index: u32}
+    SyntaxError { index: u32 },
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ParseResult {
     Comment,
     SymbolDef,
-    Instruction
+    Instruction,
 }
 
 impl Assembler {
     #[allow(dead_code)]
     pub fn new<'a>() -> Assembler {
-
-        let mut symbols = HashMap::new(); 
+        let mut symbols = HashMap::new();
 
         for i in 0..16 {
             symbols.insert(format!("R{}", i), i);
@@ -78,30 +76,33 @@ impl Assembler {
 
         println!("{:?}", symbols["R0"]);
 
-        Assembler{
+        Assembler {
             origin: None,
             instructions: vec![],
             symbols: symbols,
-            disps: HashMap::new()
+            disps: HashMap::new(),
         }
     }
 
     #[allow(dead_code)]
     pub fn parse_line(&mut self, index: u32, line: &str) -> Result<ParseResult, ParseError> {
-
         let l = line.trim_start().trim_end_matches(';').trim_end();
 
         if l.starts_with("*") {
-            return Ok(ParseResult::Comment)
+            return Ok(ParseResult::Comment);
         } else if l.starts_with("#") {
-            return self.parse_symbol_def(index, l)
+            return self.parse_symbol_def(index, l);
         }
 
         if self.origin == None {
             self.origin = Some(index);
         }
 
-        return self.parse_instruction(index, l)
+        if let Ok(instruction) = self.parse_instruction(index, l) {
+            self.instructions.push(instruction);
+            return Ok(ParseResult::Instruction);
+        }
+        return Err(ParseError::SyntaxError { index: index });
     }
 
     fn parse_symbol_def(&mut self, index: u32, line: &str) -> Result<ParseResult, ParseError> {
@@ -115,11 +116,10 @@ impl Assembler {
                 }
             }
         }
-        return Err(ParseError::SyntaxError{index: index})
+        return Err(ParseError::SyntaxError { index: index });
     }
 
-    fn parse_instruction(&mut self, index: u32, line: &str) -> Result<ParseResult, ParseError> {
-
+    fn parse_instruction(&mut self, index: u32, line: &str) -> Result<Instruction, ParseError> {
         let mut tokens = line.split_ascii_whitespace();
 
         if let Some(symbol) = tokens.next() {
@@ -132,7 +132,7 @@ impl Assembler {
                             return self.parse_op_params(index, op, params);
                         }
                     }
-                }    
+                }
             } else {
                 let op = symbol;
                 if let Some(params) = tokens.next() {
@@ -140,31 +140,25 @@ impl Assembler {
                 }
             }
         }
-        return Err(ParseError::SyntaxError{index: index})
+        return Err(ParseError::SyntaxError { index: index });
     }
 
-    fn parse_op_params(&mut self, index: u32, op: &str, params: &str) -> Result<ParseResult, ParseError> {
-     
-        match op {
-            "MOVI" => {
-                let mut split = params.split(",");
-                let (a, b, c) = (split.next(), split.next(), split.next());
-                println!("After splitting ({:?},{:?},{:?}", a,b,c);
-                if let (Some(a), Some(b), Some(c)) = (a,b,c) {
-                    let (a,b,c) = (self.parse_value(a),self.parse_value(b),self.parse_value(c));
-                    println!("After parsing value ({:?},{:?},{:?}", a,b,c);
-                    if let (Ok(a), Ok(b), Ok(c)) = (a,b,c) {
-                        let instruction = Instruction::RegisterIm{o: RegisterImOpCode::MOVI, a, b, im: c as i32};
-                        self.instructions.push(instruction);
-                        return Ok(ParseResult::Instruction)
-                    }
+    fn parse_op_params(&mut self, index: u32, op: &str, params: &str) -> Result<Instruction, ParseError> {
+        if let Ok(op) = RegisterImOpCode::from_str(op) {
+            let mut split = params.split(",");
+            let (a, b, c) = (split.next(), split.next(), split.next());
+            println!("After splitting ({:?},{:?},{:?}", a, b, c);
+            if let (Some(a), Some(b), Some(c)) = (a, b, c) {
+                let (a, b, c) = (self.parse_value(a), self.parse_value(b), self.parse_value(c));
+                println!("After parsing value ({:?},{:?},{:?}", a, b, c);
+                if let (Ok(a), Ok(b), Ok(c)) = (a, b, c) {
+                    let instruction = Instruction::RegisterIm { o: op, a, b, im: c as i32 };
+                    return Ok(instruction);
                 }
-
             }
-            _ => {}
         }
 
-        return Err(ParseError::SyntaxError{index: index})
+        return Err(ParseError::SyntaxError { index: index });
     }
 
     fn parse_value(&self, s: &str) -> Result<usize, std::num::ParseIntError> {
@@ -176,7 +170,6 @@ impl Assembler {
         }
         return s.parse::<usize>();
     }
-
 }
 
 #[cfg(test)]
@@ -200,7 +193,7 @@ mod tests {
         assert_eq!(Ok(ParseResult::SymbolDef), parsed);
         assert_eq!(None, a.origin);
         assert!(a.instructions.is_empty());
-        assert_eq!(a.symbols["#FOO"], 42);        
+        assert_eq!(a.symbols["#FOO"], 42);
     }
 
     #[test]
@@ -220,11 +213,49 @@ mod tests {
         a.parse_line(0, "#FOO 42");
         a.parse_line(1, "#BAR 50");
         a.parse_line(2, "MOVI R0,42,32");
-        let parsed = a.parse_line(3, "@START MOVI R1,42,32");
+        let parsed = a.parse_line(3, "@START MOVI R1,42,32 ; do some stuff");
         assert_eq!(Some(2), a.origin);
         assert_eq!(a.disps["@START"], 1);
         assert_eq!(Ok(ParseResult::Instruction), parsed);
 
-        assert_eq!(Instruction::RegisterIm{o: RegisterImOpCode::MOVI, a: 1, b: 42, im: 32}, a.instructions[1])
+        assert_eq!(
+            Instruction::RegisterIm {
+                o: RegisterImOpCode::MOVI,
+                a: 1,
+                b: 42,
+                im: 32
+            },
+            a.instructions[1]
+        )
+    }
+
+    #[test]
+    fn it_converts_lines_to_instructions() {
+        let mut a = Assembler::new();
+
+        let tests = [
+            (
+                "MOVI R1,42,32",
+                Instruction::RegisterIm {
+                    o: RegisterImOpCode::MOVI,
+                    a: 1,
+                    b: 42,
+                    im: 32,
+                },
+            ),
+            (
+                "MVNI R0,2,32 ; Some comment",
+                Instruction::RegisterIm {
+                    o: RegisterImOpCode::MVNI,
+                    a: 0,
+                    b: 2,
+                    im: 32,
+                },
+            ),
+        ];
+        for test in tests.iter() {
+            let (line, expected) = test;
+            assert_eq!(a.parse_instruction(0, line), Ok(*expected))
+        }
     }
 }
