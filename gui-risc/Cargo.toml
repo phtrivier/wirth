@@ -1,5 +1,5 @@
 [package]
-name = "gui"
+name = "gui-risc"
 version = "0.1.0"
 authors = ["Pierre-Henri Trivier <pierre-henri.trivier@easymile.com>"]
 edition = "2018"
@@ -8,4 +8,5 @@ edition = "2018"
 
 [dependencies]
 risc = { path = "../risc"}
+assembler = { path = "../assembler"}
 raylib = { git = "https://github.com/deltaphc/raylib-rs", branch = "master" }

@@ -29,6 +29,17 @@ impl Computer {
         }
     }
 
+    pub fn load_instructions_at(&mut self, instructions: Vec<Instruction>, base: usize) {
+        for (index, instruction) in instructions.iter().enumerate() {
+            self.mem[base + index] = Instruction::encode(*instruction) as i32;
+        }    
+    }
+
+    pub fn load_instructions(&mut self, instructions: Vec<Instruction>) {
+        self.load_instructions_at(instructions, 0);
+    }
+
+
     pub fn dump_regs(&self) {
         for (index, reg) in self.regs.iter().enumerate() {
             println!("REG {:02}: 0x{:04X} 0b{:032b}", index, reg, reg)
@@ -41,7 +52,7 @@ impl Computer {
         }
     }
 
-    pub fn execute(&mut self, max: u32, base: usize) {
+    pub fn execute_at(&mut self, max: u32, base: usize) {
         self.done_flag = false;
         self.regs[15] = base as i32;
 
@@ -73,6 +84,10 @@ impl Computer {
 
             self.regs[15] = self.next;
         }
+    }
+
+    pub fn execute(&mut self, max: u32) {
+        self.execute_at(max, 0);
     }
 
     pub fn execute_instruction(&mut self, i: Instruction) {

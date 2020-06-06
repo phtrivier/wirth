@@ -20,10 +20,7 @@ fn main() {
 
     // Load instructions
     let mut c = risc::computer::Computer::new();
-    let base : usize = 1;
-    for (index, instruction) in a.instructions.iter().enumerate() {
-        c.mem[base + index] = risc::instructions::Instruction::encode(*instruction) as i32;
-    }
+    c.load_instructions(a.instructions);
 
     // Dump before
     println!("After loading program:");
@@ -32,7 +29,7 @@ fn main() {
 
     // Execute
     println!("Executing program...");
-    c.execute(10, 1);
+    c.execute(10);
 
     // Dump after
     println!("After execution:");
