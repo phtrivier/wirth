@@ -63,19 +63,20 @@ impl Computer {
             
             // NOTE(pht) Next instructions, unless told otherwise.
             self.next = self.regs[15] + 1;
-// K            self.regs[15] = self.regs[15] + 1;
 
             let ir: i32 = self.mem[pc_address as usize];
 
             // NOTE(pht): we panic if instruction is invalid.
             let instruction = Instruction::parse(ir as u32).unwrap();
 
-            println!("Instruction {:?}", instruction);
+            // println!("Instruction {:?}", instruction);
 
             self.execute_instruction(instruction);
 
+            /*
             println!("PC ? {:?}", self.regs[15]);
             println!("Done ? {:?}", self.done_flag);
+            */
 
             if i > max || self.done_flag {
                 break;
@@ -668,7 +669,7 @@ mod tests {
         instruction_data = Instruction::encode(instruction);
         c.mem[3] = instruction_data as i32;
 
-        c.execute(5, 1);
+        c.execute_at(5, 1);
 
         assert_eq!(c.done_flag, true);
         assert_eq!(c.regs[0], 5);

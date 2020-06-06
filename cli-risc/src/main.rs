@@ -1,41 +1,41 @@
-use risc;
 use assembler;
+use risc;
+use std::fs;
+use clap::{App};
 
 fn main() {
+  let matches = App::new("cli-risc")
+    .version("0.0")
+    .author("Pierre-Henri Trivier <phtrivier@yahoo.fr>")
+    .about("Execute assembly language programs for the RISC computer based on Wirth book.")
+    .arg("<INPUT>              'Sets the input file to use'")
+    .get_matches();
 
-    // Assemble a program
-    let mut a = assembler::Assembler::new();
+  let filename = matches.value_of("INPUT").unwrap();
+  let program = fs::read_to_string(filename).expect("Unable to read file.");
 
-    let program = "
-    * A program that increments R0 until it's 3
-    #FOO    3            ; The number of iterations
-            MOVI R0,0,0  ; R0 <- 0
-    @LOOP   ADDI R0,R0,1  ; R0 <- R0 + 1
-            CMPI R0,#FOO ; If iteration done ?
-    * Note that the loop is treated as a displacement
-            BNE  @LOOP      
-    @END    RET  R14    ; Exits since R14 is null in our case
-    ";
-    a.assemble(program).expect("Unable to parse program !");
+  // Assemble a program
+  let mut a = assembler::Assembler::new();
+  a.assemble(&program).expect("Unable to parse program !");
 
-    // Load instructions
-    let mut c = risc::computer::Computer::new();
-    c.load_instructions(a.instructions);
+  // Load instructions
+  let mut c = risc::computer::Computer::new();
+  c.load_instructions(a.instructions);
 
-    // Dump before
-    println!("After loading program:");
-    c.dump_regs();
-    c.dump_mem(0, 15);
+  // Dump before
+  println!("After loading program:");
+  c.dump_regs();
+  c.dump_mem(0, 15);
 
-    // Execute
-    println!("Executing program...");
-    c.execute(10);
+  // Execute
+  println!("Executing program...");
+  c.execute(10);
 
-    // Dump after
-    println!("After execution:");
-    c.dump_regs();
-    c.dump_mem(0, 15);
+  // Dump after
+  println!("After execution:");
+  c.dump_regs();
+  c.dump_mem(0, 15);
 
-    // Success !
-    println!("Value of the Accu R0: {}", c.regs[0]);
+  // Success !
+  println!("Value of the Accu R0: {}", c.regs[0]);
 }

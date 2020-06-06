@@ -1,0 +1,11 @@
+* A program that increments R0 until it's 3
+*
+* First part of the program simply defines constants that can be used afterwards.
+#FOO    3               ; The number of iterations
+* Than the main part of the program appears.
+        MOVI R0,0,0     ; R0 <- 0
+* `@xxx` symbols can be used as symbol for the corresponding memory position of the instruction
+@LOOP   ADDI R0,R0,1    ; R0 <- R0 + 1
+        CMPI R0,#FOO    ; Test if iteration is done
+        BNE  @LOOP      ; Branch to absolute position
+@END    RET  R14        ; Exits (assumes R14 is 0)

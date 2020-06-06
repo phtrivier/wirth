@@ -10,3 +10,4 @@ edition = "2018"
 compiler = { path = "../compiler" }
 risc = { path = "../risc" }
 assembler = { path = "../assembler" }
+clap = "3.0.0-beta.1"
