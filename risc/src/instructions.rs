@@ -258,24 +258,6 @@ mod tests {
 
     #[test]
     fn test_encode_f3_instructions() {
-        /*
-        assert_both(
-            Instruction::Branch {
-                o: BranchOpCode::BEQ,
-                disp: 4,
-            },
-            0b11_0000_00000000000000000000000100,
-        );
-        */
-
-        /*
-        println!("{:08b}", 48);
-        println!("{:08b}", 49);
-
-        println!("{:032b}", -2 as i32);
-        println!("{:032b}", -2 + 0x4000000 as i32);
-        */
-
         assert_encoded(
             Instruction::Branch {
                 o: BranchOpCode::BNE,

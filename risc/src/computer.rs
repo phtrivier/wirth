@@ -69,15 +69,13 @@ impl Computer {
             // NOTE(pht): we panic if instruction is invalid.
             let instruction = Instruction::parse(ir as u32).unwrap();
 
-            // println!("Instruction {:?}", instruction);
+            println!("Instruction {:?}", instruction);
 
             self.execute_instruction(instruction);
 
-            /*
             println!("PC ? {:?}", self.regs[15]);
             println!("Done ? {:?}", self.done_flag);
-            */
-
+            
             if i > max || self.done_flag {
                 break;
             }
@@ -176,51 +174,42 @@ impl Computer {
                 match o {
                     BranchOpCode::BEQ => {
                         if self.z_test {
-                            // self.regs[15] = self.regs[15] + (disp as i32);
                             self.next = self.regs[15] + (disp as i32);
                         }
                     }
                     BranchOpCode::BLT => {
                         if self.neg_test {
-                            // self.regs[15] = self.regs[15] + (disp as i32);
                             self.next = self.regs[15] + (disp as i32);
                         }
                     }
                     BranchOpCode::BLE => {
                         if self.neg_test || self.z_test {
-                            // self.regs[15] = self.regs[15] + (disp as i32);
                             self.next = self.regs[15] + (disp as i32);
                         }
                     }
                     BranchOpCode::BNE => {
                         if !self.z_test {
-                            // self.regs[15] = self.regs[15] + (disp as i32);
                             self.next = self.regs[15] + (disp as i32);
                         }
                     }
                     BranchOpCode::BGE => {
                         if !self.neg_test {
-                            // self.regs[15] = self.regs[15] + (disp as i32);
                             self.next = self.regs[15] + (disp as i32);
                         }
                     }
                     BranchOpCode::BGT => {
                         if !self.neg_test && !self.z_test {
-                            // self.regs[15] = self.regs[15] + (disp as i32);
                             self.next = self.regs[15] + (disp as i32);
                         }
                     }
                     BranchOpCode::BR => {
-                        // self.regs[15] = self.regs[15] + (disp as i32);
                         self.next = self.regs[15] + (disp as i32);
                     }
                     BranchOpCode::BSR => {
                         self.regs[14] = self.regs[15];
-                        // self.regs[15] = self.regs[15] + (disp as i32);
                         self.next = self.regs[15] + (disp as i32);
                     }
                     BranchOpCode::RET => {
-                        // TODO(pht) If I ever get bitten, make a Ret{c: Register} command instead of taking the end of disp...
                         let index = (disp % 0x10) as usize;
                         self.next = self.regs[index];
                         if self.next == 0 {
@@ -591,7 +580,6 @@ mod tests {
     mod execute_branch_instructions {
         use super::*;
 
-        /*
         #[test]
         fn test_branch_instructions() {
             let mut c = Computer::new();
@@ -605,39 +593,38 @@ mod tests {
 
             c.neg_test = true;
             c.execute_instruction(Branch { o: BLT, disp: 2 });
-            assert_eq!(c.next, 43);
+            assert_eq!(c.next, 42);
 
             c.execute_instruction(Branch { o: BLE, disp: 3 });
-            assert_eq!(c.next, 46);
+            assert_eq!(c.next, 43);
 
             c.z_test = false;
             c.neg_test = false;
 
             c.execute_instruction(Branch { o: BNE, disp: 1 });
-            assert_eq!(c.next, 47);
+            assert_eq!(c.next, 41);
 
-            c.execute_instruction(Branch { o: BGE, disp: 2 });
-            assert_eq!(c.next, 49);
+            c.execute_instruction(Branch { o: BGE, disp: -2 });
+            assert_eq!(c.next, 38);
 
             c.execute_instruction(Branch { o: BGT, disp: 3 });
-            assert_eq!(c.next, 52);
+            assert_eq!(c.next, 43);
 
             c.execute_instruction(Branch { o: BR, disp: 12 });
-            assert_eq!(c.next, 64);
+            assert_eq!(c.next, 52);
 
             c.execute_instruction(Branch { o: BSR, disp: 10 });
-            assert_eq!(c.regs[14], 64);
-            assert_eq!(c.next, 74);
+            assert_eq!(c.regs[14], 40);
+            assert_eq!(c.next, 50);
 
             c.execute_instruction(Branch { o: RET, disp: 1 });
-            assert_eq!(c.regs[15], 10);
+            assert_eq!(c.next, 10);
 
             c.regs[1] = 0;
             c.execute_instruction(Branch { o: RET, disp: 1 });
-            assert_eq!(c.regs[15], 0);
+            assert_eq!(c.next, 0);
             assert_eq!(c.done_flag, true);
         }
-        */
     }
 
     #[test]

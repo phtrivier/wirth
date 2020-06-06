@@ -1,6 +1,5 @@
 use raylib::prelude::*;
 
-use risc::computer;
 use assembler;
 
 const INTERLINE: f32 = 20.0;
