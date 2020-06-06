@@ -45,8 +45,7 @@ use std::str::FromStr;
 
 use std::collections::HashMap;
 
-#[allow(dead_code)]
-struct Assembler {
+pub struct Assembler {
     pub instructions: Vec<Instruction>,
     pub instruction_indexes: HashMap<String, i32>,   // Map of symbols like @BAR to instruction indices
     pub symbols: HashMap<String, u32>, // Map of symbols like #FOO to their values
@@ -82,8 +81,6 @@ impl Assembler {
         for i in 0..16 {
             symbols.insert(format!("R{}", i), i);
         }
-
-        println!("{:?}", symbols["R0"]);
 
         Assembler {
             instructions: vec![],
@@ -298,6 +295,9 @@ impl Assembler {
             let disp : i32 = param_instruction_index - instruction_index as i32;
             return Ok(disp);
         }
+        if let Some(&symbol) = self.symbols.get(params) {
+            return Ok(symbol as i32);
+        }
         if let Ok(disp) = params.parse::<i32>() {
             return Ok(disp);
         }
@@ -438,6 +438,13 @@ mod tests {
                 Instruction::Branch{
                     o: BranchOpCode::BNE,
                     disp: 15
+                }
+            ),
+            (
+                "RET R0",
+                Instruction::Branch{
+                    o: BranchOpCode::RET,
+                    disp: 0
                 }
             )            
         ];

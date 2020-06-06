@@ -107,13 +107,31 @@ impl Instruction {
             | c as u32;
     }
 
+    // TODO(pht) rename to sign extend on 18 bits
+    fn adjust_im(im: i32) -> u32 {
+        let mut dd = im;
+        if dd < 0 {
+            dd = dd + 0x400000
+        }
+        return dd as u32;
+    }
+
+    // TODO(pht) rename to sign extend on 26 bits
+    fn adjust_disp(disp: i32) -> u32 {
+        let mut dd = disp;
+        if dd < 0 {
+            dd = dd + 0x4000000
+        }
+        return dd as u32;
+    }
+
     fn encode_f1(opcode: RegisterImOpCode, a: usize, b: usize, im: i32) -> u32 {
         // 01(2) [op](4) a(4) b(4) im (18)
         return 0b01_0000_0000_0000_00_00_00_00_00_00_00_00_00
             | (opcode as u32) << (32 - 2 - 4)
             | (a as u32) << (32 - 2 - 4 - 4)
             | (b as u32) << (32 - 2 - 4 - 4 - 4)
-            | im as u32;
+            | Self::adjust_im(im) as u32;
     }
 
     fn encode_f2(opcode: MemoryOpCode, a: usize, b: usize, disp: i32) -> u32 {
@@ -122,7 +140,7 @@ impl Instruction {
             | (opcode as u32) << (32 - 2 - 4)
             | (a as u32) << (32 - 2 - 4 - 4)
             | (b as u32) << (32 - 2 - 4 - 4 - 4)
-            | disp as u32;
+            | Self::adjust_im(disp) as u32;
     }
 
     fn encode_f3(opcode: BranchOpCode, disp: i32) -> u32 {
@@ -130,7 +148,7 @@ impl Instruction {
         // But warning, the op code is too big to fit on 4 bits
         return 0b11_0000_00_00_00_00_00_00_00_00_00_00_00_00_00
             | ((opcode as u32) % 0x10) << (32 - 2 - 4)
-            | disp as u32;
+            | Self::adjust_disp(disp) as u32;
     }
 
     pub fn parse(i: u32) -> Result<Instruction, InstructionParseError> {
@@ -141,7 +159,7 @@ impl Instruction {
         c := IR MOD 40000H
         */
 
-        let op = (i / 0x4000000) as u8;
+        let op = ((i / 0x4000000) % 0x40) as u8;
         let a = ((i / 0x400000) % 0x10) as usize;
         let b = ((i / 0x40000) % 0x10) as usize;
         let c = (i % 0x40000) as usize;
@@ -151,9 +169,9 @@ impl Instruction {
             im = im - 0x40000;
         }
 
-        let mut disp = (i % 0x40000) as i32;
+        let mut disp = (i % 0x4000000) as i32;
         if disp > 0x2000000 {
-            disp = disp - 0x4000000
+            disp = disp - 0x4000000;
         }
 
         if let Ok(o) = RegisterOpCode::try_from(op) {
@@ -240,6 +258,7 @@ mod tests {
 
     #[test]
     fn test_encode_f3_instructions() {
+        /*
         assert_both(
             Instruction::Branch {
                 o: BranchOpCode::BEQ,
@@ -247,7 +266,33 @@ mod tests {
             },
             0b11_0000_00000000000000000000000100,
         );
+        */
+
+        /*
+        println!("{:08b}", 48);
+        println!("{:08b}", 49);
+
+        println!("{:032b}", -2 as i32);
+        println!("{:032b}", -2 + 0x4000000 as i32);
+        */
+
+        assert_encoded(
+            Instruction::Branch {
+                o: BranchOpCode::BNE,
+                disp: -2,
+            },
+            0b11_0001_11111111111111111111111110
+        );
+
+        assert_parsed(
+            Instruction::Branch {
+                o: BranchOpCode::BNE,
+                disp: -2,
+            },
+            0b11_0001_11111111111111111111111110
+        );
     }
+
 
     fn assert_both(inst: Instruction, i: u32) {
         assert_encoded(inst, i);

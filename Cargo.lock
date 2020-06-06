@@ -49,6 +49,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "cli"
 version = "0.1.0"
 dependencies = [
+ "assembler 0.1.0",
  "compiler 0.1.0",
  "risc 0.1.0",
 ]

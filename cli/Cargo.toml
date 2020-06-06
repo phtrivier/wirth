@@ -9,4 +9,5 @@ default-run = "cli"
 
 [dependencies]
 compiler = { path = "../compiler" }
-risc = { path = "../risc"}
+risc = { path = "../risc" }
+assembler = { path = "../assembler" }
