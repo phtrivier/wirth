@@ -48,14 +48,13 @@ use std::collections::HashMap;
 #[allow(dead_code)]
 struct Assembler {
     pub instructions: Vec<Instruction>,
-    pub origin: Option<u32>,           // First line in the program that contains instructions
+    pub instruction_indexes: HashMap<String, i32>,   // Map of symbols like @BAR to instruction indices
     pub symbols: HashMap<String, u32>, // Map of symbols like #FOO to their values
-    pub disps: HashMap<String, u32>,   // Map of symbols like @BAR to displacements from origin
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ParseError {
-    SyntaxError { index: u32 },
+    SyntaxError { line_index: u32 },
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -63,6 +62,16 @@ pub enum ParseResult {
     Comment,
     SymbolDef,
     Instruction,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum AssembleResult {
+    Program
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum AssembleError {
+    SyntaxError { line_index: u32, line: String }
 }
 
 impl Assembler {
@@ -77,35 +86,42 @@ impl Assembler {
         println!("{:?}", symbols["R0"]);
 
         Assembler {
-            origin: None,
             instructions: vec![],
             symbols: symbols,
-            disps: HashMap::new(),
+            instruction_indexes: HashMap::new(),
         }
     }
 
     #[allow(dead_code)]
-    pub fn parse_line(&mut self, index: u32, line: &str) -> Result<ParseResult, ParseError> {
+    pub fn assemble(&mut self, program: &str) -> Result<AssembleResult, AssembleError> {
+        for (line_index, line) in program.lines().enumerate() {
+            let parsed = self.parse_line(line_index as u32, line);
+            // TODO(pht) add more info into the ParseErrors to help diagnostic
+            if let Err(ParseError::SyntaxError{line_index: error_line_index}) = parsed {
+                return Err(AssembleError::SyntaxError{ line_index: error_line_index as u32, line: line.to_string()})
+            }
+        }
+        return Ok(AssembleResult::Program)
+    }
+
+    #[allow(dead_code)]
+    fn parse_line(&mut self, line_index: u32, line: &str) -> Result<ParseResult, ParseError> {
         let l = line.trim_start().trim_end_matches(';').trim_end();
 
-        if l.starts_with("*") {
+        if l.is_empty() || l.starts_with("*") {
             return Ok(ParseResult::Comment);
         } else if l.starts_with("#") {
-            return self.parse_symbol_def(index, l);
+            return self.parse_symbol_def(line_index, l);
         }
 
-        if self.origin == None {
-            self.origin = Some(index);
-        }
-
-        if let Ok(instruction) = self.parse_instruction(index, l) {
+        if let Ok(instruction) = self.parse_instruction(line_index, l) {
             self.instructions.push(instruction);
             return Ok(ParseResult::Instruction);
         }
-        return Err(ParseError::SyntaxError { index: index });
+        return Err(ParseError::SyntaxError { line_index: line_index });
     }
 
-    fn parse_symbol_def(&mut self, index: u32, line: &str) -> Result<ParseResult, ParseError> {
+    fn parse_symbol_def(&mut self, line_index: u32, line: &str) -> Result<ParseResult, ParseError> {
         let mut tokens = line.split_ascii_whitespace();
 
         if let Some(symbol) = tokens.next() {
@@ -116,42 +132,53 @@ impl Assembler {
                 }
             }
         }
-        return Err(ParseError::SyntaxError { index: index });
+        return Err(ParseError::SyntaxError { line_index: line_index });
     }
 
-    fn parse_instruction(&mut self, index: u32, line: &str) -> Result<Instruction, ParseError> {
+    fn parse_instruction(&mut self, line_index: u32, line: &str) -> Result<Instruction, ParseError> {
         let mut tokens = line.split_ascii_whitespace();
+
+        let instruction_index = self.instructions.len() as u32;
 
         if let Some(symbol) = tokens.next() {
             if symbol.starts_with("@") {
-                if let Some(origin) = self.origin {
-                    let disp = index - origin;
-                    self.disps.insert(symbol.to_string(), disp);
+                if !self.instructions.is_empty() {
+                    self.instruction_indexes.insert(symbol.to_string(), instruction_index as i32);
                     if let Some(op) = tokens.next() {
                         if let Some(params) = tokens.next() {
-                            return self.parse_op_params(index, op, params);
+                            return self.parse_op_params(line_index, instruction_index, op, params);
                         }
                     }
-                }
+                 }
             } else {
                 let op = symbol;
                 if let Some(params) = tokens.next() {
-                    return self.parse_op_params(index, op, params);
+                    return self.parse_op_params(line_index, instruction_index, op, params);
                 }
             }
         }
-        return Err(ParseError::SyntaxError { index: index });
+        return Err(ParseError::SyntaxError { line_index: line_index });
     }
 
-    fn parse_op_params(&mut self, index: u32, op: &str, params: &str) -> Result<Instruction, ParseError> {
+    fn parse_op_params(&mut self, line_index: u32, instruction_index: u32, op: &str, params: &str) -> Result<Instruction, ParseError> {
         if let Ok(op) = RegisterOpCode::from_str(op) {
 
-            // TODO(pht) CMP
-
-            if let Some((a,b,c)) = self.parse_params_a_b_c(params) {
-                let instruction = Instruction::Register { o: op, a, b, c };
-                return Ok(instruction);
+            match op {
+                RegisterOpCode::CMP => { 
+                    if let Some((b,c)) = self.parse_params_b_c(params) {
+                        let instruction = Instruction::Register { o: op, a: 0, b, c };
+                        return Ok(instruction)
+                    }
+                }
+                _ => {
+                    if let Some((a,b,c)) = self.parse_params_a_b_c(params) {
+                        let instruction = Instruction::Register { o: op, a, b, c };
+                        return Ok(instruction);
+                    }
+        
+                }
             }
+
         }
 
         if let Ok(op) = RegisterImOpCode::from_str(op) {
@@ -161,8 +188,8 @@ impl Assembler {
                     let instruction = Instruction::RegisterIm { o: op, a, b, im: im as i32 };
                     return Ok(instruction);    
                 }
-                RegisterImOpCode::CMPI => if let Some((a,b,im)) = self.parse_params_b_im(params) {
-                    let instruction = Instruction::RegisterIm { o: op, a, b, im: im as i32 };
+                RegisterImOpCode::CMPI => if let Some((b,im)) = self.parse_params_b_im(params) {
+                    let instruction = Instruction::RegisterIm { o: op, a: 0, b, im: im as i32 };
                     return Ok(instruction);    
                 }
                 _ => {
@@ -183,22 +210,32 @@ impl Assembler {
         }
 
         if let Ok(op) = BranchOpCode::from_str(op) {
-            if let Ok(disp) = params.parse::<i32>() {
+            if let Ok(disp) = self.parse_disp(line_index, instruction_index, params) {
                 let instruction = Instruction::Branch { o: op, disp};
                 return Ok(instruction)
             }
         }
 
-        return Err(ParseError::SyntaxError { index: index });
+        return Err(ParseError::SyntaxError { line_index: line_index });
+    }
+
+    fn parse_params_b_c(&self, params: &str) -> Option<(usize, usize)> {
+        let mut split = params.split(",");
+        let (b, c) = (split.next(), split.next());
+        if let (Some(b), Some(c)) = (b, c) {
+            let (b, c) = (self.parse_register(b), self.parse_register(c));
+            if let (Ok(b), Ok(c)) = (b, c) {
+                return Some((b,c))
+            }
+        }
+        return None;
     }
 
     fn parse_params_a_b_c(&self, params: &str) -> Option<(usize, usize, usize)> {
         let mut split = params.split(",");
         let (a, b, c) = (split.next(), split.next(), split.next());
-        println!("After splitting ({:?},{:?},{:?}", a, b, c);
         if let (Some(a), Some(b), Some(c)) = (a, b, c) {
             let (a, b, c) = (self.parse_register(a), self.parse_register(b), self.parse_register(c));
-            println!("After parsing value ({:?},{:?},{:?}", a, b, c);
             if let (Ok(a), Ok(b), Ok(c)) = (a, b, c) {
                 return Some((a,b,c))
             }
@@ -209,10 +246,8 @@ impl Assembler {
     fn parse_params_a_b_im(&self, params: &str) -> Option<(usize, usize, i32)> {
         let mut split = params.split(",");
         let (a, b, c) = (split.next(), split.next(), split.next());
-        println!("After splitting ({:?},{:?},{:?}", a, b, c);
         if let (Some(a), Some(b), Some(c)) = (a, b, c) {
             let (a, b, c) = (self.parse_register(a), self.parse_register(b), self.parse_im(c));
-            println!("After parsing value ({:?},{:?},{:?}", a, b, c);
             if let (Ok(a), Ok(b), Ok(c)) = (a, b, c) {
                 return Some((a,b,c))
             }
@@ -220,13 +255,13 @@ impl Assembler {
         return None;
     }
 
-    fn parse_params_b_im(&self, params: &str) -> Option<(usize, usize, i32)> {
+    fn parse_params_b_im(&self, params: &str) -> Option<(usize, i32)> {
         let mut split = params.split(",");
         let (b, c) = (split.next(), split.next());
         if let (Some(b), Some(c)) = (b, c) {
             let (b, c) = (self.parse_register(b), self.parse_im(c));
             if let (Ok(b), Ok(c)) = (b, c) {
-                return Some((0,b,c))
+                return Some((b,c))
             }
         }
         return None;
@@ -257,6 +292,17 @@ impl Assembler {
         }
         return s.parse::<i32>();
     }
+
+    fn parse_disp(&self, line_index: u32, instruction_index: u32, params: &str) -> Result<i32, ParseError> {
+        if let Some(param_instruction_index) = self.instruction_indexes.get(params) {
+            let disp : i32 = param_instruction_index - instruction_index as i32;
+            return Ok(disp);
+        }
+        if let Ok(disp) = params.parse::<i32>() {
+            return Ok(disp);
+        }
+        return Err(ParseError::SyntaxError{line_index: line_index})
+    }
 }
 
 #[cfg(test)]
@@ -269,7 +315,6 @@ mod tests {
         let mut a = Assembler::new();
         let parsed = a.parse_line(0, "* A comment should be ignored");
         assert_eq!(Ok(ParseResult::Comment), parsed);
-        assert_eq!(None, a.origin);
         assert!(a.instructions.is_empty());
     }
 
@@ -278,7 +323,6 @@ mod tests {
         let mut a = Assembler::new();
         let parsed = a.parse_line(0, "#FOO 42");
         assert_eq!(Ok(ParseResult::SymbolDef), parsed);
-        assert_eq!(None, a.origin);
         assert!(a.instructions.is_empty());
         assert_eq!(a.symbols["#FOO"], 42);
     }
@@ -290,7 +334,7 @@ mod tests {
         a.parse_line(0, "#FOO 42");
         a.parse_line(1, "#BAR 50");
         a.parse_line(2, "MOVI R0,42,32");
-        assert_eq!(Some(2), a.origin);
+        assert_eq!(1, a.instructions.len());
     }
 
     #[test]
@@ -301,8 +345,7 @@ mod tests {
         a.parse_line(1, "#BAR 50");
         a.parse_line(2, "MOVI R0,42,32");
         let parsed = a.parse_line(3, "@START MOVI R1,42,32 ; do some stuff");
-        assert_eq!(Some(2), a.origin);
-        assert_eq!(a.disps["@START"], 1);
+        assert_eq!(a.instruction_indexes["@START"], 1);
         assert_eq!(Ok(ParseResult::Instruction), parsed);
 
         assert_eq!(
@@ -373,6 +416,15 @@ mod tests {
                 },
             ),
             (
+                "CMP R1,R3",
+                Instruction::Register {
+                    o: RegisterOpCode::CMP,
+                    a: 0,
+                    b: 1,
+                    c: 3,
+                },
+            ),
+            (
                 "LDW R0,R1,#FOO",
                 Instruction::Memory{
                     o: MemoryOpCode::LDW,
@@ -402,9 +454,32 @@ mod tests {
         a.parse_line(1, "MOVI R0,0,1");
         a.parse_line(2, "@LOOP SUBI R0,0,0");
         a.parse_line(3, "CMPI R0,0");
-        let parsed = a.parse_instruction(4, "BNE @LOOP");
-        assert_eq!(Some(1), a.origin);
+        a.parse_line(4, "* A comment that should be ignored");
+        let parsed = a.parse_instruction(5, "BNE @LOOP");
         // TODO(pht) make this pass by interpreting the @LOOP as a displacement...
+        // Note that that command line is ignored.
+        // Generated program should be: 
+        // 0x00 MOVI R0,0,1
+        // 0x01 CMPI R0,0
+        // 0x02 BNE -2
         assert_eq!(Ok(Instruction::Branch{o: BranchOpCode::BNE, disp: -2}), parsed)
+    }
+
+    #[test]
+    fn it_can_assemble_program() {
+        let mut a = Assembler::new();
+        let program = "
+        * A program that does stuff
+        #FOO    42            ; The number of iterations
+                MOVI R0,0,1
+        @LOOP   SUBI R0,0,0
+                CMPI R0,0
+        * A comment that should be ignored
+                BNE @LOOP     ; That, or you terminate 
+        ";
+        let assembled = a.assemble(program);
+        assert_eq!(Ok(AssembleResult::Program), assembled);
+        assert_eq!(4, a.instructions.len());        
+        assert_eq!(Instruction::Branch{o: BranchOpCode::BNE, disp: -2}, a.instructions[3])
     }
 }
