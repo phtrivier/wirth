@@ -1,0 +1,8 @@
+* 2020-06-08
+ - assembler did not handle a displacement with an address in the future. This breaks the `square.a` example.
+* 2020-06-06
+- instruction encoding was wrong for F3 format and did not handle negative displacement right
+- execution was not computing the address of the next instruction right ; moved to something closer to the book implementation
+
+* Ongoing
+ - STW instruction is not properly parsed in square.a (disp is read as 262146 instead of 2 !)
