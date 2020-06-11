@@ -1,15 +1,14 @@
 * Compute the first N squares.
 * R0 accumulates the results
 * R1 is the loop index
-* Results are put in memory starting at address 2 (arbitrarily)
-#N      3
-#OUT    2               ; locations for the squares
+* Results are put in memory starting at address #OUT (arbitrarily)
+#N      10              ; Number of iteration
+#OUT    10              ; Location for the squares
         MOVI R1,0,1     ; Init Loop index
-@LOOP   MOV  R0,0,R1    ; R0 <- R1
-        MUL  R0,R0,R0   ; R0 <- R0 * R0
-        STW  R0,R1,#OUT ; MEM[OUT+I] <- R0
+@LOOP   MUL  R0,R1,R1   ; R0 <- R1 * R1
+        STW  R0,R1,#OUT ; MEM[R1+OUT] <- R0
         CMPI R1,#N      ; Test loop finished
         BGT  @END       ; If R1 > N, terminates
-        ADD  R1,R1,1    ; R1 <- R1 + 1
-        RET  @LOOP
-@END    RET  R14
+        ADDI R1,R1,1    ; R1 <- R1 + 1
+        BR  @LOOP       ; Continue
+@END    RET  R14        ; End

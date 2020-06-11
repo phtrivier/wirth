@@ -17,6 +17,7 @@ fn main() {
   // Assemble a program
   let mut a = assembler::Assembler::new();
   a.assemble(&program).expect("Unable to parse program !");
+  println!("{:?}", a.instruction_indexes);
 
   // Load instructions
   let mut c = risc::computer::Computer::new();
@@ -29,12 +30,13 @@ fn main() {
 
   // Execute
   println!("Executing program...");
-  c.execute(10);
+  c.execute(50);
 
   // Dump after
   println!("After execution:");
   c.dump_regs();
   c.dump_mem(0, 15);
+
 
   // Success !
   println!("Value of the Accu R0: {}", c.regs[0]);

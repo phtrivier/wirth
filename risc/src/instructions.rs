@@ -164,27 +164,31 @@ impl Instruction {
         let b = ((i / 0x40000) % 0x10) as usize;
         let c = (i % 0x40000) as usize;
 
-        let mut im = (i % 0x40000) as i32;
-        if im > 0x20000 {
-            im = im - 0x40000;
+        let mut lower_18_bits = (i % 0x40000) as i32;
+        if lower_18_bits > 0x20000 {
+            lower_18_bits = lower_18_bits - 0x40000;
         }
 
-        let mut disp = (i % 0x4000000) as i32;
-        if disp > 0x2000000 {
-            disp = disp - 0x4000000;
+        let mut lower_26_bits = (i % 0x4000000) as i32;
+        if lower_26_bits > 0x2000000 {
+            lower_26_bits = lower_26_bits - 0x4000000;
         }
 
+        // F0
         if let Ok(o) = RegisterOpCode::try_from(op) {
             return Ok(Instruction::Register { o: o, a, b, c });
         }
+        // F1
         if let Ok(o) = RegisterImOpCode::try_from(op) {
-            return Ok(Instruction::RegisterIm { o: o, a, b, im });
+            return Ok(Instruction::RegisterIm { o: o, a, b, im: lower_18_bits });
         }
+        // F2
         if let Ok(o) = MemoryOpCode::try_from(op) {
-            return Ok(Instruction::Memory { o, a, b, disp });
+            return Ok(Instruction::Memory { o, a, b, disp: lower_18_bits });
         }
+        // F3
         if let Ok(o) = BranchOpCode::try_from(op) {
-            return Ok(Instruction::Branch { o, disp });
+            return Ok(Instruction::Branch { o, disp: lower_26_bits });
         }
 
         return Err(InstructionParseError::InvalidInstruction(i));
@@ -255,6 +259,20 @@ mod tests {
             0b00_0001_0011_0010_00000000000000_0100,
         );
     }
+
+    #[test]
+    fn test_encode_f2_instructions() {
+        assert_both(
+            Instruction::Memory {
+                o: MemoryOpCode::STW,
+                a: 1,
+                b: 0,
+                disp: 2,
+            },
+            0b10_0100_0001_0000_00_00_00_00_00_00_00_00_10,
+        );
+    }
+
 
     #[test]
     fn test_encode_f3_instructions() {

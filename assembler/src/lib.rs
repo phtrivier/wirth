@@ -99,13 +99,13 @@ impl Assembler {
             if l.is_empty() || l.starts_with("*") || l.starts_with("#") {
                 continue;
             } else {
-                instruction_index = instruction_index + 1;
                 let mut tokens = line.split_ascii_whitespace();
                 if let Some(symbol) = tokens.next() {
                     if symbol.starts_with("@") {
                         self.instruction_indexes.insert(symbol.to_string(), instruction_index as i32);
                     }
                 }
+                instruction_index = instruction_index + 1;
             }
         }
 
@@ -481,6 +481,8 @@ mod tests {
         let assembled = a.assemble(program);
         assert_eq!(Ok(AssembleResult::Program), assembled);
         assert_eq!(7, a.instructions.len());
+        assert_eq!(Some(&1), a.instruction_indexes.get("@LOOP"));
+        assert_eq!(Some(&6), a.instruction_indexes.get("@END"));
         assert_eq!(Instruction::Branch { o: BranchOpCode::BEQ, disp: 3 }, a.instructions[3]);
         assert_eq!(Instruction::Branch { o: BranchOpCode::BEQ, disp: 3 }, a.instructions[3]);
     }
