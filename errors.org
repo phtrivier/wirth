@@ -8,3 +8,7 @@
 - execution was not computing the address of the next instruction right ; moved to something closer to the book implementation
 
 * Ongoing
+- Error when executing a LDW instruction: ```
+Instruction Memory { o: LDW, a: 4, b: 3, disp: 30 }
+thread 'main' panicked at 'index out of bounds: the len is 4096 but the index is 32798', risc/src/computer.rs:159:36
+```

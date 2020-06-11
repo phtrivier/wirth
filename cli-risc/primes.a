@@ -1,1 +1,27 @@
 * Compute the first N primes
+#L        5   ; Number of primes to find
+#PRIME   30  ; Location for primes (TODO(pht) make sure it's lower than the size of the program)
+* Registers: 
+*  R1 : J-L (iterator from L to 0)
+*  R2 : N (currently tested integer)
+*  R3 : K (index of known prime)
+*  R4 : MEM[PRIME + K] 
+*  R5 : Q (N / PRIME[K])
+*  R6 : R (N % PRIME[K])
+@START  MOVI R1,0,1         ; J <- 1
+        MOVI R2,0,3         ; N <- 3
+        MOVI R3,0,1         ; K <- 1
+        MOVI R0,0,2         
+        STW R0,R3,#PRIME    ; PRIME[1] <- 2
+@P2     ADDI R1,R1,1        ; N is prime. J <- J + 1        
+        STW R2,R1,#PRIME    ; PRIME[J] <- N
+        CMPI R1,#L          ; L Found ?
+        BGT @END            ; If L found, exit
+        ADDI R2,R2,2        ; N <- N + 2
+        MOVI R3,#PRIME,2    ; K <- 2
+        LDW R4,R3,#PRIME    ; Load PRIME[K]
+        DIV R5,R4,R2        ; R5 <- PRIME[K] / N
+        MOD R6,R4,R2        ; R6 <- PRIME[K] % N
+*        ; PRIME[K] % N
+*        BR @P2
+@END    RET R14

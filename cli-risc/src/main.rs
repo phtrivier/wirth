@@ -36,7 +36,8 @@ fn main() {
   println!("After execution:");
   c.dump_regs();
   c.dump_mem(0, 15);
-
+  println!("...");
+  c.dump_mem(30, 40);
 
   // Success !
   println!("Value of the Accu R0: {}", c.regs[0]);
