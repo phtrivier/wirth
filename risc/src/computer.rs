@@ -14,7 +14,7 @@ pub struct Computer {
     pub done_flag: bool,
 
     // Dirty hack
-    pub next: i32
+    pub next: i32,
 }
 
 impl Computer {
@@ -25,34 +25,35 @@ impl Computer {
             z_test: false,
             neg_test: false,
             done_flag: false,
-            next: 0 // dirty hack
+            next: 0, // dirty hack
         }
     }
 
     pub fn load_instructions_at(&mut self, instructions: Vec<Instruction>, base: usize) {
         for (index, instruction) in instructions.iter().enumerate() {
             self.mem[base + index] = Instruction::encode(*instruction) as i32;
-        }    
+        }
     }
 
     pub fn load_instructions(&mut self, instructions: Vec<Instruction>) {
         self.load_instructions_at(instructions, 0);
     }
 
-
     pub fn dump_regs(&self) {
         for (index, reg) in self.regs.iter().enumerate() {
-            println!("REG {:02}: 0x{:04X} 0b{:032b}", index, reg, reg)
+            println!("REG {:04}: 0x{:08X} 0b{:032b} {:12}", index, reg, reg, reg)
         }
     }
 
-    pub fn dump_mem(&self, from: usize, to: usize) {
+    pub fn dump_mem(&self, from: usize, count: usize) {
+        let to = from + count;
         for index in from..to {
-            println!("MEM {:04}: 0x{:08X} 0b{:032b}", index, self.mem[index], self.mem[index]);
+            let content = self.mem[index];
+            println!("MEM {:04}: 0x{:08X} 0b{:032b} {:12?}", index, content, content, content);
         }
     }
 
-    pub fn execute_at(&mut self, max: u32, base: usize) {
+    pub fn execute_at(&mut self, max: u32, base: usize, debug: bool) {
         self.done_flag = false;
         self.regs[15] = base as i32;
 
@@ -60,7 +61,7 @@ impl Computer {
 
         loop {
             let pc_address = self.regs[15]; // memory is byte-address;
-            
+
             // NOTE(pht) Next instructions, unless told otherwise.
             self.next = self.regs[15] + 1;
 
@@ -69,13 +70,17 @@ impl Computer {
             // NOTE(pht): we panic if instruction is invalid.
             let instruction = Instruction::parse(ir as u32).unwrap();
 
-            println!("Instruction {:?}", instruction);
+            if debug {
+                println!("Instruction {:?}", instruction);
+            }
 
-            self.execute_instruction(instruction);
+            self.execute_instruction(instruction, debug);
 
-            println!("PC ? {:?}", self.regs[15]);
-            println!("Done ? {:?}", self.done_flag);
-            
+            if debug {
+                println!("PC ? {:?}", self.regs[15]);
+                println!("Done ? {:?}", self.done_flag);
+            }
+
             if i > max || self.done_flag {
                 break;
             }
@@ -85,11 +90,11 @@ impl Computer {
         }
     }
 
-    pub fn execute(&mut self, max: u32) {
-        self.execute_at(max, 0);
+    pub fn execute(&mut self, max: u32, debug: bool) {
+        self.execute_at(max, 0, debug);
     }
 
-    pub fn execute_instruction(&mut self, i: Instruction) {
+    pub fn execute_instruction(&mut self, i: Instruction, debug: bool) {
         match i {
             Instruction::Register { o, a, b, c } => match o {
                 RegisterOpCode::MOV => {
@@ -155,8 +160,19 @@ impl Computer {
             },
             Instruction::Memory { o, a, b, disp } => match o {
                 MemoryOpCode::LDW => {
-                    let b_add = self.regs[b] as usize;
-                    self.regs[a] = self.mem[(b_add as i32 + disp) as usize];
+                    if debug {
+                        println!("Loading from register {:?} ", b);
+                        println!("Loading with displacement {:?} ", disp);
+                    }
+                    let b_add = self.regs[b];
+                    if debug {
+                        println!("b address {:?}", b_add);
+                    }
+                    let b_plus_disp_add = (b_add as i32 + disp) as usize;
+                    if debug {
+                        println!("b + disp address, {:?}", b_plus_disp_add);
+                    }
+                    self.regs[a] = self.mem[b_plus_disp_add];
                 }
                 MemoryOpCode::POP => {
                     self.regs[a] = self.mem[self.regs[b] as usize];
@@ -170,54 +186,52 @@ impl Computer {
                     self.mem[(self.regs[b] + disp) as usize] = self.regs[a];
                 }
             },
-            Instruction::Branch { o, disp } => {
-                match o {
-                    BranchOpCode::BEQ => {
-                        if self.z_test {
-                            self.next = self.regs[15] + (disp as i32);
-                        }
-                    }
-                    BranchOpCode::BLT => {
-                        if self.neg_test {
-                            self.next = self.regs[15] + (disp as i32);
-                        }
-                    }
-                    BranchOpCode::BLE => {
-                        if self.neg_test || self.z_test {
-                            self.next = self.regs[15] + (disp as i32);
-                        }
-                    }
-                    BranchOpCode::BNE => {
-                        if !self.z_test {
-                            self.next = self.regs[15] + (disp as i32);
-                        }
-                    }
-                    BranchOpCode::BGE => {
-                        if !self.neg_test {
-                            self.next = self.regs[15] + (disp as i32);
-                        }
-                    }
-                    BranchOpCode::BGT => {
-                        if !self.neg_test && !self.z_test {
-                            self.next = self.regs[15] + (disp as i32);
-                        }
-                    }
-                    BranchOpCode::BR => {
+            Instruction::Branch { o, disp } => match o {
+                BranchOpCode::BEQ => {
+                    if self.z_test {
                         self.next = self.regs[15] + (disp as i32);
-                    }
-                    BranchOpCode::BSR => {
-                        self.regs[14] = self.regs[15];
-                        self.next = self.regs[15] + (disp as i32);
-                    }
-                    BranchOpCode::RET => {
-                        let index = (disp % 0x10) as usize;
-                        self.next = self.regs[index];
-                        if self.next == 0 {
-                            self.done_flag = true;
-                        }
                     }
                 }
-            }
+                BranchOpCode::BLT => {
+                    if self.neg_test {
+                        self.next = self.regs[15] + (disp as i32);
+                    }
+                }
+                BranchOpCode::BLE => {
+                    if self.neg_test || self.z_test {
+                        self.next = self.regs[15] + (disp as i32);
+                    }
+                }
+                BranchOpCode::BNE => {
+                    if !self.z_test {
+                        self.next = self.regs[15] + (disp as i32);
+                    }
+                }
+                BranchOpCode::BGE => {
+                    if !self.neg_test {
+                        self.next = self.regs[15] + (disp as i32);
+                    }
+                }
+                BranchOpCode::BGT => {
+                    if !self.neg_test && !self.z_test {
+                        self.next = self.regs[15] + (disp as i32);
+                    }
+                }
+                BranchOpCode::BR => {
+                    self.next = self.regs[15] + (disp as i32);
+                }
+                BranchOpCode::BSR => {
+                    self.regs[14] = self.regs[15];
+                    self.next = self.regs[15] + (disp as i32);
+                }
+                BranchOpCode::RET => {
+                    let index = (disp % 0x10) as usize;
+                    self.next = self.regs[index];
+                    if self.next == 0 {
+                        self.done_flag = true;
+                    }
+                }
+            },
         }
     }
 }
@@ -241,20 +255,10 @@ mod tests {
             let mut c = Computer::new();
             c.regs[0] = 0;
             c.regs[2] = 42;
-            c.execute_instruction(Register {
-                o: MOV,
-                a: 0,
-                b: 1,
-                c: 2,
-            });
+            c.execute_instruction(Register { o: MOV, a: 0, b: 1, c: 2 });
             assert_eq!(84, c.regs[0]);
 
-            c.execute_instruction(Register {
-                o: MVN,
-                a: 0,
-                b: 2,
-                c: 2,
-            });
+            c.execute_instruction(Register { o: MVN, a: 0, b: 2, c: 2 });
             assert_eq!(-168, c.regs[0])
         }
 
@@ -262,22 +266,12 @@ mod tests {
         fn test_execute_immediate_move_instruction() {
             let mut c = Computer::new();
             c.regs[0] = 0;
-            c.execute_instruction(RegisterIm {
-                o: MOVI,
-                a: 0,
-                b: 1,
-                im: 42,
-            });
+            c.execute_instruction(RegisterIm { o: MOVI, a: 0, b: 1, im: 42 });
             assert_eq!(84, c.regs[0]);
 
             let mut c = Computer::new();
             c.regs[0] = 0;
-            c.execute_instruction(RegisterIm {
-                o: MVNI,
-                a: 0,
-                b: 2,
-                im: 42,
-            });
+            c.execute_instruction(RegisterIm { o: MVNI, a: 0, b: 2, im: 42 });
             assert_eq!(-168, c.regs[0]);
         }
 
@@ -288,48 +282,23 @@ mod tests {
             c.regs[1] = 10;
             c.regs[2] = 32;
             // R.a = R.b + R.c
-            c.execute_instruction(Register {
-                o: ADD,
-                a: 0,
-                b: 1,
-                c: 2,
-            });
+            c.execute_instruction(Register { o: ADD, a: 0, b: 1, c: 2 });
             assert_eq!(42, c.regs[0]);
 
             // R.a = R.b - R.c
-            c.execute_instruction(Register {
-                o: SUB,
-                a: 0,
-                b: 1,
-                c: 2,
-            });
+            c.execute_instruction(Register { o: SUB, a: 0, b: 1, c: 2 });
             assert_eq!(-22, c.regs[0]);
 
             // R.a = R.b * R.c
-            c.execute_instruction(Register {
-                o: MUL,
-                a: 0,
-                b: 1,
-                c: 2,
-            });
+            c.execute_instruction(Register { o: MUL, a: 0, b: 1, c: 2 });
             assert_eq!(320, c.regs[0]);
 
             // R.a = R.b / R.c
-            c.execute_instruction(Register {
-                o: DIV,
-                a: 0,
-                b: 2,
-                c: 1,
-            });
+            c.execute_instruction(Register { o: DIV, a: 0, b: 2, c: 1 });
             assert_eq!(3, c.regs[0]);
 
             // R.a = R.b % R.c
-            c.execute_instruction(Register {
-                o: MOD,
-                a: 0,
-                b: 2,
-                c: 1,
-            });
+            c.execute_instruction(Register { o: MOD, a: 0, b: 2, c: 1 });
             assert_eq!(2, c.regs[0]);
         }
 
@@ -339,48 +308,23 @@ mod tests {
             c.regs[0] = 0;
             c.regs[1] = 10;
 
-            c.execute_instruction(RegisterIm {
-                o: ADDI,
-                a: 0,
-                b: 1,
-                im: 32,
-            });
+            c.execute_instruction(RegisterIm { o: ADDI, a: 0, b: 1, im: 32 });
             assert_eq!(42, c.regs[0]);
 
             // R.a = R.b - im
-            c.execute_instruction(RegisterIm {
-                o: SUBI,
-                a: 0,
-                b: 1,
-                im: 32,
-            });
+            c.execute_instruction(RegisterIm { o: SUBI, a: 0, b: 1, im: 32 });
             assert_eq!(-22, c.regs[0]);
 
             // R.a = R.b * im
-            c.execute_instruction(RegisterIm {
-                o: MULI,
-                a: 0,
-                b: 1,
-                im: 32,
-            });
+            c.execute_instruction(RegisterIm { o: MULI, a: 0, b: 1, im: 32 });
             assert_eq!(320, c.regs[0]);
 
             // R.a = R.b / im
-            c.execute_instruction(RegisterIm {
-                o: DIVI,
-                a: 0,
-                b: 1,
-                im: 3,
-            });
+            c.execute_instruction(RegisterIm { o: DIVI, a: 0, b: 1, im: 3 });
             assert_eq!(3, c.regs[0]);
 
             // R.a = R.b % im
-            c.execute_instruction(RegisterIm {
-                o: MODI,
-                a: 0,
-                b: 1,
-                im: 3,
-            });
+            c.execute_instruction(RegisterIm { o: MODI, a: 0, b: 1, im: 3 });
             assert_eq!(1, c.regs[0]);
         }
 
@@ -391,12 +335,7 @@ mod tests {
             c.regs[1] = 10;
             c.regs[2] = 32;
 
-            c.execute_instruction(Register {
-                o: CMP,
-                a: 0,
-                b: 1,
-                c: 2,
-            });
+            c.execute_instruction(Register { o: CMP, a: 0, b: 1, c: 2 });
             // R.b == R.c ?
             assert_eq!(false, c.z_test);
             // R.b < R.c ?
@@ -404,12 +343,7 @@ mod tests {
 
             c.regs[1] = 10;
             c.regs[2] = 10;
-            c.execute_instruction(Register {
-                o: CMP,
-                a: 0,
-                b: 1,
-                c: 2,
-            });
+            c.execute_instruction(Register { o: CMP, a: 0, b: 1, c: 2 });
             // R.b == R.c ?
             assert_eq!(true, c.z_test);
             // R.b < R.c ?
@@ -417,12 +351,7 @@ mod tests {
 
             c.regs[1] = -32;
             c.regs[2] = 10;
-            c.execute_instruction(Register {
-                o: CMP,
-                a: 0,
-                b: 1,
-                c: 2,
-            });
+            c.execute_instruction(Register { o: CMP, a: 0, b: 1, c: 2 });
             // R.b == R.c ?
             assert_eq!(false, c.z_test);
             // R.b < R.c ?
@@ -435,30 +364,15 @@ mod tests {
             c.regs[0] = 0;
             c.regs[1] = 10;
 
-            c.execute_instruction(RegisterIm {
-                o: CMPI,
-                a: 0,
-                b: 1,
-                im: -32,
-            });
+            c.execute_instruction(RegisterIm { o: CMPI, a: 0, b: 1, im: -32 });
             assert_eq!(false, c.z_test);
             assert_eq!(false, c.neg_test);
 
-            c.execute_instruction(RegisterIm {
-                o: CMPI,
-                a: 0,
-                b: 1,
-                im: 10,
-            });
+            c.execute_instruction(RegisterIm { o: CMPI, a: 0, b: 1, im: 10 });
             assert_eq!(true, c.z_test);
             assert_eq!(false, c.neg_test);
 
-            c.execute_instruction(RegisterIm {
-                o: CMPI,
-                a: 0,
-                b: 1,
-                im: 32,
-            });
+            c.execute_instruction(RegisterIm { o: CMPI, a: 0, b: 1, im: 32 });
             assert_eq!(false, c.z_test);
             assert_eq!(true, c.neg_test);
         }
@@ -467,29 +381,14 @@ mod tests {
         fn test_execute_chki() {
             let mut c = Computer::new();
             c.regs[0] = 30;
-            c.execute_instruction(RegisterIm {
-                o: CHKI,
-                b: 0,
-                a: 0,
-                im: 32,
-            });
+            c.execute_instruction(RegisterIm { o: CHKI, b: 0, a: 0, im: 32 });
             assert_eq!(c.regs[0], 30);
 
-            c.execute_instruction(RegisterIm {
-                o: CHKI,
-                b: 0,
-                a: 0,
-                im: 15,
-            });
+            c.execute_instruction(RegisterIm { o: CHKI, b: 0, a: 0, im: 15 });
             assert_eq!(c.regs[0], 0);
 
             c.regs[0] = -10;
-            c.execute_instruction(RegisterIm {
-                o: CHKI,
-                b: 0,
-                a: 0,
-                im: 15,
-            });
+            c.execute_instruction(RegisterIm { o: CHKI, b: 0, a: 0, im: 15 });
             assert_eq!(c.regs[0], 0);
         }
     }
@@ -508,12 +407,7 @@ mod tests {
             // Or at least I'm goint to assume that
             c.mem[14] = 42;
 
-            c.execute_instruction(Memory {
-                o: LDW,
-                a: 0,
-                b: 1,
-                disp: 4,
-            });
+            c.execute_instruction(Memory { o: LDW, a: 0, b: 1, disp: 4 });
             assert_eq!(c.regs[0], 42);
 
             // TODO(pht) LDB is not implemented, but will it be needed ?
@@ -535,12 +429,7 @@ mod tests {
             //  M[(R[b]) DIV 4] := R[a]
             //
             // ```
-            c.execute_instruction(Memory {
-                o: PSH,
-                a: 0,
-                b: 1,
-                disp: 1,
-            });
+            c.execute_instruction(Memory { o: PSH, a: 0, b: 1, disp: 1 });
             assert_eq!(c.regs[1], 9);
             assert_eq!(c.mem[9], 42);
 
@@ -550,12 +439,7 @@ mod tests {
             //  R[a] := M[(R[b]) DIV 4];
             //  INC(R[b], c)
             // ```
-            c.execute_instruction(Memory {
-                o: POP,
-                a: 0,
-                b: 1,
-                disp: 1,
-            });
+            c.execute_instruction(Memory { o: POP, a: 0, b: 1, disp: 1 });
             assert_eq!(c.regs[0], 42);
             assert_eq!(c.regs[1], 10);
         }
@@ -567,12 +451,7 @@ mod tests {
             c.regs[1] = 10;
 
             // M[(R[b] + c) DIV 4] := R[a]
-            c.execute_instruction(Memory {
-                o: STW,
-                a: 0,
-                b: 1,
-                disp: 2,
-            });
+            c.execute_instruction(Memory { o: STW, a: 0, b: 1, disp: 2 });
             assert_eq!(c.mem[12], 42);
         }
     }
@@ -632,22 +511,12 @@ mod tests {
         let mut c = Computer::new();
 
         // MOVI $0, 5
-        let mut instruction = RegisterIm {
-            o: MOVI,
-            a: 0,
-            b: 0,
-            im: 5,
-        };
+        let mut instruction = RegisterIm { o: MOVI, a: 0, b: 0, im: 5 };
         let mut instruction_data = Instruction::encode(instruction);
         c.mem[1] = instruction_data as i32;
 
         // MOVI $1, 10
-        instruction = RegisterIm {
-            o: MOVI,
-            a: 1,
-            b: 0,
-            im: 10,
-        };
+        instruction = RegisterIm { o: MOVI, a: 1, b: 0, im: 10 };
         instruction_data = Instruction::encode(instruction);
         c.mem[2] = instruction_data as i32;
 
@@ -656,37 +525,10 @@ mod tests {
         instruction_data = Instruction::encode(instruction);
         c.mem[3] = instruction_data as i32;
 
-        c.execute_at(5, 1);
+        c.execute_at(5, 1, true);
 
         assert_eq!(c.done_flag, true);
         assert_eq!(c.regs[0], 5);
         assert_eq!(c.regs[1], 10);
-    }
-
-    #[test]
-    fn test_ambitious_program() {
-        // TODO(pht) a more ambitious program
-        // a = 5
-        // if a > 3 {
-        //    return 0
-        // } else {
-        //    return 1
-        // }
-
-        // Prepare memory
-
-        // MAIN:  MOVI $0, 5 ; R.0 = 5
-        // let instruction = RegisterIm{o: MOVI, a: 0, b: 0, im: 5};
-        // let instruction_data = Instruction::encode(instruction);
-        // c.mem[1] = instruction_data as i32;
-
-        //        CMPI $0, 3; Z <- R.0 == 3 ; N <-R.0 < 3
-        //        BLE  $0, RET1
-        // RET0   MOVI $0, 0 ; load result
-        //        MOVI $1, 0 ; load return address to end
-        //        RET  $0
-        // RET1   MOVI $0, 1 ; load result
-        //        MOVI $1, 0 ; load return address to end
-        //        RET  $0
     }
 }

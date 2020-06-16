@@ -1,3 +1,6 @@
+* 2020-06-16
+- My primes.a program was badly computing the address of a prime to load. Nice to notice that is
+was the first error in an *assembly* program that I debugged with my simulator.
 * 2020-06-11
 - STW instruction is not properly parsed in square.a (disp is read as 262146 instead of 2 !)
 - There was an off-by-one error in parsing instruction addresses
@@ -6,9 +9,4 @@
 * 2020-06-06
 - instruction encoding was wrong for F3 format and did not handle negative displacement right
 - execution was not computing the address of the next instruction right ; moved to something closer to the book implementation
-
 * Ongoing
-- Error when executing a LDW instruction: ```
-Instruction Memory { o: LDW, a: 4, b: 3, disp: 30 }
-thread 'main' panicked at 'index out of bounds: the len is 4096 but the index is 32798', risc/src/computer.rs:159:36
-```

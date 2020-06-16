@@ -1,44 +1,82 @@
 use assembler;
 use risc;
 use std::fs;
-use clap::{App};
+use std::path::PathBuf;
+use structopt::StructOpt;
+
+/// Execute assembly file in the RISC-wirth computer
+#[derive(StructOpt, Debug)]
+#[structopt(name = "cli-risc", version = "0.0.1")]
+struct Opt {
+    /// Assembly language file
+    #[structopt(name = "FILE", parse(from_os_str))]
+    input: PathBuf,
+
+    /// Maximum number of instructions to run
+    #[structopt(short = "l", long, default_value = "500")]
+    instruction_limit: u32,
+
+    /// Memory position to dump instruction from
+    #[structopt(long, default_value = "0")]
+    instruction_dump_from: usize,
+
+    /// Number of memory position to dump instruction
+    #[structopt(long, default_value = "15")]
+    instruction_dump_count: usize,
+
+    /// Memory position to dump data from
+    #[structopt(long, default_value = "30")]
+    memory_dump_from: usize,
+
+    /// Number of memory position to dump data
+    #[structopt(long, default_value = "15")]
+    memory_dump_count: usize,
+
+    /// Debug mode
+    #[structopt(short, long)]
+    debug: bool,
+}
 
 fn main() {
-  let matches = App::new("cli-risc")
-    .version("0.0")
-    .author("Pierre-Henri Trivier <phtrivier@yahoo.fr>")
-    .about("Execute assembly language programs for the RISC computer based on Wirth book.")
-    .arg("<INPUT>              'Sets the input file to use'")
-    .get_matches();
+    let opt = Opt::from_args();
+    let filename = opt.input;
+    let program = fs::read_to_string(filename).expect("Unable to read file.");
 
-  let filename = matches.value_of("INPUT").unwrap();
-  let program = fs::read_to_string(filename).expect("Unable to read file.");
+    // Assemble a program
+    let mut a = assembler::Assembler::new();
+    a.assemble(&program).expect("Unable to parse program !");
+    if opt.debug {
+        println!("{:?}", a.instruction_indexes);
+    }
 
-  // Assemble a program
-  let mut a = assembler::Assembler::new();
-  a.assemble(&program).expect("Unable to parse program !");
-  println!("{:?}", a.instruction_indexes);
+    // Load instructions
+    let mut c = risc::computer::Computer::new();
+    c.load_instructions(a.instructions);
 
-  // Load instructions
-  let mut c = risc::computer::Computer::new();
-  c.load_instructions(a.instructions);
+    let limit = opt.instruction_limit;
 
-  // Dump before
-  println!("After loading program:");
-  c.dump_regs();
-  c.dump_mem(0, 15);
+    // Dump before
+    println!("After loading program:");
+    c.dump_regs();
+    println!("---");
+    c.dump_mem(opt.instruction_dump_from, opt.instruction_dump_count);
 
-  // Execute
-  println!("Executing program...");
-  c.execute(50);
+    // Execute
+    println!(">>>>>>");
+    println!("Executing program...");
+    c.execute(limit, opt.debug);
+    println!("<<<<<<");
 
-  // Dump after
-  println!("After execution:");
-  c.dump_regs();
-  c.dump_mem(0, 15);
-  println!("...");
-  c.dump_mem(30, 40);
+    // Dump after
+    println!("After execution:");
+    c.dump_regs();
+    println!("---");
+    c.dump_mem(opt.instruction_dump_from, opt.instruction_dump_count);
+    println!("...");
+    c.dump_mem(opt.memory_dump_from, opt.memory_dump_count);
 
-  // Success !
-  println!("Value of the Accu R0: {}", c.regs[0]);
+    if !c.done_flag {
+        println!("Warning: execution stopped after {:?} instructions", limit);
+        std::process::exit(1);
+    }
 }
