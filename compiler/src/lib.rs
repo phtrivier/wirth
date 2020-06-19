@@ -1,4 +1,5 @@
 mod parser;
+mod parser_test;
 mod scanner;
 
 pub fn run() -> Result<(), parser::ParseError> {

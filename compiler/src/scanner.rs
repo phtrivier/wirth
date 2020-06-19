@@ -9,12 +9,14 @@ pub enum Token {
     Plus,
     Minus,
     Or,
+    /* eql* = 9; neq* = 10; lss* = 11; geq* = 12; leq* = 13; gtr* = 14;
+    period* = 18; comma* = 19; colon* = 20; rparen* = 22; rbrak* = 23 */
     Eql,
     Neq,
     Lss,
+    Geq,
     Leq,
     Gtr,
-    Geq,
     Period,
     Int(u32),
     False,
