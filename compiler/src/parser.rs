@@ -24,33 +24,44 @@ pub struct Parser<'a> {
 
 impl Parser<'_> {
     pub fn parse<'a>(content: &'a String) -> Result<(), ParseError> {
+        match Parser::from_string(&content) {
+            Ok(mut parser) => {
+                parser.expression();
+                return parser.result();
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    pub fn from_string<'a>(content: &'a String) -> Result<Parser<'a>, ParseError> {
         let mut scanner = Scanner::new(&content);
 
-        // TODO(pht)  The initial scan might is a bit cumbersome... but I want the
-        // token to be absolutely set !
         return match scanner.scan() {
             Ok(Some(token)) => {
                 println!("Initial token {:?}", token);
-                let mut parser = Parser {
+                return Ok(Parser {
                     scanner: scanner,
                     token: token,
                     done: false,
                     error: None,
-                };
-                parser.expression();
-                if let Some(e) = parser.error {
-                    return Err(e);
-                }
-                if !parser.done {
-                    return Err(ParseError::UnexpectedToken);
-                }
-                return Ok(());
+                });
             }
             Ok(None) => Err(ParseError::PrematureEOF),
             // TODO(pht) find a way to associate the ScanError to the parse error, otherwise it's lost :/
             Err(scan_error) => Err(ParseError::ScanError(scan_error)),
         };
     }
+
+    pub fn result(&mut self) -> Result<(), ParseError> {
+        if let Some(e) = self.error {
+            return Err(e);
+        }
+        if !self.done {
+            return Err(ParseError::UnexpectedToken);
+        }
+        return Ok(());
+    }
+
     fn next(&mut self) {
         match self.scanner.scan() {
             Ok(Some(token)) => {
@@ -104,31 +115,79 @@ impl Parser<'_> {
 
      */
 
-    fn term(&mut self) {
-        match self.token {
+    pub fn factor(&mut self) {
+        /* NOTE(pht) the following is done in the code to handle
+        error, but trying to parse until next valid char.
+        I'm not doing that !!
+        if self.is_lower_than_lparen() {
+            println!("Skipping everything until lparen...");
+            self.next();
+            while self.is_lower_than_lparen() {
+                println!("... still skipping...");
+                self.next();
+            }
+        }
+        */
+
+        match &self.token {
+            Token::Ident(_i) => {
+                self.next();
+                self.selector();
+            }
             Token::Int(_n) => {
                 self.next();
             }
-            _ => self.error = Some(ParseError::UnexpectedToken),
+            Token::Lparen => {
+                self.next();
+
+                // TODO(pht) should be self.expression(), but hard to test piece by piece :/;
+                self.next();
+                // ----------
+
+                if let Token::Rparen = self.token {
+                    self.next();
+                } else {
+                    self.error = Some(ParseError::UnexpectedToken);
+                }
+            }
+            Token::Not => {
+                self.next();
+                self.factor();
+            }
+            _ => {
+                self.error = Some(ParseError::UnexpectedToken);
+            }
         }
     }
 
-    fn simple_expression(&mut self) {
-        /*
-                PROCEDURE SimpleExpression(VAR x: OSG.Item);
-                VAR y: OSG.Item; op: INTEGER;
-                BEGIN
-                    IF sym = OSS.plus THEN OSS.Get(sym); term(x)
-                    ELSIF sym = OSS.minus THEN OSS.Get(sym); term(x); OSG.Op1(OSS.minus, x)
-                ELSE term(x)
-                    END;
-                WHILE (sym >= OSS.plus) & (sym <= OSS.or) DO
-                    op := sym; OSS.Get(sym);
-                IF op = OSS.or THEN OSG.Op1(op, x) END ;
-                term(y); OSG.Op2(op, x, y)
-                    END
-                    END SimpleExpression;
+    pub fn term(&mut self) {
+        /* TODO(pht)
+                factor(x);
+                WHILE (sym >= OSS.times) & (sym <= OSS.and) DO
+                  op := sym; OSS.Get(sym);
+                  IF op = OSS.and THEN OSG.Op1(op, x) END ;
+                  factor(y); OSG.Op2(op, x, y)
+               END
         */
+        self.factor();
+        loop {
+            match self.token {
+                Token::Times|
+                Token::Div|
+                Token::Mod|
+                Token::And => {
+                    self.next();
+                    self.factor();
+                }
+                _ => {
+                    break;
+                }
+            }
+        }
+
+    }
+
+    fn simple_expression(&mut self) {
         match self.token {
             Token::Plus => {
                 self.next();
@@ -179,49 +238,86 @@ impl Parser<'_> {
         }
     }
 
-    /*
-    fn selector(&mut self) -> Result<(), ParseError> {
+    pub fn selector(&mut self) {
         loop {
+            println!("Selector loop {:?}", self.token);
             match self.token {
-                Token::Lbrak => {
-                    self.next();
-                    if let Ok(_) = self.current() {
-                        if let Ok(_) = self.expression() {
-                            match self.token {
-                                Token::Rbrak => {
-                                    self.next();
-                                    return self.current();
-                                }
-                                _ => {
-                                    return Err(ParseError::UnexpectedToken);
-                                }
-                            }
+                Token::Lbrak | Token::Period => {
+                    if let Token::Lbrak = self.token {
+                        self.next();
+                        self.expression();
+                        if let Token::Rbrak = self.token {
+                            self.next();
+                        }
+                    } else {
+                        self.next();
+                        if let Token::Ident(_) = self.token {
+                            // TODO(pht) this will need to look at the type of the ident
+                            self.next();
                         }
                     }
-                    return self.current();
-                }
-                Token::Period => {
-                    self.next();
-                    if let Ok(_) = self.current() {
-                        match self.token {
-                            Token::Ident(_) => {
-                                self.next();
-                                if let Ok(_) = self.current() {
-                                    continue;
-                                } else {
-                                    return self.current();
-                                }
-                            }
-                            _ => return Err(ParseError::UnexpectedToken),
-                        }
-                    }
-                    return self.current();
                 }
                 _ => {
-                    return Err(ParseError::UnexpectedToken);
+                    break;
                 }
             }
         }
     }
-     */
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    #[test]
+    fn test_factor() {
+        for c in ["1", "x", "(1)", "~y"].iter() {
+            println!("----");
+            let content = String::from(*c);
+            let mut p = Parser::from_string(&content).unwrap();
+            p.factor();
+            assert!(p.result().is_ok(), format!("{:?}", p.result()));
+        }
+    }
+    
+    #[test]
+    fn test_term() {
+        for c in ["1", "1*2", "1*2/3&5", "5*3/(y+1)"].iter() {
+            println!("----");
+            let content = String::from(*c);
+            let mut p = Parser::from_string(&content).unwrap();
+            p.term();
+            assert!(p.result().is_ok(), format!("{:?}", p.result()));
+        }
+    }
+
+    /*
+    #[test]
+    fn test_selector() {
+        let content = String::from(".y");
+        let mut p = Parser::from_string(&content).unwrap();
+        p.selector();
+        assert!(p.result().is_ok(), format!("{:?}", p.result()));
+
+        let content = String::from(".[0]");
+        p = Parser::from_string(&content).unwrap();
+        p.selector();
+        assert!(p.result().is_ok(), format!("{:?}", p.result()));
+    }
+
+    #[test]
+    fn test_parses_valid_expression() {
+        let content = String::from("1 + 2 + 3 | 5");
+        let c = Parser::parse(&content);
+        assert!(c.is_ok(), format!("{:?}", c));
+    }
+
+    #[test]
+    fn test_breaks_on_invalid_expression() {
+        let content = String::from("@1 + x.Bar[0]");
+        let c = Parser::parse(&content);
+        assert!(c.is_err());
+    }
+    */
 }
