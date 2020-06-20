@@ -80,55 +80,7 @@ impl Parser<'_> {
         }
     }
 
-    /*
-    fn current(&mut self) -> Result<(), ParseError> {
-        return self.result;
-    }
-    */
-
-    /* TODO(pht) implement those...
-
-    PROCEDURE factor(VAR x: OSG.Item);
-    VAR obj: OSG.Object;
-    BEGIN (*sync*)
-    IF sym < OSS.lparen THEN OSS.Mark("ident?");
-      REPEAT OSS.Get(sym) UNTIL sym >= OSS.lparen
-    END ;
-    IF sym = OSS.ident THEN find(obj); OSS.Get(sym); OSG.MakeItem(x, obj); selector(x)
-    ELSIF sym = OSS.number THEN OSG.MakeConstItem(x, OSG.intType, OSS.val); OSS.Get(sym)
-    ELSIF sym = OSS.lparen THEN
-     OSS.Get(sym); expression(x);
-     IF sym = OSS.rparen THEN OSS.Get(sym) ELSE OSS.Mark(")?") END
-     ELSIF sym = OSS.not THEN OSS.Get(sym); factor(x); OSG.Op1(OSS.not, x)
-     ELSE OSS.Mark("factor?"); OSG.MakeItem(x, guard)
-    END
-    END factor;
-    PROCEDURE term(VAR x: OSG.Item);
-    VAR y: OSG.Item; op: INTEGER;
-    BEGIN factor(x);
-    WHILE (sym >= OSS.times) & (sym <= OSS.and) DO
-     op := sym; OSS.Get(sym);
-     IF op = OSS.and THEN OSG.Op1(op, x) END ;
-     factor(y); OSG.Op2(op, x, y)
-    END
-    END term;
-
-     */
-
     pub fn factor(&mut self) {
-        /* NOTE(pht) the following is done in the code to handle
-        error, but trying to parse until next valid char.
-        I'm not doing that !!
-        if self.is_lower_than_lparen() {
-            println!("Skipping everything until lparen...");
-            self.next();
-            while self.is_lower_than_lparen() {
-                println!("... still skipping...");
-                self.next();
-            }
-        }
-        */
-
         match &self.token {
             Token::Ident(_i) => {
                 self.next();
@@ -139,10 +91,7 @@ impl Parser<'_> {
             }
             Token::Lparen => {
                 self.next();
-
-                // TODO(pht) should be self.expression(), but hard to test piece by piece :/;
-                self.next();
-                // ----------
+                self.expression();
 
                 if let Token::Rparen = self.token {
                     self.next();
@@ -161,14 +110,6 @@ impl Parser<'_> {
     }
 
     pub fn term(&mut self) {
-        /* TODO(pht)
-                factor(x);
-                WHILE (sym >= OSS.times) & (sym <= OSS.and) DO
-                  op := sym; OSS.Get(sym);
-                  IF op = OSS.and THEN OSG.Op1(op, x) END ;
-                  factor(y); OSG.Op2(op, x, y)
-               END
-        */
         self.factor();
         loop {
             match self.token {
@@ -210,21 +151,9 @@ impl Parser<'_> {
                 }
             }
         }
-        /* TODO(pht) handle the case white + - |
-        while self.token in []
-        */
     }
 
     fn expression(&mut self) {
-        /*
-                ROCEDURE expression(VAR x: OSG.Item);
-                VAR y: OSG.Item; op: INTEGER;
-                BEGIN SimpleExpression(x);
-                IF (sym >= OSS.eql) & (sym <= OSS.gtr) THEN
-                op := sym; OSS.Get(sym); SimpleExpression(y); OSG.Relation(op, x, y)
-                END
-                END expression;
-        */
         self.simple_expression();
         match self.token {
             Token::Eql | Token::Neq | Token::Lss | Token::Geq | Token::Leq | Token::Gtr => {
@@ -232,8 +161,6 @@ impl Parser<'_> {
                 self.simple_expression()
             }
             _ => {
-
-                // NOTe(pht) I'm not sure what this means, actually ?
             }
         }
     }
@@ -252,7 +179,6 @@ impl Parser<'_> {
                     } else {
                         self.next();
                         if let Token::Ident(_) = self.token {
-                            // TODO(pht) this will need to look at the type of the ident
                             self.next();
                         }
                     }
@@ -271,6 +197,17 @@ mod test {
     use super::*;
 
     #[test]
+    fn test_selector() {
+        for c in [".y", ".[0]"].iter() {
+            println!("----");
+            let content = String::from(*c);
+            let mut p = Parser::from_string(&content).unwrap();
+            p.selector();
+            assert!(p.result().is_ok(), format!("{:?}", p.result()));
+        }
+    }
+
+    #[test]
     fn test_factor() {
         for c in ["1", "x", "(1)", "~y"].iter() {
             println!("----");
@@ -283,7 +220,7 @@ mod test {
     
     #[test]
     fn test_term() {
-        for c in ["1", "1*2", "1*2/3&5", "5*3/(y+1)"].iter() {
+        for c in ["1", "1*2", "1*2/3&5", "5*3/(1+x)", "2*x"].iter() {
             println!("----");
             let content = String::from(*c);
             let mut p = Parser::from_string(&content).unwrap();
@@ -292,19 +229,18 @@ mod test {
         }
     }
 
-    /*
+    
     #[test]
-    fn test_selector() {
-        let content = String::from(".y");
-        let mut p = Parser::from_string(&content).unwrap();
-        p.selector();
-        assert!(p.result().is_ok(), format!("{:?}", p.result()));
-
-        let content = String::from(".[0]");
-        p = Parser::from_string(&content).unwrap();
-        p.selector();
-        assert!(p.result().is_ok(), format!("{:?}", p.result()));
+    fn test_simple_expression() {
+        for c in ["1", "1+(1*2)/3", "y[0]+x.z*15"].iter() {
+            println!("----");
+            let content = String::from(*c);
+            let mut p = Parser::from_string(&content).unwrap();
+            p.simple_expression();
+            assert!(p.result().is_ok(), format!("{:?}", p.result()));
+        }
     }
+    
 
     #[test]
     fn test_parses_valid_expression() {
@@ -319,5 +255,5 @@ mod test {
         let c = Parser::parse(&content);
         assert!(c.is_err());
     }
-    */
+    
 }
