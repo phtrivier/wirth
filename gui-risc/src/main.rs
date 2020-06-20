@@ -43,7 +43,7 @@ fn main() {
     // Load instructions
     let mut c = risc::computer::Computer::new();
     c.load_instructions(a.instructions);
-    c.execute(99);
+    c.execute(99, true);
 
     while !rl.window_should_close() {
         let mut d = rl.begin_drawing(&thread);
