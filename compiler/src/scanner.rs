@@ -47,6 +47,7 @@ pub enum Token {
     True,
     Repeat,
     Until,
+    Return
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -62,7 +63,7 @@ pub struct Scanner<'a> {
 }
 
 impl Scanner<'_> {
-    pub fn new<'a>(content: &'a String) -> Scanner<'a> {
+    pub fn new<'a>(content: &'a str) -> Scanner<'a> {
         let mut chars = content.chars();
         let peek = chars.next();
         Scanner {
@@ -198,6 +199,7 @@ impl Scanner<'_> {
                     "MODULE" => Some(Token::Module),
                     "TRUE" => Some(Token::True),
                     "FALSE" => Some(Token::False),
+                    "RETURN" => Some(Token::Return),
                     _ => Some(Token::Ident(w.clone())),
                 };
                 return Ok(token);
