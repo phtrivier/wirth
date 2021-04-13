@@ -1,6 +1,6 @@
 use std::str::Chars;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Token {
     Times,
     Div,
@@ -27,8 +27,10 @@ pub enum Token {
     Lbrak,
     Not,
     Becomes,
-    Int(u32), // TODO(pht) rename as Number
-    Ident(String),
+    Int{v: u32},
+    Ident{name: String}, // This one breaks everything because it makes the whole type non copyable.
+    // But I don't understand how I'm supposed to annotate this type so that it suddenly 
+    // becomes acceptable
     Semicolon,
     End,
     Else,
@@ -94,18 +96,18 @@ impl Scanner<'_> {
         }
     }
 
-    fn skip_whitespace(&mut self) -> Result<Option<Token>, ScanError> {
+    fn skip_whitespace<'a>(&mut self) -> Result<Option<Token>, ScanError> {
         self.read_next();
         return self.scan();
     }
 
-    fn skip_newline(&mut self) -> Result<Option<Token>, ScanError> {
+    fn skip_newline<'a>(&mut self) -> Result<Option<Token>, ScanError> {
         self.line = self.line + 1;
         self.read_next();
         return self.scan();
     }
 
-    fn scan_number(&mut self, d: char) -> Result<Option<Token>, ScanError> {
+    fn scan_number<'a>(&mut self, d: char) -> Result<Option<Token>, ScanError> {
         let mut v = d.to_digit(10).unwrap();
         loop {
             self.read_next();
@@ -123,10 +125,10 @@ impl Scanner<'_> {
                 }
             }
         }
-        return Ok(Some(Token::Int(v)));
+        return Ok(Some(Token::Int{v: v}));
     }
 
-    fn skip_comment(&mut self) -> Result<Option<Token>, ScanError> {
+    fn skip_comment<'a>(&mut self) -> Result<Option<Token>, ScanError> {
         loop {
             self.read_next();
             match self.peek {
@@ -155,7 +157,7 @@ impl Scanner<'_> {
         }
     }
 
-    pub fn scan(&mut self) -> Result<Option<Token>, ScanError> {
+    pub fn scan<'a>(&mut self) -> Result<Option<Token>, ScanError> {
         match self.peek {
             Some(s) if s == ' ' || s == '\t' => return self.skip_whitespace(),
             Some(nl) if nl == '\n' => return self.skip_newline(),
@@ -198,7 +200,7 @@ impl Scanner<'_> {
                     "MODULE" => Some(Token::Module),
                     "TRUE" => Some(Token::True),
                     "FALSE" => Some(Token::False),
-                    _ => Some(Token::Ident(w.clone())),
+                    _ => Some(Token::Ident{name: w}),
                 };
                 return Ok(token);
             }
