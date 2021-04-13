@@ -47,7 +47,6 @@ pub enum Token {
     True,
     Repeat,
     Until,
-    Return
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -199,7 +198,6 @@ impl Scanner<'_> {
                     "MODULE" => Some(Token::Module),
                     "TRUE" => Some(Token::True),
                     "FALSE" => Some(Token::False),
-                    "RETURN" => Some(Token::Return),
                     _ => Some(Token::Ident(w.clone())),
                 };
                 return Ok(token);

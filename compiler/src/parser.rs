@@ -81,6 +81,7 @@ impl Parser<'_> {
     }
 
     pub fn factor(&mut self) {
+        println!("> factor");
         match &self.token {
             Token::Ident(_i) => {
                 self.next();
@@ -107,9 +108,11 @@ impl Parser<'_> {
                 self.error = Some(ParseError::UnexpectedToken);
             }
         }
+        println!("< factor");
     }
 
     pub fn term(&mut self) {
+        println!("> term");
         self.factor();
         loop {
             match self.token {
@@ -122,9 +125,11 @@ impl Parser<'_> {
                 }
             }
         }
+        println!("< term")
     }
 
     fn simple_expression(&mut self) {
+        println!("> simple_expression");
         match self.token {
             Token::Plus => {
                 self.next();
@@ -147,9 +152,11 @@ impl Parser<'_> {
                 }
             }
         }
+        println!("< simple_expression");
     }
 
     fn expression(&mut self) {
+        println!("> expression");
         self.simple_expression();
         match self.token {
             Token::Eql | Token::Neq | Token::Lss | Token::Geq | Token::Leq | Token::Gtr => {
@@ -158,11 +165,13 @@ impl Parser<'_> {
             }
             _ => {}
         }
+        println!("< expression");
     }
 
     pub fn selector(&mut self) {
+        println!("> selector");
         loop {
-            println!("Selector loop {:?}", self.token);
+            println!("selector loop {:?}", self.token);
             match self.token {
                 Token::Lbrak | Token::Period => {
                     if let Token::Lbrak = self.token {
@@ -183,20 +192,21 @@ impl Parser<'_> {
                 }
             }
         }
+        println!("< selector");
     }
 
     pub fn try_assignment(&mut self) {
-        // TODO(pht) either do this self.next explicitely in all test
-        // or find a way to make this more natural...
+        println!("> assignement");
+        // NOTE(pht) This assumes that the initial Token::Ident token has been consumed;
+        // assert! self.token == Some(Token::Becomes)
         self.next();
-        if let Token::Becomes = self.token {
-            self.next();
-            self.expression();
-        }
+        self.expression();
+        println!("< assignement");
     }
 
     pub fn try_procedure_call(&mut self) {
-        // NOTE(pht) This assumes that try_assignment was called before
+        println!("> procedure_call");
+        // NOTE(pht) This assumes that the initial Token::Ident token has been consumed
         if let Token::Lparen = self.token {
             self.next();
             if let Token::Rparen = self.token {
@@ -218,15 +228,78 @@ impl Parser<'_> {
                     }
                 }
             }
+            println!("< procedure_call !");
         }
     }
 
-    pub fn try_if_statement(&mut self) {
-        // TODO(pht) From ELSIF sym = OSS.if THEN...
+    pub fn if_statement(&mut self) {
+        // NOTE(pht) This assumes that the current token is a IF
+        println!("> if_statement");
+        self.next();
+        self.expression();
+        if let Token::Then = self.token {
+            self.next();
+            self.statement_sequence();
+
+            loop {
+                if let Token::Elsif = self.token {
+                    self.next();
+                    self.expression();
+                    if let Token::Then = self.token {
+                        self.next();
+                        self.statement_sequence();
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            loop {
+                if let Token::Else = self.token {
+                    self.next();
+                    self.statement_sequence();
+                } else {
+                    break;
+                }
+            }
+
+            if let Token::End = self.token {
+                self.next();
+            }
+        }
+        println!("< if_statement");
     }
 
     pub fn parameter(&mut self) {
+        println!("> parameter");
         self.expression();
+        println!("< parameter");
+    }
+
+    pub fn statement(&mut self) {
+        match self.token {
+            // NOTE(pht) that's where I don't understand how
+            // I can work this out without some sort of "backtracking".
+            // If you know that the first is an `ident`, it can be either
+            // an assignement or a procedure call ;
+            // but you need to lookahead to know that.
+            Token::Ident(_) => {
+                self.next();
+                if let Token::Becomes = self.token {
+                    self.try_assignment()
+                } else {
+                    self.try_procedure_call();
+                }
+            }
+
+            Token::If => {
+                self.if_statement();
+            }
+
+            _ => {
+                // TODO(pht) more cases ?
+            }
+        }
     }
 
     /*
@@ -235,28 +308,21 @@ impl Parser<'_> {
     LoopStatement | ForStatement | WithStatement | EXIT | RETURN [expression] ].
     */
     pub fn statement_sequence(&mut self) {
+        println!("> statement_sequence");
         loop {
-            match self.token {
-                Token::Ident(_) => {
-                    self.try_assignment();
-                    self.try_procedure_call();
-                    self.try_if_statement();
-                }
-
-                Token::Return => {
-                    self.next();
-                    self.expression();
-                }
-                _ => {
-                    // TODO(pht) handle other cases
-                }
+            self.statement();
+            if let Token::Semicolon = self.token {
+                self.next();
+                self.statement();
+            } else {
+                break;
             }
         }
     }
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
 
     use super::*;
 
@@ -305,8 +371,10 @@ mod test {
 
     #[test]
     fn test_assignement() {
-        for c in ["x:=1", "x:=1", "z:=y[0]", "x:=(x.z*15)+12"].iter() {
+        // NOTE(pht) "x:=foo(z)" is not a valid Oberon-0 expression
+        for c in ["x:=1", "z:=y[0]", "x:=(x.z*15)+12"].iter() {
             let mut p = parser(c);
+            p.next();
             p.try_assignment();
             assert_parses(&mut p);
         }
@@ -319,20 +387,40 @@ mod test {
             p.next();
             p.try_procedure_call();
             assert_parses(&mut p);
+
+            let mut p2 = parser(c);
+            p2.statement();
+            assert_parses(&mut p2);
         }
     }
 
-    /* TODO(pht) fix that
     #[test]
-    fn test_if_statement() {
-        for c in ["IF x > 0 THEN bar() ELSE y:=12 END"].iter() {
-             let mut p = parser(c);
-            p.next();
-            p.try_if_statement();
+    fn test_expression() {
+        for c in ["x < 2"].iter() {
+            let mut p = parser(c);
+            p.expression();
             assert_parses(&mut p);
         }
     }
-    */
+
+    #[test]
+    fn test_if_statement() {
+        // NOTE(pht) if expressions like `IF bar(x) THEN foo(z)` are *not* valid Oberon-0 expressions !
+        for c in ["IF x > 0 THEN y:=2 END", "IF x + y = 0 THEN foo(z) END", "IF x > -1 THEN y:=3+5 ELSE z:=z+1 ; z:=x+2 END", "IF x = 0 THEN y:=x ELSIF x = 1 THEN y:=x+1 END"].iter() {
+            let mut p = parser(c);
+            p.if_statement();
+            assert_parses(&mut p);
+        }
+    }
+
+    #[test]
+    fn test_statement_sequence() {
+        for c in ["foo(z)", "foo(z); bar(x)"].iter() {
+            let mut p = parser(c);
+            p.statement_sequence();
+            assert_parses(&mut p);
+        }
+    }
 
     /*
     #[test]
