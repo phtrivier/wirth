@@ -6,8 +6,8 @@ use crate::token::Token;
 use crate::token::Scan;
 
 // <@scanner/line-scanner
-#[derive(Debug)]
-struct LineScanner<'a> {
+#[derive(Debug, Clone)]
+pub struct LineScanner<'a> {
   line_number: u32,
   column_number: u32,
   chars: Peekable<CharIndices<'a>>,
@@ -23,32 +23,6 @@ impl LineScanner<'_> {
         column_number: 0,
         chars: line.char_indices().peekable(),
       }),
-    }
-  }
-  pub fn next<'a>(&mut self) -> Option<Scan> {
-    loop {
-      let peek = self.chars.peek();
-      println!("Peeked {:?}", peek);
-      match peek {
-        Some(&(_column, c)) if (c == ' ' || c == '\t') => {
-          println!("Peeked whitespace, will skip");
-          return self.skip_whitespaces();
-        }
-        Some(&(_column, '\n')) => {
-          panic!("Found newline in LineScanner content, should come from a Lines iterator");
-        }
-
-        // NOTE(pht) next step would be to try and parse all types of Tokens ; but instead, 
-        // I'm going to allow myself to parse a "procedure call" tree node like `foo(bar)`
-
-        Some(&(column, '(')) => { return self.scan_single(column as u32, Token::Lparen)}
-        Some(&(column, ')')) => { return self.scan_single(column as u32, Token::Rparen)}
-        
-        Some(&(column, _first_char)) => {
-          return self.scan_ident(column as u32);
-        },
-        None => return None,
-      }
     }
   }
 
@@ -103,9 +77,49 @@ impl LineScanner<'_> {
 
 }
 
+impl Iterator for LineScanner<'_> {
+  type Item = Scan;
+
+  fn next<'a>(&mut self) -> Option<Scan> {
+    loop {
+      let peek = self.chars.peek();
+      println!("Peeked {:?}", peek);
+      match peek {
+        Some(&(_column, c)) if (c == ' ' || c == '\t') => {
+          println!("Peeked whitespace, will skip");
+          return self.skip_whitespaces();
+        }
+        Some(&(_column, '\n')) => {
+          panic!("Found newline in LineScanner content, should come from a Lines iterator");
+        }
+
+        // NOTE(pht) next step would be to try and parse all types of Tokens ; but instead, 
+        // I'm going to allow myself to parse a "procedure call" tree node like `foo(bar)`
+
+        Some(&(column, '(')) => { return self.scan_single(column as u32, Token::Lparen)}
+        Some(&(column, ')')) => { return self.scan_single(column as u32, Token::Rparen)}
+        
+        Some(&(column, _first_char)) => {
+          return self.scan_ident(column as u32);
+        },
+        None => return None,
+      }
+    }
+  }
+
+
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn test_builds_nothing_in_empty_content() {
+    let content = "";
+    let mut line_scanner = LineScanner::new(0, &mut content.lines());
+    assert_eq!(None, line_scanner);
+  }
 
   #[test]
   fn test_scanner_ignore_whitespaces() {

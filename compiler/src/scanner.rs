@@ -1,11 +1,59 @@
+use std::str::Lines;
+use crate::token::Scan;
+use crate::token::Token;
+use crate::line_scanner::LineScanner;
 
+#[derive(Debug)]
+struct Scanner<'a> {
+    line_number: u32,
+    lines: Lines<'a>,
+    line_scanner: Option<LineScanner<'a>>
+}
 
-// #[derive(Debug)]
-// struct Scanner<'a> {
-//     line_number: u32,
-//     lines: Lines<'a>,
-//     line_scanner: Option<LineScanner<'a>>
-// }
+impl Scanner<'_> {
+  pub fn new<'a>(s: &'a str) -> Option<Scanner<'a>> {
+    let mut lines = s.lines();
+    let line_scanner = LineScanner::new(0, &mut lines);
+
+    if let Some(_) = line_scanner {
+      return Some(Scanner{
+        line_number: 0,
+        lines: lines,
+        line_scanner
+      })
+    } else {
+      return  None
+    }
+  }
+}
+
+impl Iterator for Scanner<'_> {
+  type Item = Scan;
+
+  fn next<'a>(&mut self) -> Option<Scan> {
+    return None;
+  }
+}
+
+mod tests {
+  use super::*;
+  
+  #[test]
+  fn test_finds_nothing_in_empty_content() {
+    let content = "";
+    let mut scanner = Scanner::new(&content).unwrap();
+    assert_eq!(None, scanner.next());    
+  }
+
+  // #[test]
+  // fn test_scan_tokens_on_multiple_lines() {
+  //   let content = " foo \n  bar";
+  //   let mut scanner = Scanner::new(&content).unwrap();
+  //   assert_eq!(Scan{line_number: 0, column_number: 1, token: Token::Ident(String::from("foo"))}, scanner.next().unwrap());
+  //   assert_eq!(Scan{line_number: 1, column_number: 2, token: Token::Ident(String::from("bar"))}, scanner.next().unwrap());
+  //   assert_eq!(None, scanner.next());
+  // }
+}
 
 // impl Scanner <'_> {
 
