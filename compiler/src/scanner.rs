@@ -1,5 +1,5 @@
-use crate::line_scanner::LineScanner;
-use crate::token::Scan;
+use crate::line_scanner::*;
+use crate::token::*;
 use std::str::Lines;
 
 #[derive(Debug)]
@@ -32,9 +32,9 @@ impl Scanner<'_> {
 }
 
 impl Iterator for Scanner<'_> {
-  type Item = Scan;
+  type Item = ScanResult;
 
-  fn next<'a>(&mut self) -> Option<Scan> {
+  fn next<'a>(&mut self) -> Option<ScanResult> {
     loop {
       match self.line_scanner.next() {
         Some(scan) => {
@@ -69,22 +69,26 @@ mod tests {
 
   #[test]
   fn test_scan_tokens_on_multiple_lines() {
-    let content = " foo \n  bar";
+    let content = " foo \n\n  bar";
     let mut scanner = Scanner::new(&content);
     assert_eq!(
-      Scan {
-        line_number: 0,
-        column_number: 1,
+      Ok(Scan {
+        context: ScanContext{
+          line: 0,
+          column: 1
+        },
         token: Token::Ident(String::from("foo"))
-      },
+      }),
       scanner.next().unwrap()
     );
     assert_eq!(
-      Scan {
-        line_number: 1,
-        column_number: 2,
+      Ok(Scan {
+        context: ScanContext{
+          line: 2,
+          column: 2
+        },
         token: Token::Ident(String::from("bar"))
-      },
+      }),
       scanner.next().unwrap()
     );
     assert_eq!(None, scanner.next());

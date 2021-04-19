@@ -1,8 +1,7 @@
 use std::iter::Peekable;
 use std::str::CharIndices;
 
-use crate::token::Token;
-use crate::token::Scan;
+use crate::token::*;
 
 // <@scanner/line-scanner
 #[derive(Debug, Clone)]
@@ -15,24 +14,40 @@ pub struct LineScanner<'a> {
 
 impl LineScanner<'_> {
   pub fn new<'a>(line_number: u32, line: &'a str) -> LineScanner<'a> {
-    LineScanner{
+    LineScanner {
       line_number: line_number,
       column_number: 0,
-      chars: line.char_indices().peekable(),  
+      chars: line.char_indices().peekable(),
     }
-
   }
 
-  fn scan_single(&mut self, column_number: u32, token: Token) -> Option<Scan> {
+  fn context(&self, column_number: u32) -> ScanContext {
+    return ScanContext {
+      line: self.line_number,
+      column: column_number as u32,
+    };
+  }
+
+  fn token_at(&self, column: u32, token: Token) -> Option<ScanResult> {
+    return Some(Ok(Scan {
+      context: self.context(column as u32),
+      token,
+    }))
+  } 
+
+  fn error_at(&self, column: u32, error_type: ScanErrorType) -> Option<ScanResult> {
+    return Some(Err(ScanError {
+      context: self.context(column as u32),
+      error_type,
+    }))
+  }
+
+  fn scan_single(&mut self, column_number: u32, token: Token) -> Option<ScanResult> {
     self.chars.next();
-    return Some(Scan{
-      line_number: self.line_number, 
-      column_number,
-      token
-    })
+    return self.token_at(column_number, token);
   }
 
-  fn skip_whitespaces(&mut self) -> Option<Scan> {
+  fn skip_whitespaces(&mut self) -> Option<ScanResult> {
     loop {
       let next_char = self.chars.peek();
       if let Some(&(_column, c)) = next_char {
@@ -50,7 +65,7 @@ impl LineScanner<'_> {
     return self.next();
   }
 
-  fn scan_ident(&mut self, column_number: u32) -> Option<Scan> {
+  fn scan_ident(&mut self, column_number: u32) -> Option<ScanResult> {
     let mut ident = String::from("");
     loop {
       let p = self.chars.peek();
@@ -65,19 +80,15 @@ impl LineScanner<'_> {
         break;
       }
     }
-    return Some(Scan{
-      line_number: self.line_number,
-      column_number: column_number as u32,
-      token: Token::Ident(ident)
-    })
+    return self.token_at(column_number, Token::Ident(ident));
   }
 
 }
 
 impl Iterator for LineScanner<'_> {
-  type Item = Scan;
+  type Item = ScanResult;
 
-  fn next<'a>(&mut self) -> Option<Scan> {
+  fn next<'a>(&mut self) -> Option<ScanResult> {
     loop {
       let peek = self.chars.peek();
       println!("Peeked {:?}", peek);
@@ -86,32 +97,27 @@ impl Iterator for LineScanner<'_> {
           println!("Peeked whitespace, will skip");
           return self.skip_whitespaces();
         }
-        Some(&(_column, '\n')) => {
-          panic!("Found newline in LineScanner content, should come from a Lines iterator");
+        Some(&(column, '\n')) => {
+          self.chars.next();
+          return self.error_at(column as u32, ScanErrorType::UnexpectedNewLine);
         }
-        Some(&(column_number, c)) if !c.is_ascii() => {
-          // NOTE(pht) this probably not very efficient, since we're going to check 
-          // again against all chars.
-          // Also, in a perfect world, I would use a Option<Result<Scan, ScanError>>, but would that really
-          // be worth it ?
-          panic!("Found non ascii character at position {:?}, {:?}", self.line_number, column_number);
+        Some(&(column, c)) if !c.is_ascii() => {
+          self.chars.next();
+          return self.error_at(column as u32, ScanErrorType::InvalidChar(c));
         }
 
-        // NOTE(pht) next step would be to try and parse all types of Tokens ; but instead, 
+        // NOTE(pht) next step would be to try and parse all types of Tokens ; but instead,
         // I'm going to allow myself to parse a "procedure call" tree node like `foo(bar)`
+        Some(&(column, '(')) => return self.scan_single(column as u32, Token::Lparen),
+        Some(&(column, ')')) => return self.scan_single(column as u32, Token::Rparen),
 
-        Some(&(column, '(')) => { return self.scan_single(column as u32, Token::Lparen)}
-        Some(&(column, ')')) => { return self.scan_single(column as u32, Token::Rparen)}
-        
         Some(&(column, _first_char)) => {
           return self.scan_ident(column as u32);
-        },
+        }
         None => return None,
       }
     }
   }
-
-
 }
 
 #[cfg(test)]
@@ -135,20 +141,51 @@ mod tests {
   }
 
   #[test]
-  #[should_panic]
-  fn test_panics_on_non_ascii_chars() {
-    let content = " ❤ ";
+  fn test_returns_error_on_non_ascii_chars_and_newlines() {
+    let content = " ❤\n";
     let mut scanner = LineScanner::new(0, &content);
-    scanner.next();
+    assert_eq!(
+      Err(ScanError {
+        context: ScanContext { line: 0, column: 1 },
+        error_type: ScanErrorType::InvalidChar('❤')
+      }),
+      scanner.next().unwrap()
+    );
+    assert_eq!(
+      Err(ScanError {
+        context: ScanContext { line: 0, column: 4 },
+        error_type: ScanErrorType::UnexpectedNewLine
+      }),
+      scanner.next().unwrap()
+    );
+    assert_eq!(None, scanner.next());
   }
 
   #[test]
   fn test_scanner_extracts_identifier() {
     let content = "  foo()";
     let mut scanner = LineScanner::new(1, &content);
-    assert_eq!(Some(Scan{line_number: 1, column_number: 2, token: Token::Ident(String::from("foo"))}), scanner.next());
-    assert_eq!(Some(Scan{line_number: 1, column_number: 5, token: Token::Lparen}), scanner.next());
-    assert_eq!(Some(Scan{line_number: 1, column_number: 6, token: Token::Rparen}), scanner.next());
-    assert_eq!(None, scanner.next());   
+    assert_eq!(
+      Ok(Scan {
+        context: ScanContext { line: 1, column: 2 },
+        token: Token::Ident(String::from("foo"))
+      }),
+      scanner.next().unwrap()
+    );
+    assert_eq!(
+      Ok(Scan {
+        context: ScanContext { line: 1, column: 5 },
+        token: Token::Lparen
+      }),
+      scanner.next().unwrap()
+    );
+    assert_eq!(
+      Ok(Scan {
+        context: ScanContext { line: 1, column: 6 },
+        token: Token::Rparen
+      }),
+      scanner.next().unwrap()
+    );
+    assert_eq!(None, scanner.next());
   }
 }

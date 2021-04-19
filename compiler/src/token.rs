@@ -1,11 +1,3 @@
-
-// I must be stupid, because I simply can't make rust find
-// and import this module when I put it in a nother file.
-// I simply don't understand. 
-// use crate::token::Token should work. 
-// It does not. 
-
-// <@scanner/tokens
 #[allow(dead_code)]
 #[derive(Clone, PartialEq, Debug)]
 pub enum Token {
@@ -57,12 +49,29 @@ pub enum Token {
 }
 // @>scanner/tokens
 
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct ScanContext {
+  pub line: u32,
+  pub column: u32
+}
+
 // <@scanner/scan
 #[derive(Clone, PartialEq, Debug)]
 pub struct Scan {
-  pub line_number: u32,
-  pub column_number: u32,
+  pub context: ScanContext,
   pub token: Token,
 }
-// @>scanner/scan
 
+#[derive(Clone, PartialEq, Debug)]
+pub enum ScanErrorType {
+  InvalidChar(char),
+  UnexpectedNewLine,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct ScanError {
+  pub context: ScanContext,
+  pub error_type: ScanErrorType
+}
+
+pub type ScanResult = Result<Scan, ScanError>;
