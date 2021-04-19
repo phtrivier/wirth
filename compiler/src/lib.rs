@@ -1,3 +1,3 @@
-mod token;
+pub mod token;
 mod line_scanner;
-mod scanner;
+pub mod scanner;

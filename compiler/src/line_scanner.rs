@@ -1,6 +1,5 @@
 use std::iter::Peekable;
 use std::str::CharIndices;
-use std::str::Lines;
 
 use crate::token::Token;
 use crate::token::Scan;
@@ -15,15 +14,13 @@ pub struct LineScanner<'a> {
 // @>scanner/line-scanner
 
 impl LineScanner<'_> {
-  pub fn new<'a>(line_number: u32, lines: &mut Lines<'a>) -> Option<LineScanner<'a>> {
-    match lines.next() {
-      None => return None,
-      Some(line) => Some(LineScanner {
-        line_number: line_number,
-        column_number: 0,
-        chars: line.char_indices().peekable(),
-      }),
+  pub fn new<'a>(line_number: u32, line: &'a str) -> LineScanner<'a> {
+    LineScanner{
+      line_number: line_number,
+      column_number: 0,
+      chars: line.char_indices().peekable(),  
     }
+
   }
 
   fn scan_single(&mut self, column_number: u32, token: Token) -> Option<Scan> {
@@ -117,14 +114,14 @@ mod tests {
   #[test]
   fn test_builds_nothing_in_empty_content() {
     let content = "";
-    let mut line_scanner = LineScanner::new(0, &mut content.lines());
-    assert_eq!(None, line_scanner);
+    let mut line_scanner = LineScanner::new(0, &content);
+    assert_eq!(None, line_scanner.next());
   }
 
   #[test]
   fn test_scanner_ignore_whitespaces() {
     let content = "  ";
-    let mut scanner = LineScanner::new(0, &mut content.lines()).unwrap();
+    let mut scanner = LineScanner::new(0, &content);
     assert_eq!(None, scanner.next());
     assert_eq!(None, scanner.next());
     assert_eq!(2, scanner.column_number);
@@ -133,7 +130,7 @@ mod tests {
   #[test]
   fn test_scanner_extracts_identifier() {
     let content = "  foo()";
-    let mut scanner = LineScanner::new(1, &mut content.lines()).unwrap();
+    let mut scanner = LineScanner::new(1, &content);
     assert_eq!(Some(Scan{line_number: 1, column_number: 2, token: Token::Ident(String::from("foo"))}), scanner.next());
     assert_eq!(Some(Scan{line_number: 1, column_number: 5, token: Token::Lparen}), scanner.next());
     assert_eq!(Some(Scan{line_number: 1, column_number: 6, token: Token::Rparen}), scanner.next());
