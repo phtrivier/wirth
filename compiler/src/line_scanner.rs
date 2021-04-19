@@ -55,7 +55,7 @@ impl LineScanner<'_> {
     loop {
       let p = self.chars.peek();
       if let Some(&(_column, next_char)) = p {
-        if next_char.is_ascii_alphanumeric() {
+        if next_char.is_ascii_alphabetic() {
           ident.push(next_char);
           self.chars.next();
         } else {
@@ -88,6 +88,13 @@ impl Iterator for LineScanner<'_> {
         }
         Some(&(_column, '\n')) => {
           panic!("Found newline in LineScanner content, should come from a Lines iterator");
+        }
+        Some(&(column_number, c)) if !c.is_ascii() => {
+          // NOTE(pht) this probably not very efficient, since we're going to check 
+          // again against all chars.
+          // Also, in a perfect world, I would use a Option<Result<Scan, ScanError>>, but would that really
+          // be worth it ?
+          panic!("Found non ascii character at position {:?}, {:?}", self.line_number, column_number);
         }
 
         // NOTE(pht) next step would be to try and parse all types of Tokens ; but instead, 
@@ -125,6 +132,14 @@ mod tests {
     assert_eq!(None, scanner.next());
     assert_eq!(None, scanner.next());
     assert_eq!(2, scanner.column_number);
+  }
+
+  #[test]
+  #[should_panic]
+  fn test_panics_on_non_ascii_chars() {
+    let content = " ❤ ";
+    let mut scanner = LineScanner::new(0, &content);
+    scanner.next();
   }
 
   #[test]
