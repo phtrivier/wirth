@@ -2,30 +2,35 @@
 #L      300  ; Number of primes to find
 #PRIME   30  ; Location for primes (TODO(pht) make sure it's lower than the size of the program)
 * Registers: 
-*  R1 : J-L (iterator from L to 0)
+*  R1 : J (iterator from 0 to L)
 *  R2 : N (currently tested integer)
 *  R3 : K (index of known prime)
 *  R4 : MEM[PRIME + K] 
 *  R5 : Q (N / PRIME[K])
 *  R6 : R (N % PRIME[K])
-@START  MOVI R1,0,1         ; J <- 1
-        MOVI R2,0,3         ; N <- 3
-        MOVI R3,0,1         ; K <- 1
-        MOVI R0,0,2
+*  R7 : J-L (used for branching)
+*  R8 : Q - MEM[PRIME + K] (used to stop computation early)
+@START  MOV R1,1            ; J <- 1
+        MOV R2,3            ; N <- 3
+        MOV R3,1            ; K <- 1
+        MOV R0,2            ; 2 as first PRIME
         STW R0,R3,#PRIME    ; PRIME[1] <- 2
-@P2     ADDI R1,R1,1        ; N is prime. J <- J + 1        
+@P2     ADD R1,R1,1         ; N is prime. J <- J + 1        
         STW R2,R1,#PRIME    ; PRIME[J] <- N
-        CMPI R1,#L          ; L Found ?
-        BGE @END            ; If L found, exit
-@P4     ADDI R2,R2,2        ; N <- N + 2
-@P5     MOVI R3,0,2         ; K <- 2
+        SUB R7,R1,#L        
+        BEQ @END            ; If L found, exit
+@P4     ADD R2,R2,2         ; N <- N + 2
+@P5     MOV R3,2            ; K <- 2
 @P6     LDW R4,R3,#PRIME    ; R4 <- PRIME[K]
         DIV R5,R2,R4        ; R5 <- N / PRIME[K]
+
+* NOTE(pht) I cheated by adding a MOD operator !!
         MOD R6,R2,R4        ; R6 <- N % PRIME[K]
-        CMPI R6,0           ; PRIME[K] \ N ?
-        BEQ @P4             ; To P4 if R=0
-        CMP R5,R4           ; PRIME[K] large ?
-        BLE @P2             ; To P2 if Q <= PRIME[K]
-        ADDI R3,R3,1        ; K <- K + 1
-        BR  @P6             ; Continue
-@END    RET R14
+        BEQ @P4             ; IF PRIME[K] \ N GOTO P4
+
+        SUB R8,R5,R4
+        BLE @P2             ; if Q <= PRIME[K] GOTO P2
+        ADD R3,R3,1         ; K <- K + 1
+        B   @P6             ; Continue
+@END    MOV R15,0
+        B   R15 

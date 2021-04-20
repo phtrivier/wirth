@@ -91,10 +91,8 @@ impl Iterator for LineScanner<'_> {
   fn next<'a>(&mut self) -> Option<ScanResult> {
     loop {
       let peek = self.chars.peek();
-      println!("Peeked {:?}", peek);
       match peek {
         Some(&(_column, c)) if (c == ' ' || c == '\t') => {
-          println!("Peeked whitespace, will skip");
           return self.skip_whitespaces();
         }
         Some(&(column, '\n')) => {

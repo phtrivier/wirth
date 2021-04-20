@@ -29,15 +29,20 @@ fn main() {
     let mut a = assembler::Assembler::new();
 
     let program = "
-    * A program that increments R0 until it's 3
-    #FOO    3            ; The number of iterations
-            MOVI R0,0,0  ; R0 <- 0
-    @LOOP   ADDI R0,R0,1  ; R0 <- R0 + 1
-            CMPI R0,#FOO ; If iteration done ?
-    * Note that the loop is treated as a displacement
-            BNE  @LOOP      
-    @END    RET  R14    ; Exits since R14 is null in our case
+    * A program that incruments R1 until it's 6
+    #FOO    3             ; Number of iterations remaining
+    #BAR    2
+            MOV  R0,#FOO   ; R0 <- 3
+            MOV  R1,0      ; 
+    @LOOP   ADD  R1,R1,#BAR   ; R1 <- R1 + 2
+            SUB  R0,R0,1      ; R0 <- R0 - 1
+            BEQ  @END      ; IF R0 == 0 GOTO @END
+    * A comment that should be ignored
+            B    @LOOP
+    @END    MOV  R2,0      ; Put 0 in the R2, and branch to 0 to exit
+            B    R2
     ";
+
     a.assemble(program).expect("Unable to parse program !");
 
     // Load instructions

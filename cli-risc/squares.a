@@ -4,11 +4,11 @@
 * Results are put in memory starting at address #OUT (arbitrarily)
 #N      10              ; Number of iteration
 #OUT    10              ; Location for the squares
-        MOVI R1,0,1     ; Init Loop index
-@LOOP   MUL  R0,R1,R1   ; R0 <- R1 * R1
-        STW  R0,R1,#OUT ; MEM[R1+OUT] <- R0
-        CMPI R1,#N      ; Test loop finished
-        BGT  @END       ; If R1 > N, terminates
-        ADDI R1,R1,1    ; R1 <- R1 + 1
-        BR  @LOOP       ; Continue
-@END    RET  R14        ; End
+        MOV  R0,#N      ; Init Loop index
+@LOOP   MUL  R1,R0,R0   ; R1 <- R0 * R0
+        STW  R1,R0,#OUT ; MEM[R0+OUT] <- R1
+        BEQ  @END       ; IF R0 == 0 GOTO END
+        SUB  R0,R0,1    ; R0 <- R0 - 1
+        B    @LOOP      ; Continue
+@END    MOV  R15,0      ; End
+        B    R15

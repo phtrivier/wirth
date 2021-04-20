@@ -3,9 +3,12 @@
 * First part of the program simply defines constants that can be used afterwards.
 #FOO    3               ; The number of iterations
 * Than the main part of the program appears.
-        MOVI R0,0,0     ; R0 <- 0
+        MOV R0,0     ; R0 <- 0
+        MOV R1,#FOO  ; R1 <- 3
 * `@xxx` symbols can be used as symbol for the corresponding memory position of the instruction
-@LOOP   ADDI R0,R0,1    ; R0 <- R0 + 1
-        CMPI R0,#FOO    ; Test if iteration is done
-        BNE  @LOOP      ; Branch to absolute position
-@END    RET  R14        ; Exits (assumes R14 is 0)
+@LOOP   ADD R0,R0,1    ; R0 <- R0 + 1
+        SUB R1,R1,1    ; R1 <- R1 - 1
+        BEQ @END    ; IF R1 == 0 THEN GOTO END
+        B   @LOOP   ; Branch to known position
+@END    MOV R15,0  ; Prepare exit
+        B   R15

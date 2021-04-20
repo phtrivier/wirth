@@ -1,20 +1,21 @@
 // A RISC Computer.
 use crate::instructions::*;
 
-pub struct Computer {
-    pub regs: [i32; 16],
-    // NOTE(pht) memory is represented as an array of words, so byte-addressing is implicit.
-    pub mem: [i32; 4096],
+const MEMORY_SIZE: usize = 4096;
 
-    // Test flags
+pub struct Computer {
+    // Memory, represented as an array of 32-bit words ; byte-addressing is implicit
+    // in the simulator.
+    pub mem: [i32; MEMORY_SIZE],
+
+    // Arithmetic unit
+    pub regs: [i32; 16],
+    pub pc: usize,
+
+    // Condition codes
     pub z_test: bool,
     pub neg_test: bool,
 
-    // Done flag to stop execution loop
-    pub done_flag: bool,
-
-    // Dirty hack
-    pub next: i32,
 }
 
 impl Computer {
@@ -22,21 +23,16 @@ impl Computer {
         Computer {
             regs: [0; 16],
             mem: [0; 4096],
+            pc: 0,
             z_test: false,
             neg_test: false,
-            done_flag: false,
-            next: 0, // dirty hack
-        }
-    }
-
-    pub fn load_instructions_at(&mut self, instructions: Vec<Instruction>, base: usize) {
-        for (index, instruction) in instructions.iter().enumerate() {
-            self.mem[base + index] = Instruction::encode(*instruction) as i32;
         }
     }
 
     pub fn load_instructions(&mut self, instructions: Vec<Instruction>) {
-        self.load_instructions_at(instructions, 0);
+        for (index, instruction) in instructions.iter().enumerate() {
+            self.mem[index] = Instruction::encode(instruction) as i32;
+        }
     }
 
     pub fn dump_regs(&self) {
@@ -53,185 +49,175 @@ impl Computer {
         }
     }
 
-    pub fn execute_at(&mut self, max: u32, base: usize, debug: bool) {
-        self.done_flag = false;
-        self.regs[15] = base as i32;
+    pub fn execute(&mut self, max_cycles: u32, debug: bool) {
+        self.pc = 0;
 
-        let mut i = 0;
+        let mut cycles = 0;
 
         loop {
-            let pc_address = self.regs[15]; // memory is byte-address;
+            if debug {
+                println!("----------------- PC = {} --------------", {self.pc});
+            }
 
-            // NOTE(pht) Next instructions, unless told otherwise.
-            self.next = self.regs[15] + 1;
+            // Read current instruction
+            let ir : i32 = self.mem[self.pc];
+            // NOTE(pht): we panic if instruction is invalid, this could
+            // be done by returning an error, etc...
 
-            let ir: i32 = self.mem[pc_address as usize];
-
-            // NOTE(pht): we panic if instruction is invalid.
             let instruction = Instruction::parse(ir as u32).unwrap();
 
             if debug {
                 println!("Instruction {:?}", instruction);
             }
+            // Set PC to the address of next instruction ; unless a branch instruction
+            // is run, this will be the next instruction in memory.
+            self.pc = self.pc + 1;
+
+            if debug {
+                println!("Setting PC to next value {:?}", self.pc);
+            }
 
             self.execute_instruction(instruction, debug);
 
-            if debug {
-                println!("PC ? {:?}", self.regs[15]);
-                println!("Done ? {:?}", self.done_flag);
-            }
-
-            if i > max || self.done_flag {
+            if self.pc == 0 {
+                if debug {
+                    println!("Program finished succesfully.")
+                }
                 break;
             }
-            i = i + 1;
 
-            self.regs[15] = self.next;
+            if cycles > max_cycles {
+                if debug {
+                    println!("Reached max cycles count {}, aborting.", max_cycles);
+                }
+                break;
+            }
+            cycles  = cycles  + 1;
         }
     }
 
-    pub fn execute(&mut self, max: u32, debug: bool) {
-        self.execute_at(max, 0, debug);
-    }
-
-    pub fn execute_instruction(&mut self, i: Instruction, debug: bool) {
+    pub fn execute_instruction(&mut self, i: Instruction, _debug: bool) {
         match i {
-            Instruction::Register { o, a, b, c } => match o {
-                RegisterOpCode::MOV => {
-                    self.regs[a] = self.regs[c] << b;
-                }
-                RegisterOpCode::MVN => {
-                    self.regs[a] = -(self.regs[c] << b);
-                }
-                RegisterOpCode::ADD => {
-                    self.regs[a] = self.regs[b] + self.regs[c];
-                }
-                RegisterOpCode::SUB => {
-                    self.regs[a] = self.regs[b] - self.regs[c];
-                }
-                RegisterOpCode::MUL => {
-                    self.regs[a] = self.regs[b] * self.regs[c];
-                }
-                RegisterOpCode::DIV => {
-                    self.regs[a] = self.regs[b] / self.regs[c];
-                }
-                RegisterOpCode::MOD => {
-                    self.regs[a] = self.regs[b] % self.regs[c];
-                }
-                RegisterOpCode::CMP => {
-                    let (reg_b, reg_c) = (self.regs[b], self.regs[c]);
-                    self.z_test = reg_b == reg_c;
-                    self.neg_test = reg_b < reg_c;
-                }
-            },
-            Instruction::RegisterIm { o, a, b, im } => match o {
-                RegisterImOpCode::MOVI => {
-                    self.regs[a] = im << b;
-                }
-                RegisterImOpCode::MVNI => {
-                    self.regs[a] = -(im << b);
-                }
-                RegisterImOpCode::ADDI => {
-                    self.regs[a] = self.regs[b] + im;
-                }
-                RegisterImOpCode::SUBI => {
-                    self.regs[a] = self.regs[b] - im;
-                }
-                RegisterImOpCode::MULI => {
-                    self.regs[a] = self.regs[b] * im;
-                }
-                RegisterImOpCode::DIVI => {
-                    self.regs[a] = self.regs[b] / im;
-                }
-                RegisterImOpCode::MODI => {
-                    self.regs[a] = self.regs[b] % im;
-                }
-                RegisterImOpCode::CMPI => {
-                    let reg_b = self.regs[b];
-                    self.z_test = reg_b == im;
-                    self.neg_test = reg_b < im;
-                }
-                RegisterImOpCode::CHKI => {
-                    let reg_a = self.regs[a];
-                    if reg_a < 0 || reg_a > im {
-                        self.regs[a] = 0;
-                    }
-                }
-            },
-            Instruction::Memory { o, a, b, disp } => match o {
-                MemoryOpCode::LDW => {
-                    if debug {
-                        println!("Loading from register {:?} ", b);
-                        println!("Loading with displacement {:?} ", disp);
-                    }
-                    let b_add = self.regs[b];
-                    if debug {
-                        println!("b address {:?}", b_add);
-                    }
-                    let b_plus_disp_add = (b_add as i32 + disp) as usize;
-                    if debug {
-                        println!("b + disp address, {:?}", b_plus_disp_add);
-                    }
-                    self.regs[a] = self.mem[b_plus_disp_add];
-                }
-                MemoryOpCode::POP => {
-                    self.regs[a] = self.mem[self.regs[b] as usize];
-                    self.regs[b] = ((self.regs[b] as i32) + disp) as i32;
-                }
-                MemoryOpCode::PSH => {
-                    self.regs[b] = self.regs[b] - disp;
-                    self.mem[self.regs[b] as usize] = self.regs[a];
-                }
-                MemoryOpCode::STW => {
-                    self.mem[(self.regs[b] + disp) as usize] = self.regs[a];
-                }
-            },
-            Instruction::Branch { o, disp } => match o {
-                BranchOpCode::BEQ => {
-                    if self.z_test {
-                        self.next = self.regs[15] + (disp as i32);
-                    }
-                }
-                BranchOpCode::BLT => {
-                    if self.neg_test {
-                        self.next = self.regs[15] + (disp as i32);
-                    }
-                }
-                BranchOpCode::BLE => {
-                    if self.neg_test || self.z_test {
-                        self.next = self.regs[15] + (disp as i32);
-                    }
-                }
-                BranchOpCode::BNE => {
-                    if !self.z_test {
-                        self.next = self.regs[15] + (disp as i32);
-                    }
-                }
-                BranchOpCode::BGE => {
-                    if !self.neg_test {
-                        self.next = self.regs[15] + (disp as i32);
-                    }
-                }
-                BranchOpCode::BGT => {
-                    if !self.neg_test && !self.z_test {
-                        self.next = self.regs[15] + (disp as i32);
-                    }
-                }
-                BranchOpCode::BR => {
-                    self.next = self.regs[15] + (disp as i32);
-                }
-                BranchOpCode::BSR => {
-                    self.regs[14] = self.regs[15];
-                    self.next = self.regs[15] + (disp as i32);
-                }
-                BranchOpCode::RET => {
-                    let index = (disp % 0x10) as usize;
-                    self.next = self.regs[index];
-                    if self.next == 0 {
-                        self.done_flag = true;
-                    }
-                }
-            },
+            Instruction::Register { o, a, b, c } => self.execute_register(o, a, b, self.regs[c]),
+            Instruction::RegisterIm { o, a, b, im } => self.execute_register(o, a, b, im),
+            Instruction::Memory { u, a, b, offset } => self.execute_memory(u, a, b, offset),
+            Instruction::Branch { cond, c, link } => self.execute_branch(cond, c, link),
+            Instruction::BranchOff { cond, offset, link } => self.execute_branch_offset(cond, offset, link),
+            
         }
+    }
+
+    fn execute_register(&mut self, o: OpCode, a: usize, b: usize, value: i32) {
+        match o {
+            OpCode::MOV => {
+                self.regs[a] = value;
+            }
+            OpCode::LSL => {
+                self.regs[a] = self.regs[b] << value;
+            }
+            OpCode::ASR => {
+                self.regs[a] = self.regs[b] >> value;
+            }
+            OpCode::ROR => {
+                if value > 0 {
+                    self.regs[a] = (self.regs[b] as u32).rotate_right(value as u32) as i32;
+                } else {
+                    self.regs[a] = (self.regs[b] as u32).rotate_left(-value as u32) as i32;
+                }
+            }
+            OpCode::AND => {
+                self.regs[a] = self.regs[b] & value;
+            }
+            OpCode::ANN => {
+                self.regs[a] = self.regs[b] & !value;
+            }
+            OpCode::IOR => {
+                self.regs[a] = self.regs[b] | value;
+            }
+            OpCode::XOR => {
+                self.regs[a] = self.regs[b] ^ value;
+            }
+            OpCode::ADD => {
+                self.regs[a] = self.regs[b] + value;
+            }
+            OpCode::SUB => {
+                self.regs[a] = self.regs[b] - value;
+            }
+            OpCode::MUL => {
+                self.regs[a] = self.regs[b] * value;
+            }
+            OpCode::DIV => {
+                self.regs[a] = self.regs[b] / value;
+            }
+            OpCode::MOD => {
+                self.regs[a] = self.regs[b] % value;
+            }
+        }
+        self.update_flags(a);
+    }
+
+    fn execute_memory(&mut self, u: MemoryMode, a: usize, b: usize, offset: u32) {
+        match u {
+            MemoryMode::Load => {
+                let adr: i32 = self.regs[b] + offset as i32;
+                if adr < 0 {
+                    panic!("Attempt to load memory from negative address {}, not implemented.", adr);
+                }
+                if adr > MEMORY_SIZE as i32 {
+                    panic!("Attempt to load memory from address {}, bigger than computer memory.", adr)
+                }
+                self.regs[a] = self.mem[adr as usize];
+                self.update_flags(a);
+            }
+            MemoryMode::Store => {
+                let adr: i32 = self.regs[b] + offset as i32;
+                if adr < 0 {
+                    panic!("Attempt to store data at negative address {}, not implemented.", adr);
+                }
+                if adr > MEMORY_SIZE as i32 {
+                    panic!("Attempt to store data at address {}, bigger than computer memory.", adr)
+                }
+                self.mem[adr as usize] = self.regs[a];
+            }
+        }
+    }
+
+    fn execute_branch(&mut self, cond: BranchCondition, c: usize, link: bool) {
+        if self.matches_cond(cond) {
+            if link {
+                self.regs[15] = self.pc as i32;
+            }
+            self.pc = self.regs[c] as usize;
+        }
+    }
+
+    fn execute_branch_offset(&mut self, cond: BranchCondition, offset: i32, link: bool) {
+        if self.matches_cond(cond) {
+            if link {
+                self.regs[15] = self.pc as i32;
+            }
+
+            self.pc = (self.pc as i32 + offset as i32) as usize;
+        }
+    }
+
+    pub fn matches_cond(&self, cond: BranchCondition) -> bool {
+        return match cond {
+            BranchCondition::MI => self.neg_test,
+            BranchCondition::EQ => self.z_test,
+            BranchCondition::LT => self.neg_test,
+            BranchCondition::LE => (self.neg_test || self.z_test), 
+            BranchCondition::AW => true,
+            BranchCondition::PL => !self.neg_test,
+            BranchCondition::NE => !self.z_test,
+            BranchCondition::GE => !self.neg_test,
+            BranchCondition::GT => !(self.neg_test || self.z_test),
+            BranchCondition::NV => false
+        }
+    }
+
+    pub fn update_flags(&mut self, a: usize) {
+        self.z_test = self.regs[a] == 0;
+        self.neg_test = self.regs[a] < 0;
     }
 }
