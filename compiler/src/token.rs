@@ -44,7 +44,7 @@ pub enum Token {
     True,
     Repeat,
     Until,
-    Number(u32),
+    Int(u32),
     Ident(String),
 }
 // @>scanner/tokens
@@ -64,7 +64,7 @@ pub struct Scan {
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum ScanErrorType {
-  InvalidChar(char),
+  InvalidChar(char), // char is not ascii
   UnexpectedNewLine,
 }
 
