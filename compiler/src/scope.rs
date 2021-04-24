@@ -1,6 +1,6 @@
 #[derive(Debug, PartialEq)]
 pub struct Symbol {
-  name: String
+  pub name: String
 }
 
 pub struct Scope {
