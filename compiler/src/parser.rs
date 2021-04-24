@@ -5,6 +5,7 @@ use std::rc::Rc;
 
 #[derive(Debug, PartialEq)]
 enum NodeInfo<'a> {
+  StatementSequence,
   Assignement,
   Constant(u32),
   Ident(&'a Symbol), // NOTE(pht) I wonder if this could be done with a &Symbol, with the appropriate lifetime ?
@@ -58,6 +59,26 @@ struct Parser {}
 impl Parser {
   pub fn new() -> Parser {
     Parser {}
+  }
+
+  pub fn parse_statement_sequence<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
+
+    let first_statement = self.parse_statement(scanner, scope)?;
+    let next = self.scan_next(scanner);
+    if let Ok(Scan { token : Token::Semicolon, context: _context}) = next {
+      return Ok(Rc::new(Tree::Node(Node {
+        info: NodeInfo::StatementSequence,
+        child: first_statement,
+        sibling: self.parse_statement_sequence(scanner, scope)?,
+      })));
+    } else {
+      return Ok(Rc::new(Tree::Node(Node {
+        info: NodeInfo::StatementSequence,
+        child: first_statement,
+        sibling: Rc::new(Tree::Nil),
+      })));
+    }
+
   }
 
   pub fn parse_statement<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
@@ -164,7 +185,7 @@ mod tests {
   }
 
   #[test]
-  fn parses_statement() {
+  fn can_parse_statement() {
     let mut scope = scope(vec!["x"]);
     let tree = parse_statement(&mut scope, "x:=42").unwrap();
     assert_matches!(tree.as_ref(), Tree::Node(_));
@@ -180,11 +201,30 @@ mod tests {
     assert_matches!(sibling_node.info, NodeInfo::Constant(c) if c == 42);
   }
 
+  fn parse_statement_sequence<'a>(scope: &'a Scope, content: &str) -> ParseResult<'a> {
+    let mut scanner = Scanner::new(content);
+    let p = Parser::new();
+    return p.parse_statement_sequence(&mut scanner, scope);
+  }
+
   #[test]
-  fn parse_statement_sequence() {
+  fn can_parse_statement_sequence() {
     let mut scope = scope(vec!["x", "y"]);
-    let _tree = parse_statement(&mut scope, "x:=42;y:=0").unwrap();
-    
+    let tree = parse_statement_sequence(&mut scope, "x:=42;y:=0").unwrap();
+    assert_matches!(tree.as_ref(), Tree::Node(_));
+
+    let first_statement = tree_node(tree.as_ref()).unwrap();
+    assert_eq!(first_statement.info, NodeInfo::StatementSequence);
+    assert_matches!(first_statement.child.as_ref(), Tree::Node(_));
+
+    let first_assignemnt = tree_node(first_statement.child.as_ref()).unwrap();
+    assert_matches!(first_assignemnt.info, NodeInfo::Assignement);
+
+    let second_statement = tree_node(first_statement.sibling.as_ref()).unwrap();
+    assert_eq!(second_statement.info, NodeInfo::StatementSequence);
+
+    let second_assignment = tree_node(second_statement.child.as_ref()).unwrap();
+    assert_matches!(second_assignment.info, NodeInfo::Assignement);
   }
 
 }
