@@ -45,7 +45,7 @@ mod tests {
   }
 
   #[test]
-  fn can_find_symbole() {
+  fn can_find_symbol() {
     let mut s = Scope::new();
     s.add("x");
     assert_eq!(s.lookup("x").unwrap().name, "x");

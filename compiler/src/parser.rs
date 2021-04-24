@@ -3,27 +3,26 @@ use crate::scope::*;
 use crate::token::*;
 use std::rc::Rc;
 
-
 #[derive(Debug, PartialEq)]
 enum NodeInfo<'a> {
   Assignement,
   Constant(u32),
-  Ident(&'a Symbol) // NOTE(pht) I wonder if this could be done with a &Symbol, with the appropriate lifetime ?
+  Ident(&'a Symbol), // NOTE(pht) I wonder if this could be done with a &Symbol, with the appropriate lifetime ?
 }
 
 #[derive(Debug)]
-struct Node<'a>{
+struct Node<'a> {
   info: NodeInfo<'a>,
   child: Rc<Tree<'a>>, // NOTE(pht) I wonder if those could be either Boxes. Or, If I don't want to allocate memory, a reference to a vec ?
-  sibling: Rc<Tree<'a>>
+  sibling: Rc<Tree<'a>>,
 }
 
 impl Node<'_> {
   pub fn ident<'a>(symbol: &'a Symbol) -> Node<'a> {
-    Node{
+    Node {
       info: NodeInfo::Ident(symbol),
-         child: Rc::new(Tree::Nil),
-         sibling: Rc::new(Tree::Nil)
+      child: Rc::new(Tree::Nil),
+      sibling: Rc::new(Tree::Nil),
     }
   }
 
@@ -31,7 +30,7 @@ impl Node<'_> {
     Node {
       info: NodeInfo::Constant(c),
       child: Rc::new(Tree::Nil),
-      sibling: Rc::new(Tree::Nil)
+      sibling: Rc::new(Tree::Nil),
     }
   }
 }
@@ -39,115 +38,79 @@ impl Node<'_> {
 #[derive(Debug)]
 enum Tree<'a> {
   Node(Node<'a>),
-  Nil
+  Nil,
 }
 
 // TODO(pht) all parseerror should probably get the corresponding ScanContext
 #[derive(Debug)]
 enum ParseError {
+  ScanError(crate::token::ScanError),
   UndefinedSymbol(String),
   PrematureEof,
   UnexpectedToken(ScanContext),
-  Wtf
+  Todo,
 }
-
 
 type ParseResult<'a> = Result<Rc<Tree<'a>>, ParseError>;
 
 struct Parser {}
 
 impl Parser {
-
   pub fn new() -> Parser {
-    Parser{}
+    Parser {}
   }
 
-  pub fn parse_statement<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
-
-    // TODO(pht) extract this as a function to try and parse, and fail with an error... 
+  fn scan_next(&self, scanner: &mut Scanner) -> Result<Scan, ParseError> {
     let next_scan_result = scanner.next().ok_or(ParseError::PrematureEof)?;
-    let next_scan = next_scan_result.unwrap(); // TODO(pht) convert the error to a ParseResult
-    
-    match next_scan {
-      Scan{ token : Token::Ident(ident), context } => {
-          // TODO(pht) extract this as a function to try and lookup the symbol, and fail with an error... 
-          let ident_symbol = scope.lookup(&ident).ok_or_else(|| { ParseError::UndefinedSymbol(String::from(ident)) })?;
+    match next_scan_result {
+      Ok(scan) => Ok(scan),
+      Err(scan_error) => Err(ParseError::ScanError(scan_error)),
+    }
+  }
 
-          let next_scan_result = scanner.next().ok_or(ParseError::PrematureEof)?;
-          let next_scan = next_scan_result.unwrap(); // TODO(pht) convert the error to a ParseResult
+  fn lookup<'a>(&self, scope: &'a mut Scope, ident: &str) -> Result<&'a Symbol, ParseError> {
+    return scope.lookup(&ident).ok_or_else(|| ParseError::UndefinedSymbol(String::from(ident)));
+  }
 
-          match next_scan {
+  pub fn parse_statement<'a>(&self, scanner: &mut Scanner, scope: &'a mut Scope) -> ParseResult<'a> {
+    match self.scan_next(scanner)? {
+      Scan {
+        token: Token::Ident(ident),
+        context,
+      } => {
+        let ident_symbol = self.lookup(scope, &ident)?;
 
-            Scan{ token: Token::Becomes, context: _context } => {
+        match self.scan_next(scanner)? {
+          Scan {
+            token: Token::Becomes,
+            context: _context,
+          } => match self.scan_next(scanner)? {
+            Scan {
+              token: Token::Int(constant_value),
+              context: _context,
+            } => {
+              let child = Rc::new(Tree::Node(Node::ident(ident_symbol)));
 
-              let next_scan_result = scanner.next().ok_or(ParseError::PrematureEof)?;
-              let next_scan = next_scan_result.unwrap(); // TODO(pht) convert the error to a ParseResult
+              let sibling = Rc::new(Tree::Node(Node::constant(constant_value)));
 
-              
-              match next_scan {
-
-                Scan{ token: Token::Int(constant_value), context: _context } => {
-
-                  let child = Rc::new(Tree::Node(Node::ident(ident_symbol)));
-
-                  let sibling = Rc::new(Tree::Node(Node::constant(constant_value)));
-
-                  return Ok(Rc::new(Tree::Node(Node{
-                    info: NodeInfo::Assignement,
-                    child,
-                    sibling
-                  })));
-
-                }
-
-                _ => {
-
-                  return Err(ParseError::UnexpectedToken(context))
-
-                }
-
-
-              }
-
-
-
+              return Ok(Rc::new(Tree::Node(Node {
+                info: NodeInfo::Assignement,
+                child,
+                sibling,
+              })));
             }
 
-            _ => {
-              return Err(ParseError::UnexpectedToken(context))
-            }
+            _ => return Err(ParseError::UnexpectedToken(context)),
+          },
 
-          }
-
-
+          _ => return Err(ParseError::UnexpectedToken(context)),
+        }
       }
       _ => {
-        return Err(ParseError::Wtf);
+        // Will need to handle other kinds of statement
+        return Err(ParseError::Todo);
       }
     }
-        
-    /*
-    if let None = next {
-      return Err(ParseError::PrematureEof);
-    }
-
-    let symbol = scope.lookup(ident);
-    if let None = symbol  {
-      return Err(ParseError::UndefinedSymbol(String::from(ident)));
-    }
-
-    
-    let child = Rc::new(Tree::Node(Node::ident(symbol.unwrap())));
-
-    let sibling = Rc::new(Tree::Node(Node::constant(42)));
-
-    return Ok(Rc::new(Tree::Node(Node{
-      info: NodeInfo::Assignement,
-      child,
-      sibling
-    })))
-    */
-
   }
 }
 
@@ -156,58 +119,50 @@ mod tests {
 
   use super::*;
 
+  fn scope(symbols: Vec<&str>) -> Scope {
+    let mut scope = Scope::new();
+    for symbol in symbols {
+      scope.add(symbol);
+    }
+    return scope;
+  }
+
   // Convenience method to allow exctracting the Node from a tree.
   // I don't know if I should use it except in tests ?
   fn tree_node<'a>(tree: &'a Tree) -> Option<&'a Node<'a>> {
     match tree {
       Tree::Node(node) => Some(node),
-      Tree::Nil => None
+      Tree::Nil => None,
     }
+  }
+
+  fn parse_statement<'a>(scope: &'a mut Scope, content: &str) -> ParseResult<'a> {
+    let mut scanner = Scanner::new(content);
+    let p = Parser::new();
+    return p.parse_statement(&mut scanner, scope);
   }
 
   #[test]
   fn fails_on_premature_eof() {
-    let mut scope = Scope::new();
-    scope.add("x");
-    
-    let mut scanner = Scanner::new("");
-    let p = Parser::new();
-    let tree = p.parse_statement(&mut scanner, &scope);
-    assert_matches!(tree.unwrap_err(), ParseError::PrematureEof);
-/* TODO(pht)
-    let mut scanner = Scanner::new("x");
-    let p = Parser::new();
-    let tree = p.parse_statement(&mut scanner, &scope);
-    assert_matches!(tree.unwrap_err(), ParseError::PrematureEof);
-
-    let mut scanner = Scanner::new("x:=");
-    let p = Parser::new();
-    let tree = p.parse_statement(&mut scanner, &scope);
-    assert_matches!(tree.unwrap_err(), ParseError::PrematureEof);
-    */
+    let mut scope = scope(vec!["x"]);
+    for content in vec!["", "x", "x:="] {
+      let tree = parse_statement(&mut scope, content);
+      assert_matches!(tree.unwrap_err(), ParseError::PrematureEof, "Expected PrematureEof while parsing {}", content);
+    }
   }
-
 
   #[test]
   fn fails_parsing_statement_for_unknown_identifier() {
-    let scope = Scope::new();
-    let mut scanner = Scanner::new("y:=42");
+    let mut scope = Scope::new();
 
-    let p = Parser::new();
-    let tree = p.parse_statement(&mut scanner, &scope);
-    let e = tree.unwrap_err();
-    assert_matches!(e, ParseError::UndefinedSymbol(s) if s == "y");
+    let tree = parse_statement(&mut scope, "y:=42");
+    assert_matches!(tree.unwrap_err(), ParseError::UndefinedSymbol(s) if s == "y");
   }
 
   #[test]
   fn parses_statement() {
-    let mut scope = Scope::new();
-    scope.add("x");
-    
-    let mut scanner = Scanner::new("x:=42");
-
-    let p = Parser::new();
-    let tree = p.parse_statement(&mut scanner, &scope).unwrap();
+    let mut scope = scope(vec!["x"]);
+    let tree = parse_statement(&mut scope, "x:=42").unwrap();
     assert_matches!(tree.as_ref(), Tree::Node(_));
 
     let node = tree_node(tree.as_ref()).unwrap();
@@ -220,5 +175,4 @@ mod tests {
     let sibling_node = tree_node(node.sibling.as_ref()).unwrap();
     assert_matches!(sibling_node.info, NodeInfo::Constant(c) if c == 42);
   }
-
 }
