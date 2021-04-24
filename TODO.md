@@ -18,7 +18,7 @@ Next:
 
  - [X] Replace Option<Scan> with Option<Result<Scan, ScanError>>. None still represent end of inputs.
   (ScanError is for unexpected char, and unexpected newlines.)
- - [ ] Scan `!=` , idents and numbers to be able to parse an expression like `x := 42`
+ - [X] Scan `!=` , idents and numbers to be able to parse an expression like `x := 42`
 
 # parser
 
@@ -29,7 +29,7 @@ Next:
   - [X] Result should be a tree if things worked
 
 # cli-risc
-  - [ ] Modernize example programs and see them run in the client
+  - [X] Modernize example programs and see them run in the client
 
 Next:
   - [ ] Replace structopt with `clap` (If that's better...)
