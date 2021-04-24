@@ -42,6 +42,17 @@ enum Tree<'a> {
   Nil,
 }
 
+impl Tree<'_> {
+  // Convenience method to allow exctracting the Node from a tree.
+  // I don't know if I should use it except in tests ?
+  pub fn get_node<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a Node<'a>> {
+    match tree.as_ref() {
+      Tree::Node(node) => Some(node),
+      Tree::Nil => None,
+    }
+  }
+}
+
 // TODO(pht) all parseerror should probably get the corresponding ScanContext
 #[derive(Debug)]
 enum ParseError {
@@ -151,16 +162,7 @@ mod tests {
     }
     return scope;
   }
-
-  // Convenience method to allow exctracting the Node from a tree.
-  // I don't know if I should use it except in tests ?
-  fn tree_node<'a>(tree: &'a Tree) -> Option<&'a Node<'a>> {
-    match tree {
-      Tree::Node(node) => Some(node),
-      Tree::Nil => None,
-    }
-  }
-
+  
   fn parse_statement<'a>(scope: &'a Scope, content: &str) -> ParseResult<'a> {
     let mut scanner = Scanner::new(content);
     let p = Parser::new();
@@ -190,14 +192,15 @@ mod tests {
     let tree = parse_statement(&mut scope, "x:=42").unwrap();
     assert_matches!(tree.as_ref(), Tree::Node(_));
 
-    let node = tree_node(tree.as_ref()).unwrap();
+    let node = Tree::get_node(&tree).unwrap();
+
     assert_eq!(node.info, NodeInfo::Assignement);
     assert_matches!(node.child.as_ref(), Tree::Node(_));
 
-    let child_node = tree_node(node.child.as_ref()).unwrap();
+    let child_node = Tree::get_node(&node.child).unwrap();
     assert_matches!(child_node.info, NodeInfo::Ident(s) if s.name == "x");
 
-    let sibling_node = tree_node(node.sibling.as_ref()).unwrap();
+    let sibling_node = Tree::get_node(&node.sibling).unwrap();
     assert_matches!(sibling_node.info, NodeInfo::Constant(c) if c == 42);
   }
 
@@ -213,17 +216,17 @@ mod tests {
     let tree = parse_statement_sequence(&mut scope, "x:=42;y:=0").unwrap();
     assert_matches!(tree.as_ref(), Tree::Node(_));
 
-    let first_statement = tree_node(tree.as_ref()).unwrap();
+    let first_statement = Tree::get_node(&tree).unwrap();
     assert_eq!(first_statement.info, NodeInfo::StatementSequence);
     assert_matches!(first_statement.child.as_ref(), Tree::Node(_));
 
-    let first_assignemnt = tree_node(first_statement.child.as_ref()).unwrap();
+    let first_assignemnt = Tree::get_node(&first_statement.child).unwrap();
     assert_matches!(first_assignemnt.info, NodeInfo::Assignement);
 
-    let second_statement = tree_node(first_statement.sibling.as_ref()).unwrap();
+    let second_statement = Tree::get_node(&first_statement.sibling).unwrap();
     assert_eq!(second_statement.info, NodeInfo::StatementSequence);
 
-    let second_assignment = tree_node(second_statement.child.as_ref()).unwrap();
+    let second_assignment = Tree::get_node(&second_statement.child).unwrap();
     assert_matches!(second_assignment.info, NodeInfo::Assignement);
   }
 
