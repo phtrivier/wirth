@@ -60,6 +60,50 @@ impl Parser {
     Parser {}
   }
 
+  pub fn parse_statement<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
+    let next = self.scan_next(scanner)?;
+    if let Scan {
+      token: Token::Ident(ident),
+      context,
+    } = next
+    {
+      let ident_symbol = self.lookup(scope, &ident)?;
+      let subject = Rc::new(Tree::Node(Node::ident(ident_symbol))); // NOTE(pht) this subject is either the ident, or a selector tree from the ident
+
+      let next = self.scan_next(scanner)?;
+      if let Scan {
+        token: Token::Becomes,
+        context,
+      } = next
+      {
+        return self.parse_assignment(subject, context, scanner, scope);
+      }
+      return Err(ParseError::UnexpectedToken(context));
+    }
+    return Err(ParseError::Todo); // If statement, etc... 
+
+  }
+ 
+  // NOTE(pht) the first argument of parse_assignemnt should not be the ident_symbol, but a tree 
+  fn parse_assignment<'a>(&self, subject: Rc<Tree<'a>>, context: ScanContext, scanner: &mut Scanner, _scope: &'a Scope) -> ParseResult<'a> {
+    let next = self.scan_next(scanner)?;
+    if let Scan {
+      token: Token::Int(constant_value),
+      context: _context,
+    } = next
+    {
+      let sibling = Rc::new(Tree::Node(Node::constant(constant_value)));
+
+      return Ok(Rc::new(Tree::Node(Node {
+        info: NodeInfo::Assignement,
+        child: subject,
+        sibling,
+      })));
+    } else {
+      Err(ParseError::UnexpectedToken(context))
+    }
+  }
+
   fn scan_next(&self, scanner: &mut Scanner) -> Result<Scan, ParseError> {
     let next_scan_result = scanner.next().ok_or(ParseError::PrematureEof)?;
     match next_scan_result {
@@ -68,50 +112,10 @@ impl Parser {
     }
   }
 
-  fn lookup<'a>(&self, scope: &'a mut Scope, ident: &str) -> Result<&'a Symbol, ParseError> {
+  fn lookup<'a>(&self, scope: &'a Scope, ident: &str) -> Result<&'a Symbol, ParseError> {
     return scope.lookup(&ident).ok_or_else(|| ParseError::UndefinedSymbol(String::from(ident)));
   }
 
-  pub fn parse_statement<'a>(&self, scanner: &mut Scanner, scope: &'a mut Scope) -> ParseResult<'a> {
-    match self.scan_next(scanner)? {
-      Scan {
-        token: Token::Ident(ident),
-        context,
-      } => {
-        let ident_symbol = self.lookup(scope, &ident)?;
-
-        match self.scan_next(scanner)? {
-          Scan {
-            token: Token::Becomes,
-            context: _context,
-          } => match self.scan_next(scanner)? {
-            Scan {
-              token: Token::Int(constant_value),
-              context: _context,
-            } => {
-              let child = Rc::new(Tree::Node(Node::ident(ident_symbol)));
-
-              let sibling = Rc::new(Tree::Node(Node::constant(constant_value)));
-
-              return Ok(Rc::new(Tree::Node(Node {
-                info: NodeInfo::Assignement,
-                child,
-                sibling,
-              })));
-            }
-
-            _ => return Err(ParseError::UnexpectedToken(context)),
-          },
-
-          _ => return Err(ParseError::UnexpectedToken(context)),
-        }
-      }
-      _ => {
-        // Will need to handle other kinds of statement
-        return Err(ParseError::Todo);
-      }
-    }
-  }
 }
 
 #[cfg(test)]
@@ -136,7 +140,7 @@ mod tests {
     }
   }
 
-  fn parse_statement<'a>(scope: &'a mut Scope, content: &str) -> ParseResult<'a> {
+  fn parse_statement<'a>(scope: &'a Scope, content: &str) -> ParseResult<'a> {
     let mut scanner = Scanner::new(content);
     let p = Parser::new();
     return p.parse_statement(&mut scanner, scope);
@@ -175,4 +179,12 @@ mod tests {
     let sibling_node = tree_node(node.sibling.as_ref()).unwrap();
     assert_matches!(sibling_node.info, NodeInfo::Constant(c) if c == 42);
   }
+
+  #[test]
+  fn parse_statement_sequence() {
+    let mut scope = scope(vec!["x", "y"]);
+    let _tree = parse_statement(&mut scope, "x:=42;y:=0").unwrap();
+    
+  }
+
 }

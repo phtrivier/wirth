@@ -36,14 +36,14 @@ impl LineScanner<'_> {
     return Some(Ok(Scan {
       context: self.context(column as u32),
       token,
-    }))
-  } 
+    }));
+  }
 
   fn error_at(&self, column: usize, error_type: ScanErrorType) -> Option<ScanResult> {
     return Some(Err(ScanError {
       context: self.context(column as u32),
       error_type,
-    }))
+    }));
   }
 
   fn scan_single(&mut self, column: usize, token: Token) -> Option<ScanResult> {
@@ -88,14 +88,15 @@ impl LineScanner<'_> {
   }
 
   fn scan_integer(&mut self, column: usize) -> Option<ScanResult> {
-    let mut n : u32 = 0;
+    let mut n: u32 = 0;
     loop {
       let p = self.chars.peek();
       if let Some(&(_column, next_char)) = p {
         if let Some(d) = next_char.to_digit(10) {
-          n = n*10 + d;
+          n = n * 10 + d;
           self.forward();
           continue;
+          // TODO(pht) replace with single 'break' here ?
         } else {
           break;
         }
@@ -119,11 +120,13 @@ impl LineScanner<'_> {
         }
       }
       _ => {
-        panic!("Programmer error: function `LineScanner::scan_sigil` called with character `{:?}` that does not start a sigil.", first_char);
+        panic!(
+          "Programmer error: function `LineScanner::scan_sigil` called with character `{:?}` that does not start a sigil.",
+          first_char
+        );
       }
     }
   }
-
 }
 
 impl Iterator for LineScanner<'_> {
@@ -150,8 +153,7 @@ impl Iterator for LineScanner<'_> {
         Some(&(column, ':')) => {
           return self.scan_sigil(column, ':');
         }
-        // NOTE(pht) next step would be to try and parse all types of Tokens ; but instead,
-        // I'm going to allow myself to parse a "procedure call" tree node like `foo(bar)`
+        Some(&(column, ';')) => return self.scan_single(column, Token::Semicolon),
         Some(&(column, '(')) => return self.scan_single(column, Token::Lparen),
         Some(&(column, ')')) => return self.scan_single(column, Token::Rparen),
 
@@ -167,6 +169,13 @@ impl Iterator for LineScanner<'_> {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  fn assert_scans_all(scanner: &mut LineScanner, tests: Vec<(u32, u32, Token)>) -> () {
+    for (l, c, t) in tests {
+      assert_scans(scanner, l, c, t);
+    }
+    assert_done(scanner);
+  }
 
   fn assert_scans(scanner: &mut LineScanner, line: u32, column: u32, token: Token) -> () {
     assert_eq!(
@@ -200,10 +209,10 @@ mod tests {
 
   #[test]
   fn test_scanner_ignore_whitespaces() {
-    let mut scanner = LineScanner::new(0, "  ");
-    assert_eq!(None, scanner.next());
-    assert_eq!(None, scanner.next());
-    assert_eq!(2, scanner.column_number);
+    let mut line_scanner = LineScanner::new(0, "  ");
+    assert_done(&mut line_scanner);
+    assert_done(&mut line_scanner);
+    assert_eq!(2, line_scanner.column_number);
   }
 
   #[test]
@@ -213,24 +222,36 @@ mod tests {
     assert_scans_error(&mut scanner, 0, 4, ScanErrorType::UnexpectedNewLine);
     assert_done(&mut scanner);
   }
-  
   #[test]
   fn test_scans_identifier() {
     let content = "  foo()";
     let mut scanner = LineScanner::new(1, &content);
-    assert_scans(&mut scanner, 1, 2, Token::Ident(String::from("foo")));
-    assert_scans(&mut scanner, 1, 5, Token::Lparen);
-    assert_scans(&mut scanner, 1, 6, Token::Rparen);
-    assert_done(&mut scanner);
+
+    assert_scans_all(
+      &mut scanner,
+      vec![
+        (1, 2, Token::Ident(String::from("foo"))), // foo
+        (1, 5, Token::Lparen),                     // (
+        (1, 6, Token::Rparen),                     // )
+      ],
+    );
   }
 
   #[test]
-  fn test_scans_assignement() {
-    let content = "  foo := 742";
+  fn test_scans_assignements() {
+    let content = "  foo := 742 ; bar()";
     let mut scanner = LineScanner::new(0, &content);
-    assert_scans(&mut scanner, 0, 2, Token::Ident(String::from("foo")));
-    assert_scans(&mut scanner, 0, 6, Token::Becomes);
-    assert_scans(&mut scanner, 0, 9, Token::Int(742));
-    assert_done(&mut scanner);
+    assert_scans_all(
+      &mut scanner,
+      vec![
+        (0, 2, Token::Ident(String::from("foo"))),  // foo
+        (0, 6, Token::Becomes),                     // :=
+        (0, 9, Token::Int(742)),                    // 742
+        (0, 13, Token::Semicolon),                  // ;
+        (0, 15, Token::Ident(String::from("bar"))), // bar
+        (0, 18, Token::Lparen),                     // (
+        (0, 19, Token::Rparen),                     // )
+      ],
+    );
   }
 }
