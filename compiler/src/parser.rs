@@ -1,5 +1,6 @@
 use crate::scanner::*;
 use crate::scope::*;
+use crate::token::*;
 use std::rc::Rc;
 
 
@@ -13,7 +14,7 @@ enum NodeInfo<'a> {
 #[derive(Debug)]
 struct Node<'a>{
   info: NodeInfo<'a>,
-  child: Rc<Tree<'a>>,
+  child: Rc<Tree<'a>>, // NOTE(pht) I wonder if those could be either Boxes. Or, If I don't want to allocate memory, a reference to a vec ?
   sibling: Rc<Tree<'a>>
 }
 
@@ -41,9 +42,13 @@ enum Tree<'a> {
   Nil
 }
 
+// TODO(pht) all parseerror should probably get the corresponding ScanContext
 #[derive(Debug)]
 enum ParseError {
-  UndefinedSymbol(String)
+  UndefinedSymbol(String),
+  PrematureEof,
+  UnexpectedToken(ScanContext),
+  Wtf
 }
 
 
@@ -57,12 +62,81 @@ impl Parser {
     Parser{}
   }
 
-  pub fn parse_statement<'a>(&self, ident: &str, _scanner: &Scanner, scope: &'a Scope) -> ParseResult<'a> {
+  pub fn parse_statement<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
+
+    // TODO(pht) extract this as a function to try and parse, and fail with an error... 
+    let next_scan_result = scanner.next().ok_or(ParseError::PrematureEof)?;
+    let next_scan = next_scan_result.unwrap(); // TODO(pht) convert the error to a ParseResult
+    
+    match next_scan {
+      Scan{ token : Token::Ident(ident), context } => {
+          // TODO(pht) extract this as a function to try and lookup the symbol, and fail with an error... 
+          let ident_symbol = scope.lookup(&ident).ok_or_else(|| { ParseError::UndefinedSymbol(String::from(ident)) })?;
+
+          let next_scan_result = scanner.next().ok_or(ParseError::PrematureEof)?;
+          let next_scan = next_scan_result.unwrap(); // TODO(pht) convert the error to a ParseResult
+
+          match next_scan {
+
+            Scan{ token: Token::Becomes, context: _context } => {
+
+              let next_scan_result = scanner.next().ok_or(ParseError::PrematureEof)?;
+              let next_scan = next_scan_result.unwrap(); // TODO(pht) convert the error to a ParseResult
+
+              
+              match next_scan {
+
+                Scan{ token: Token::Int(constant_value), context: _context } => {
+
+                  let child = Rc::new(Tree::Node(Node::ident(ident_symbol)));
+
+                  let sibling = Rc::new(Tree::Node(Node::constant(constant_value)));
+
+                  return Ok(Rc::new(Tree::Node(Node{
+                    info: NodeInfo::Assignement,
+                    child,
+                    sibling
+                  })));
+
+                }
+
+                _ => {
+
+                  return Err(ParseError::UnexpectedToken(context))
+
+                }
+
+
+              }
+
+
+
+            }
+
+            _ => {
+              return Err(ParseError::UnexpectedToken(context))
+            }
+
+          }
+
+
+      }
+      _ => {
+        return Err(ParseError::Wtf);
+      }
+    }
+        
+    /*
+    if let None = next {
+      return Err(ParseError::PrematureEof);
+    }
+
     let symbol = scope.lookup(ident);
     if let None = symbol  {
       return Err(ParseError::UndefinedSymbol(String::from(ident)));
     }
 
+    
     let child = Rc::new(Tree::Node(Node::ident(symbol.unwrap())));
 
     let sibling = Rc::new(Tree::Node(Node::constant(42)));
@@ -72,6 +146,7 @@ impl Parser {
       child,
       sibling
     })))
+    */
 
   }
 }
@@ -91,13 +166,35 @@ mod tests {
   }
 
   #[test]
+  fn fails_on_premature_eof() {
+    let mut scope = Scope::new();
+    scope.add("x");
+    
+    let mut scanner = Scanner::new("");
+    let p = Parser::new();
+    let tree = p.parse_statement(&mut scanner, &scope);
+    assert_matches!(tree.unwrap_err(), ParseError::PrematureEof);
+/* TODO(pht)
+    let mut scanner = Scanner::new("x");
+    let p = Parser::new();
+    let tree = p.parse_statement(&mut scanner, &scope);
+    assert_matches!(tree.unwrap_err(), ParseError::PrematureEof);
+
+    let mut scanner = Scanner::new("x:=");
+    let p = Parser::new();
+    let tree = p.parse_statement(&mut scanner, &scope);
+    assert_matches!(tree.unwrap_err(), ParseError::PrematureEof);
+    */
+  }
+
+
+  #[test]
   fn fails_parsing_statement_for_unknown_identifier() {
     let scope = Scope::new();
-    // TODO(pht) : prepare s with symbol "x" to softcode
-    let scanner = Scanner::new("y:=42");
+    let mut scanner = Scanner::new("y:=42");
 
     let p = Parser::new();
-    let tree = p.parse_statement("y", &scanner, &scope);
+    let tree = p.parse_statement(&mut scanner, &scope);
     let e = tree.unwrap_err();
     assert_matches!(e, ParseError::UndefinedSymbol(s) if s == "y");
   }
@@ -106,11 +203,11 @@ mod tests {
   fn parses_statement() {
     let mut scope = Scope::new();
     scope.add("x");
-    // TODO(pht) : prepare s with symbol "x" to softcode
-    let scanner = Scanner::new("x:=42");
+    
+    let mut scanner = Scanner::new("x:=42");
 
     let p = Parser::new();
-    let tree = p.parse_statement("x", &scanner, &scope).unwrap();
+    let tree = p.parse_statement(&mut scanner, &scope).unwrap();
     assert_matches!(tree.as_ref(), Tree::Node(_));
 
     let node = tree_node(tree.as_ref()).unwrap();
