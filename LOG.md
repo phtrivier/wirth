@@ -1,3 +1,5 @@
+# 2021-04-27 18:00-20:00
+- Introduced codegen for basic assignements to contants
 # 2021-04-26 12:30-13:30
 - Updated example programs in cli-risc to computer-2017
 - Added a MOD instruction because otherwise nothing was working

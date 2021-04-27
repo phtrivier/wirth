@@ -75,6 +75,7 @@ impl Parser {
       context: _context,
     } = next
     {
+      // NOTE(pht) this will only work for assignment to constants !
       let sibling = Rc::new(Tree::Node(Node::constant(constant_value)));
 
       return Ok(Rc::new(Tree::Node(Node {

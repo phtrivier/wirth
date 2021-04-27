@@ -91,6 +91,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "codegen"
+version = "0.1.0"
+dependencies = [
+ "compiler",
+ "risc",
+]
+
+[[package]]
 name = "compiler"
 version = "0.1.0"
 
