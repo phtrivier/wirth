@@ -49,4 +49,36 @@ impl Tree<'_> {
       Tree::Nil => None,
     }
   }
+
+  pub fn get_child<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a Rc<Tree<'a>>> {
+    match tree.as_ref() {
+      Tree::Node(node) => Some(&node.child),
+      Tree::Nil => None
+    }
+  }
+
+  pub fn get_child_node<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a Node<'a>> {
+    return match tree.as_ref() {
+      Tree::Node(node) => {
+        Tree::get_node(&node.child)
+      }
+      Tree::Nil => None,
+    }
+  }
+
+  pub fn get_sibling<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a Rc<Tree<'a>>> {
+    match tree.as_ref() {
+      Tree::Node(node) => Some(&node.sibling),
+      Tree::Nil => None
+    }
+  }
+
+  pub fn get_sibling_node<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a Node<'a>> {
+    return match tree.as_ref() {
+      Tree::Node(node) => {
+        Tree::get_node(&node.sibling)
+      }
+      Tree::Nil => None,
+    }
+  }
 }

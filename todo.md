@@ -35,7 +35,8 @@ Next:
   - [ ] Replace structopt with `clap` (If that's better...)
 
 # codegen
-  - [ ] From the basic tree, generate a bunch of instructions to assign variables
+  - [X] From the basic tree, generate a bunch of instructions to assign constants to variables 
+  - [ ] Assign constant to variable and variable to variable
 
 # compiler
   - [ ] Tie scanner, parser and codegen to generate an assembly program that sets a register to a value.

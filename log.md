@@ -1,3 +1,7 @@
+# 2021-04-28 13:30-14:00
+- Introduced some helper functions for tree
+- Added possibility to parse ident := ident
+
 # 2021-04-27 18:00-20:00
 - Introduced codegen for basic assignements to contants
 # 2021-04-26 12:30-13:30

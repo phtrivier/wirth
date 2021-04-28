@@ -67,25 +67,35 @@ impl Parser {
 
   }
  
-  // NOTE(pht) the first argument of parse_assignemnt should not be the ident_symbol, but a tree 
-  fn parse_assignment<'a>(&self, subject: Rc<Tree<'a>>, context: ScanContext, scanner: &mut Scanner, _scope: &'a Scope) -> ParseResult<'a> {
-    let next = self.scan_next(scanner)?;
-    if let Scan {
-      token: Token::Int(constant_value),
-      context: _context,
-    } = next
-    {
-      // NOTE(pht) this will only work for assignment to constants !
-      let sibling = Rc::new(Tree::Node(Node::constant(constant_value)));
+  fn parse_assignment<'a>(&self, subject: Rc<Tree<'a>>, context: ScanContext, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
 
-      return Ok(Rc::new(Tree::Node(Node {
-        info: NodeInfo::Assignement,
-        child: subject,
-        sibling,
-      })));
-    } else {
-      Err(ParseError::UnexpectedToken(context))
+    let object = self.parse_expression(context, scanner, scope)?;
+
+    return Ok(Rc::new(Tree::Node(Node {
+      info: NodeInfo::Assignement,
+      child: subject,
+      sibling: object,
+    })));
+
+  }
+
+  fn parse_expression<'a>(&self, context: ScanContext, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
+    // NOTE(pht) at the moment, expression := ident | integer...
+    let next = self.scan_next(scanner)?;
+    if let Scan{token: Token::Int(constant_value),
+      context: _context,
+    } = next {
+      return Ok(Rc::new(Tree::Node(Node::constant(constant_value))));
     }
+
+    if let Scan{token: Token::Ident(ident),
+      context: _context,
+    } = next {
+      let symbol = self.lookup(scope, &ident)?;
+      return Ok(Rc::new(Tree::Node(Node::ident(symbol))));
+    }
+    
+    return Err(ParseError::UnexpectedToken(context));
   }
 
   fn scan_next(&self, scanner: &mut Scanner) -> Result<Scan, ParseError> {
@@ -172,21 +182,21 @@ mod tests {
   #[test]
   fn can_parse_statement_sequence() {
     let mut scope = scope(vec!["x", "y"]);
-    let tree = parse_statement_sequence(&mut scope, "x:=42;\ny:=0").unwrap();
+    let tree = parse_statement_sequence(&mut scope, "x:=42;\ny:=x").unwrap();
     assert_matches!(tree.as_ref(), Tree::Node(_));
 
     let first_statement = Tree::get_node(&tree).unwrap();
     assert_eq!(first_statement.info, NodeInfo::StatementSequence);
     assert_matches!(first_statement.child.as_ref(), Tree::Node(_));
 
-    let first_assignemnt = Tree::get_node(&first_statement.child).unwrap();
-    assert_matches!(first_assignemnt.info, NodeInfo::Assignement);
+    let first_assignment = Tree::get_child(&tree).unwrap();
+    assert_matches!(Tree::get_node(first_assignment).unwrap().info, NodeInfo::Assignement);
 
-    let second_statement = Tree::get_node(&first_statement.sibling).unwrap();
-    assert_eq!(second_statement.info, NodeInfo::StatementSequence);
-
-    let second_assignment = Tree::get_node(&second_statement.child).unwrap();
-    assert_matches!(second_assignment.info, NodeInfo::Assignement);
+    let second_statement = Tree::get_sibling(&tree).unwrap();
+    assert_eq!(Tree::get_node(second_statement).unwrap().info, NodeInfo::StatementSequence);
+    
+    let second_assignment = Tree::get_child(&second_statement).unwrap();
+    assert_matches!(Tree::get_node(second_assignment).unwrap().info, NodeInfo::Assignement);
   }
 
 }

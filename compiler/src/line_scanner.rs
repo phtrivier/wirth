@@ -30,6 +30,7 @@ impl LineScanner<'_> {
 
   fn forward(&mut self) -> () {
     self.chars.next();
+    self.column_number = self.column_number + 1;
   }
 
   fn token_at(&self, column: usize, token: Token) -> Option<ScanResult> {
@@ -56,7 +57,6 @@ impl LineScanner<'_> {
       let p = self.chars.peek();
       if let Some(&(_column, next_char)) = p {
         if next_char == ' ' || next_char == '\t' {
-          self.column_number = self.column_number + 1;
           self.forward();
           continue;
         } else {
@@ -222,6 +222,8 @@ mod tests {
     assert_scans_error(&mut scanner, 0, 4, ScanErrorType::UnexpectedNewLine);
     assert_done(&mut scanner);
   }
+
+
   #[test]
   fn test_scans_identifier() {
     let content = "  foo()";
@@ -254,4 +256,18 @@ mod tests {
       ],
     );
   }
+
+  #[test]
+  fn test_scans_assignment_to_ident() {
+    let mut scanner = LineScanner::new(0, "x:=y");
+    assert_scans_all(
+      &mut scanner,
+      vec![
+        (0, 0, Token::Ident(String::from("x"))),
+        (0, 1, Token::Becomes),
+        (0, 3, Token::Ident(String::from("y")))
+      ],
+    );
+  }
+
 }
