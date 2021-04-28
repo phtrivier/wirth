@@ -1,5 +1,7 @@
 use assembler;
 use risc;
+use risc::instructions::*;
+
 use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -23,6 +25,24 @@ fn load_assembly_file(filename: &str, debug: bool) -> risc::computer::Computer {
 
     return c;
 }
+
+fn load_binary_file(filename: &str, _debug: bool) -> risc::computer::Computer {
+
+    let bytes : Vec<u8> = fs::read(filename).expect("Unable to read file");
+    let instructions_bits : Vec<u32> = bincode::deserialize_from(&bytes[..]).unwrap();
+    let instructions = instructions_bits.iter().map(|i: &u32| {
+        return Instruction::parse(*i).unwrap();
+    }).collect();
+
+    let mut c = risc::computer::Computer::new();
+    c.load_instructions(instructions);
+
+    // arbitrary stack base, should be an argument
+    c.regs[14] = 30;
+
+    return c;
+}
+
 
 /// Execute assembly file in the RISC-wirth computer
 #[derive(StructOpt, Debug)]
@@ -60,8 +80,13 @@ struct Opt {
 fn main() {
     let opt = Opt::from_args();
 
+    /*
     let filename = opt.input.into_os_string().into_string().expect("Filename is malformed.");
     let mut c = load_assembly_file(&filename, opt.debug);
+    */
+
+    let filename = opt.input.into_os_string().into_string().expect("Filename is malformed.");
+    let mut c = load_binary_file(&filename, opt.debug);
 
     let limit = opt.instruction_limit;
 

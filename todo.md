@@ -28,19 +28,19 @@ Next:
   - [X] Parse an assignment sequence
   - [X] Result should be a tree if things worked
 
+# codegen
+  - [X] From the basic tree, generate a bunch of instructions to assign constants to variables 
+  - [X] Assign constant to variable and variable to variable
+
+# cli-compiler
+  - [ ] Tie scanner, parser and codegen to generate an object file for a program
+
 # cli-risc
   - [X] Modernize example programs and see them run in the client
+  - [ ] Load the object with cli-risc, and feel great about yourself. 
 
 Next:
   - [ ] Replace structopt with `clap` (If that's better...)
-
-# codegen
-  - [X] From the basic tree, generate a bunch of instructions to assign constants to variables 
-  - [ ] Assign constant to variable and variable to variable
-
-# compiler
-  - [ ] Tie scanner, parser and codegen to generate an assembly program that sets a register to a value.
-    Load it with cli-risc, and feel great about yourself. 
 
 # gui-risc
 

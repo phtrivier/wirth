@@ -30,6 +30,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bincode"
+version = "1.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -66,9 +75,11 @@ dependencies = [
 name = "cli-compiler"
 version = "0.1.0"
 dependencies = [
- "assembler",
+ "bincode",
+ "codegen",
  "compiler",
  "risc",
+ "serde",
 ]
 
 [[package]]
@@ -76,8 +87,10 @@ name = "cli-risc"
 version = "0.1.0"
 dependencies = [
  "assembler",
+ "bincode",
  "compiler",
  "risc",
+ "serde",
  "structopt",
 ]
 
@@ -213,6 +226,12 @@ dependencies = [
 [[package]]
 name = "risc"
 version = "0.1.0"
+
+[[package]]
+name = "serde"
+version = "1.0.125"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "558dc50e1a5a5fa7112ca2ce4effcb321b0300c0d4ccf0776a9f60cd89031171"
 
 [[package]]
 name = "strsim"

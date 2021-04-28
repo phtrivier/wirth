@@ -2,14 +2,11 @@ extern crate compiler;
 
 use risc::instructions::*;
 use risc::instructions::OpCode::*;
-use compiler::parser::*;
-use compiler::scanner::*;
-use compiler::scope::Scope;
 use compiler::ast::*;
 use std::rc::Rc;
 
 pub struct Codegen {
-  instructions: Vec<Instruction>,
+  pub instructions: Vec<Instruction>,
   rh: usize
 }
 
@@ -86,6 +83,9 @@ impl Codegen {
 mod tests {
 
   use super::*;
+  use compiler::parser::*;
+  use compiler::scanner::*;
+  use compiler::scope::Scope;  
 
   #[test]
   fn generate_no_instruction_for_empty_tree() {
@@ -129,7 +129,6 @@ mod tests {
     ])
   }
 
-  /* TODO(pht) this needs parser work
   #[test]
   fn generate_load_instruction_for_multiple_assignments() {
     let mut scope = Scope::new();
@@ -149,6 +148,5 @@ mod tests {
       Instruction::Memory{ u: MemoryMode::Store, a: 0, b: 14, offset: 0},
     ])
   }
-  */
 
 }
