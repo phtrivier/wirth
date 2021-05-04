@@ -1,3 +1,3 @@
 [workspace]
-members=["cli-compiler", "cli-risc", "gui-risc", "compiler", "risc", "assembler", "codegen"]
+members=["bin-assembler", "bin-compiler", "bin-simulator", "bin-simulator-gui", "dom-ast", "dom-risc", "uc-assembler", "uc-compiler", "uc-parser", "uc-simulator", ]
 exclude=[]

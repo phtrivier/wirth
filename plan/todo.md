@@ -1,11 +1,3 @@
-# Goal: Shuffle code around to get a nice maintainable organization
-
-  - [ ] Extract a lib in the "compiler" crate to go from text to object code
-  - [ ] Add an "e2e" test somewhere (where ?) to check the compiler behavior
-  - [ ] Make cli-assembler that reads text and produce binary
-  - [ ] Make a lib in risc to load binary and run code, use it in cli-risc
-  - [ ] Rename crates so that all domain is grouped, and all clis are grouped :D (ultimate yak shaving)
-
 # Goal: Program that does basic arithmetic
 
 ## Parser
@@ -16,3 +8,30 @@
 
 ## codegen
   - [ ] ADD and SUB and MUL and DIV
+
+# Goal: Conditionnals
+
+# Goal: Loops
+
+# Goal: Variables 
+
+
+# Goal: Procedures
+
+# Goal: Module
+
+# Goal: Types
+
+# Goal: Improve code coverage
+## Libraries
+  - [ ] Just add more tests, maybe it's just acceptance tests missing...
+## binaries
+  - [ ] Extract functions to compute the arguments
+  - [ ] Extract function that runs the main based on the arguments
+  - [ ] Add integration test that reads simulated arguments and actually calls the lib.
+  - [ ] Then simply exclude the "main" function from tarpaulin because it becomes irrelevant
+
+# Goal: Druid simulator gui
+
+# Goal: Literate Programming editor
+

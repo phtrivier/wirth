@@ -19,6 +19,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "ast"
+version = "0.1.0"
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -27,6 +31,44 @@ dependencies = [
  "hermit-abi",
  "libc",
  "winapi",
+]
+
+[[package]]
+name = "bin-assembler"
+version = "0.1.0"
+dependencies = [
+ "assembler",
+ "risc",
+ "structopt",
+]
+
+[[package]]
+name = "bin-compiler"
+version = "0.1.0"
+dependencies = [
+ "ast",
+ "compiler",
+ "risc",
+ "structopt",
+]
+
+[[package]]
+name = "bin-simulator"
+version = "0.1.0"
+dependencies = [
+ "risc",
+ "simulator",
+ "structopt",
+]
+
+[[package]]
+name = "bin-simulator-gui"
+version = "0.1.0"
+dependencies = [
+ "raylib",
+ "risc",
+ "simulator",
+ "structopt",
 ]
 
 [[package]]
@@ -72,29 +114,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cli-compiler"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "codegen",
- "compiler",
- "risc",
- "serde",
-]
-
-[[package]]
-name = "cli-risc"
-version = "0.1.0"
-dependencies = [
- "assembler",
- "bincode",
- "compiler",
- "risc",
- "serde",
- "structopt",
-]
-
-[[package]]
 name = "cmake"
 version = "0.1.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -104,31 +123,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "codegen"
-version = "0.1.0"
-dependencies = [
- "compiler",
- "risc",
-]
-
-[[package]]
 name = "compiler"
 version = "0.1.0"
+dependencies = [
+ "ast",
+ "parser",
+ "risc",
+]
 
 [[package]]
 name = "fs_extra"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2022715d62ab30faffd124d40b76f4134a550a87792276512b18d63272333394"
-
-[[package]]
-name = "gui-risc"
-version = "0.1.0"
-dependencies = [
- "assembler",
- "raylib",
- "risc",
-]
 
 [[package]]
 name = "heck"
@@ -159,6 +166,14 @@ name = "libc"
 version = "0.2.94"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "18794a8ad5b29321f790b55d93dfba91e125cb1a9edbd4f8e3150acc771c1a5e"
+
+[[package]]
+name = "parser"
+version = "0.1.0"
+dependencies = [
+ "ast",
+ "risc",
+]
 
 [[package]]
 name = "proc-macro-error"
@@ -226,12 +241,25 @@ dependencies = [
 [[package]]
 name = "risc"
 version = "0.1.0"
+dependencies = [
+ "bincode",
+]
 
 [[package]]
 name = "serde"
 version = "1.0.125"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "558dc50e1a5a5fa7112ca2ce4effcb321b0300c0d4ccf0776a9f60cd89031171"
+
+[[package]]
+name = "simulator"
+version = "0.1.0"
+dependencies = [
+ "assembler",
+ "ast",
+ "compiler",
+ "risc",
+]
 
 [[package]]
 name = "strsim"
@@ -265,9 +293,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.70"
+version = "1.0.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9505f307c872bab8eb46f77ae357c8eba1fdacead58ee5a850116b1d7f82883"
+checksum = "ad184cc9470f9117b2ac6817bfe297307418819ba40552f9b3846f05c33d5373"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -297,9 +325,9 @@ checksum = "9337591893a19b88d8d87f2cec1e73fad5cdfd10e5a6f349f498ad6ea2ffb1e3"
 
 [[package]]
 name = "unicode-xid"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7fe0bb3479651439c9112f72b6c505038574c9fbb575ed1bf3b797fa39dd564"
+checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
 
 [[package]]
 name = "vec_map"

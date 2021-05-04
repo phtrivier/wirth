@@ -1,3 +1,4 @@
 target
 reference
 out.o
+tarpaulin-report.html

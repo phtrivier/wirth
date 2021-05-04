@@ -1,5 +1,4 @@
 # Done: generate a program that sets a memory location to 42
-
 ## risc
 
  - [X] Adapt the the 2017 computer version, mine is outdated... 
@@ -35,3 +34,31 @@
 ## cli-risc
   - [X] Modernize example programs and see them run in the client
   - [X] Load the object with cli-risc, and feel great about yourself. 
+
+# Done: Shuffle code around to get a nice maintainable organization
+
+## Shuffling
+  - [X] It's possible to refer to a package with foo = "../lib-foo".
+        And it's possible to change the name of the generated binary for a package.
+        So what I want is multiple lib crates, with a split between domain / uc / binaries : 
+        - dom-risc  (instructions, encode / decode to instructions, read and write instructions to file)
+        - dom-ast        
+        - uc-parser         (from a string, create an ast)
+        - uc-assembler      (from a reader of string, produce a list of instructions)
+        - uc-compiler       (from a reader of string, produce a list of instructions)
+        - uc-simulator      (from a list of instructions and a configuration, simulate a computer)
+        - bin-assembler     (from a filename of assembly code, produces a binary instruction file)
+        - bin-compiler      (from a filename of binary code, produces a file or error messages)
+        - bin-simulator     (from a filename of a binary code, simulate the compiler and print output)
+        - bin-simulator-gui (from a filename of a binary code, simulate the compiler and display output)
+
+## Improve simulator
+
+  - [X] Extract in uc_simulator with the notion of loading either an assembly file (and compile it on the fly) or a binary file
+      - load_instructions(....)
+      - status(mem_from, mem_count) -> (registers, memory slice)
+      - simulate_all(max_cycle) -> Result((), ComputationNeverEnded 
+      
+  - [X] Move the `example_tests` to the most appropriate place (in uc_simulator, now)
+
+  - [X] Use uc_simulator in bin_simulator and bin_simulator_gui using flags to load assembler or binary file

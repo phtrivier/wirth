@@ -1,0 +1,15 @@
+[package]
+name = "bin-assembler"
+version = "0.1.0"
+authors = ["Pierre-Henri Trivier <pierre-henri.trivier@easymile.com>"]
+edition = "2018"
+
+[[bin]]
+name = "assembler"
+path = "src/main.rs"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+structopt = "0.3"
+risc = { path = "../dom-risc" }
+assembler = { path = "../uc-assembler"}

@@ -1,0 +1,19 @@
+[package]
+name = "bin-simulator-gui"
+version = "0.1.0"
+authors = ["Pierre-Henri Trivier <pierre-henri.trivier@easymile.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "simulator-gui"
+path = "src/main.rs"
+
+
+[dependencies]
+structopt = "0.3"
+raylib = { git = "https://github.com/deltaphc/raylib-rs", branch = "master" }
+simulator = { path = "../uc-simulator"}
+# NOTE(pht) I'm not sure if something can/should be factored in simulator...
+risc = { path = "../dom-risc"}
