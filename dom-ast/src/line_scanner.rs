@@ -174,7 +174,10 @@ impl Iterator for LineScanner<'_> {
         
         Some(&(column, '(')) => return self.scan_single(column, Token::Lparen),
         Some(&(column, ')')) => return self.scan_single(column, Token::Rparen),
-        
+        Some(&(column, '+')) => return self.scan_single(column, Token::Plus),
+        Some(&(column, '-')) => return self.scan_single(column, Token::Minus),
+        Some(&(column, '*')) => return self.scan_single(column, Token::Times),
+        Some(&(column, '/')) => return self.scan_single(column, Token::Div),
         Some(&(column, _first_char)) => {
           return self.scan_ident(column);
         }
@@ -186,4 +189,3 @@ impl Iterator for LineScanner<'_> {
     }
   }
 }
-

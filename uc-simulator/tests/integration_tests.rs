@@ -94,7 +94,7 @@ fn invalid_oberon() {
 }
 
 #[test]
-fn valid_oberon() {
+fn oberon_assignments() {
   let content = String::from("x:=42;y:=x");
   let mut s = Simulator::from_oberon(&content).unwrap();
   let execution = Execution{
@@ -106,4 +106,16 @@ fn valid_oberon() {
   assert_eq!(s.memory(execution.stack_base, 2), [42, 42]);
 }
 
+#[test]
+fn oberon_arithmetic() {
+  let content = String::from("x:=40+2;y:=(x*2)-10");
+  let mut s = Simulator::from_oberon(&content).unwrap();
+  let execution = Execution{
+    program_address: 0,
+    stack_base: 100,
+    max_cycles: 5
+  };
+  s.execute(execution).unwrap();
+  assert_eq!(s.memory(execution.stack_base, 2), [42, 74]);
+}
 

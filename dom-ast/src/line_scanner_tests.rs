@@ -120,4 +120,27 @@ mod tests {
     );
   }
 
+  #[test]
+  fn test_scans_arithmetic() {
+    let mut scanner = LineScanner::new(0, "(x/42)+(y*12)-3");
+    assert_scans_all(
+      &mut scanner,
+      vec![
+        (0, 0, Token::Lparen),
+        (0, 1, Token::Ident(String::from("x"))),
+        (0, 2, Token::Div),
+        (0, 3, Token::Int(42)),
+        (0, 5, Token::Rparen),
+        (0, 6, Token::Plus),
+        (0, 7, Token::Lparen),
+        (0, 8, Token::Ident(String::from("y"))),
+        (0, 9, Token::Times),
+        (0, 10, Token::Int(12)),
+        (0, 12, Token::Rparen),
+        (0, 13, Token::Minus),
+        (0, 14, Token::Int(3)),
+      ],
+    );
+  }
+
 }

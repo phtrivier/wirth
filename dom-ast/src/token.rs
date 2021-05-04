@@ -4,12 +4,12 @@ use std::rc::Rc;
 #[allow(dead_code)]
 #[derive(Clone, PartialEq, Debug)]
 pub enum Token {
-    // Times,
-    // Div,
+    Times,
+    Div,
     // Mod,
     // And,
-    // Plus,
-    // Minus,
+    Plus,
+    Minus,
     // Or,
     // Eql,
     // Neq,
