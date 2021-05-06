@@ -116,6 +116,8 @@ mod tests {
     scope.add("y");
     let mut scanner = Scanner::new("y:=42");
     let p = Parser::new();
+    // Necessary because parse_statement_sequence is not the first thing to compile yet
+    p.scan_next(&mut scanner).unwrap();
     let assignement = p.parse_statement_sequence(&mut scanner, &mut scope).unwrap();
     
     let mut codegen = Codegen::new();
@@ -134,6 +136,8 @@ mod tests {
     scope.add("y");
     let mut scanner = Scanner::new("y:=42;x:=y");
     let p = Parser::new();
+    // Necessary because parse_statement_sequence is not the first thing to compile yet
+    p.scan_next(&mut scanner).unwrap();
     let assignement = p.parse_statement_sequence(&mut scanner, &mut scope).unwrap();
     
     let mut codegen = Codegen::new();

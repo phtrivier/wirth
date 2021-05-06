@@ -1,4 +1,6 @@
-
+# Wed 2021-05-06 18:00-20:00
+- Finally caved in, and extracted an (ugly) function that gets the 'current' token.
+Normally, I now have what I need to parse an expression without loosing too much of my brain.
 # Tue 2021-05-04 13:00-14:00
 - Used uc-simulator in bin-simulator and bin-simulator-gui
 - Added extra command line options and a dump of memory in the gui

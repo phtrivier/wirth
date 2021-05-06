@@ -1,5 +1,10 @@
-# Goal: Program that does basic arithmetic
+# Goal: Extract a function to get the 'current' token during parse
 
+## Scanner / Parser
+
+- [X] Change all types to allow this 'current' function
+- [ ] Clarify that scan_next() just advances, and current() returns an Option
+# Goal: Program that does basic arithmetic
 ## Parser
   - [ ] factor 
   - [ ] term

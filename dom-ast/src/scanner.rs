@@ -1,6 +1,7 @@
 use crate::line_scanner::*;
 use crate::token::*;
 use std::str::Lines;
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct Scanner<'a> {
@@ -29,6 +30,10 @@ impl Scanner<'_> {
       }
     }
   }
+
+  pub fn current(&mut self) -> Option<Rc<Scan>> {
+    return self.line_scanner.current();
+  }
 }
 
 impl Iterator for Scanner<'_> {
@@ -52,45 +57,5 @@ impl Iterator for Scanner<'_> {
         },
       }
     }
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use crate::token::Token;
-
-  #[test]
-  fn test_finds_nothing_in_empty_content() {
-    let content = "";
-    let mut scanner = Scanner::new(&content);
-    assert_eq!(None, scanner.next());
-  }
-
-  #[test]
-  fn test_scan_tokens_on_multiple_lines() {
-    let content = " foo \n\n  bar";
-    let mut scanner = Scanner::new(&content);
-    assert_eq!(
-      Ok(Scan {
-        context: ScanContext{
-          line: 0,
-          column: 1
-        },
-        token: Token::Ident(String::from("foo"))
-      }),
-      scanner.next().unwrap()
-    );
-    assert_eq!(
-      Ok(Scan {
-        context: ScanContext{
-          line: 2,
-          column: 2
-        },
-        token: Token::Ident(String::from("bar"))
-      }),
-      scanner.next().unwrap()
-    );
-    assert_eq!(None, scanner.next());
   }
 }
