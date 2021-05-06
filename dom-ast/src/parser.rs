@@ -121,6 +121,90 @@ impl Parser {
     return Err(ParseError::UnexpectedToken(context));
   }
 
+  pub fn parse_term<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
+    
+    let mut tree = self.parse_factor(scanner, scope)?;
+    loop {
+      let current = self.current_or_none(scanner);
+      println!("parse_term loop, current ? {:?}", current);
+
+      match current {
+        None => {
+          break;
+        }
+        Some(scan) => {
+
+          // I don't understand how this can not affect the thing
+          let pouet = scan.as_ref();
+         
+          if let Scan{
+            token: Token::Div,
+            ..
+          } = pouet {
+            self.scan_next(scanner)?;
+  
+            let sibling = self.parse_factor(scanner, scope)?;
+            let node = Node{
+              info: NodeInfo::Term(TermOp::Div),
+              child: tree,
+              sibling: sibling
+            };
+      
+            tree = Rc::new(Tree::Node(node));
+            continue;
+          }
+
+          if let Scan{
+            token: Token::Times,
+            ..
+          } = pouet {
+            self.scan_next(scanner)?;
+  
+            let sibling = self.parse_factor(scanner, scope)?;
+            let node = Node{
+              info: NodeInfo::Term(TermOp::Times),
+              child: tree,
+              sibling: sibling
+            };
+      
+            tree = Rc::new(Tree::Node(node));
+            continue;
+          }
+
+          return Err(ParseError::UnexpectedToken(scan.context));
+
+        }
+      }
+
+
+    }
+    return Ok(tree);
+
+    /*
+    let child = self.parse_factor(scanner, scope)?;
+
+    let current = self.current(scanner)?;
+
+    if let Scan{token: Token::Times,
+      ..
+    } = current.as_ref() {
+
+      self.scan_next(scanner)?;
+
+      let sibling = self.parse_factor(scanner, scope)?;
+      let node = Node{
+        info: NodeInfo::Term(TermOp::Times),
+        child: child,
+        sibling: sibling
+      };
+
+      return Ok(Rc::new(Tree::Node(node)));
+    } else {
+      return Ok(child);
+    }
+    */
+  }
+
   pub fn parse_factor<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
     let current = self.current(scanner)?;
 
@@ -140,6 +224,8 @@ impl Parser {
       return Ok(Rc::new(Tree::Node(Node::ident(symbol))));
     }
 
+    // NOTE(pht) here I'll also have to parse nested expressions, etc...
+
     return Err(ParseError::UnexpectedToken(current.context));
   }
 
@@ -158,8 +244,12 @@ impl Parser {
     let current = scanner.current();
     match current {
       Some(scan) => Ok(scan),
-      None => Err(ParseError::PrematureEof)?
+      None => Err(ParseError::PrematureEof)
     }
+  }
+
+  fn current_or_none(&self, scanner: &mut Scanner) -> Option<Rc<Scan>> {
+    return scanner.current();
   }
 
   fn lookup<'a>(&self, scope: &'a Scope, ident: &str) -> Result<&'a Symbol, ParseError> {

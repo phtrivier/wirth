@@ -113,7 +113,54 @@ mod tests {
 
     let first_statement = Tree::get_node(&tree).unwrap();
     assert_matches!(first_statement.info, NodeInfo::Ident(ident) if ident.name == "x");
-
   }
 
+  fn parse_term<'a>(scope: &'a Scope, content: &str) -> ParseResult<'a> {
+    let mut scanner = Scanner::new(content);
+    let p = Parser::new();
+    p.scan_next(&mut scanner)?;
+    return p.parse_term(&mut scanner, scope);
+  }
+
+  #[test]
+  fn can_parse_term_with_one_level() {
+    let mut scope = scope(vec!["x", "y"]);
+    let tree = parse_term(&mut scope, "x*42").unwrap();
+    assert_matches!(tree.as_ref(), Tree::Node(_));
+
+    let first_statement = Tree::get_node(&tree).unwrap();
+    assert_eq!(first_statement.info, NodeInfo::Term(TermOp::Times));
+
+    let child = Tree::get_child_node(&tree).unwrap();
+    assert_matches!(child.info, NodeInfo::Ident(ident) if ident.name == "x");
+
+    let sibling = Tree::get_sibling_node(&tree).unwrap();
+    assert_eq!(sibling.info, NodeInfo::Constant(42));
+  }
+
+  #[test]
+  fn can_parse_term_with_two_levels() {
+    let mut scope = scope(vec!["x", "y"]);
+
+    // NOTE(pht) maybe just print the tree to understand what's happening ?
+    // Cause it does not make sense that '*' is the head node no matter what...
+    let tree = parse_term(&mut scope, "x/42*y").unwrap();
+
+    println!("Tree ? {:?}", tree);
+
+    assert_matches!(tree.as_ref(), Tree::Node(_));
+
+    let first_statement = Tree::get_node(&tree).unwrap();
+    assert_eq!(first_statement.info, NodeInfo::Term(TermOp::Div));
+
+    let child_node = Tree::get_child_node(&tree).unwrap();
+    assert_matches!(child_node.info, NodeInfo::Term(TermOp::Times));
+
+    let child_child = Tree::get_child(&tree).unwrap();
+    let child_child_node = Tree::get_child_node(&child_child).unwrap();
+    assert_matches!(child_child_node.info, NodeInfo::Ident(ident) if ident.name == "x");
+
+    let sibling_node = Tree::get_sibling_node(&tree).unwrap();
+    assert_matches!(sibling_node.info, NodeInfo::Ident(ident) if ident.name == "y");
+  }
 }

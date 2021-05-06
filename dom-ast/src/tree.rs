@@ -2,11 +2,18 @@ use crate::scope::*;
 use std::rc::Rc;
 
 #[derive(Debug, PartialEq)]
+pub enum TermOp {
+  Times,
+  Div
+}
+
+#[derive(Debug, PartialEq)]
 pub enum NodeInfo<'a> {
   StatementSequence,
   Assignement,
   Constant(u32),
-  Ident(&'a Symbol), // NOTE(pht) I wonder if this could be done with a &Symbol, with the appropriate lifetime ?
+  Ident(&'a Symbol),
+  Term(TermOp)
 }
 
 #[derive(Debug)]
