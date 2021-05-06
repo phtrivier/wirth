@@ -121,6 +121,28 @@ impl Parser {
     return Err(ParseError::UnexpectedToken(context));
   }
 
+  pub fn parse_factor<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
+    let current = self.current(scanner)?;
+
+    if let Scan{token: Token::Int(constant_value),
+      ..
+    } = current.as_ref() {
+
+      self.scan_next(scanner)?;
+      return Ok(Rc::new(Tree::Node(Node::constant(*constant_value))));
+    }
+
+    if let Scan{token: Token::Ident(ident), ..
+    } = current.as_ref() {
+      let symbol = self.lookup(scope, &ident)?;
+
+      self.scan_next(scanner)?;
+      return Ok(Rc::new(Tree::Node(Node::ident(symbol))));
+    }
+
+    return Err(ParseError::UnexpectedToken(current.context));
+  }
+
   pub fn scan_next(&self, scanner: &mut Scanner) -> Result<(), ParseError> {
     println!("Advancing scanner from token {:?}", scanner.current());
     match scanner.next() {

@@ -92,4 +92,28 @@ mod tests {
     assert_matches!(Tree::get_node(second_assignment).unwrap().info, NodeInfo::Assignement);
   }
 
+  fn parse_factor<'a>(scope: &'a Scope, content: &str) -> ParseResult<'a> {
+    let mut scanner = Scanner::new(content);
+    let p = Parser::new();
+    p.scan_next(&mut scanner)?;
+    return p.parse_factor(&mut scanner, scope);
+  }
+
+  #[test]
+  fn can_parse_factor() {
+    let mut scope = scope(vec!["x", "y"]);
+    let tree = parse_factor(&mut scope, "42").unwrap();
+    assert_matches!(tree.as_ref(), Tree::Node(_));
+
+    let first_statement = Tree::get_node(&tree).unwrap();
+    assert_eq!(first_statement.info, NodeInfo::Constant(42));
+
+    let tree = parse_factor(&mut scope, "x").unwrap();
+    assert_matches!(tree.as_ref(), Tree::Node(_));
+
+    let first_statement = Tree::get_node(&tree).unwrap();
+    assert_matches!(first_statement.info, NodeInfo::Ident(ident) if ident.name == "x");
+
+  }
+
 }
