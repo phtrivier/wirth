@@ -145,10 +145,6 @@ mod tests {
     // NOTE: the tree here is a bit ambiguous, so the user will have to use parentheses.
     let tree = parse_term(&mut scope, "x/42*y").unwrap();
 
-    println!("Tree ? {:?}", tree);
-
-    assert_matches!(tree.as_ref(), Tree::Node(_));
-
     let first_statement = Tree::get_node(&tree).unwrap();
     assert_eq!(first_statement.info, NodeInfo::Term(TermOp::Times));
 
@@ -162,4 +158,42 @@ mod tests {
     let sibling_node = Tree::get_sibling_node(&tree).unwrap();
     assert_matches!(sibling_node.info, NodeInfo::Ident(ident) if ident.name == "y");
   }
+
+  // NOTE(pht) maybe those functions can be automagically created with macros ?
+  fn parse_simple_expression<'a>(scope: &'a Scope, content: &str) -> ParseResult<'a> {
+    let mut scanner = Scanner::new(content);
+    let p = Parser::new();
+    p.scan_next(&mut scanner)?;
+    return p.parse_simple_expression(&mut scanner, scope);
+  }
+
+  #[test]
+  fn can_parse_simple_expression_with_one_level() {
+    let mut scope = scope(vec!["x", "y"]);
+    let tree = parse_simple_expression(&mut scope, "x*y+42").unwrap();
+    assert_matches!(tree.as_ref(), Tree::Node(_));
+
+    let first_statement = Tree::get_node(&tree).unwrap();
+    assert_eq!(first_statement.info, NodeInfo::SimpleExpression(SimpleExpressionOp::Plus));
+
+    let child = Tree::get_child_node(&tree).unwrap();
+    assert_matches!(child.info, NodeInfo::Term(TermOp::Times));
+
+    let sibling = Tree::get_sibling_node(&tree).unwrap();
+    assert_eq!(sibling.info, NodeInfo::Constant(42));
+  }
+
+  #[test]
+  fn can_parse_simple_expression_with_multiple_level() {
+    let mut scope = scope(vec!["x", "y"]);
+    let tree = parse_simple_expression(&mut scope, "x*y+42*13-12").unwrap();
+    assert_matches!(tree.as_ref(), Tree::Node(_));
+
+    let first_statement = Tree::get_node(&tree).unwrap();
+    assert_eq!(first_statement.info, NodeInfo::SimpleExpression(SimpleExpressionOp::Minus));
+
+    let child = Tree::get_child_node(&tree).unwrap();
+    assert_eq!(child.info, NodeInfo::SimpleExpression(SimpleExpressionOp::Plus));
+  }
+
 }

@@ -8,12 +8,19 @@ pub enum TermOp {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum SimpleExpressionOp{
+  Plus,
+  Minus
+}
+
+#[derive(Debug, PartialEq)]
 pub enum NodeInfo<'a> {
   StatementSequence,
   Assignement,
   Constant(u32),
   Ident(&'a Symbol),
-  Term(TermOp)
+  Term(TermOp),
+  SimpleExpression(SimpleExpressionOp)
 }
 
 #[derive(Debug)]
