@@ -139,11 +139,10 @@ mod tests {
   }
 
   #[test]
-  fn can_parse_term_with_two_levels() {
+  fn can_parse_term_with_multiple_operators() {
     let mut scope = scope(vec!["x", "y"]);
 
-    // NOTE(pht) maybe just print the tree to understand what's happening ?
-    // Cause it does not make sense that '*' is the head node no matter what...
+    // NOTE: the tree here is a bit ambiguous, so the user will have to use parentheses.
     let tree = parse_term(&mut scope, "x/42*y").unwrap();
 
     println!("Tree ? {:?}", tree);
@@ -151,10 +150,10 @@ mod tests {
     assert_matches!(tree.as_ref(), Tree::Node(_));
 
     let first_statement = Tree::get_node(&tree).unwrap();
-    assert_eq!(first_statement.info, NodeInfo::Term(TermOp::Div));
+    assert_eq!(first_statement.info, NodeInfo::Term(TermOp::Times));
 
     let child_node = Tree::get_child_node(&tree).unwrap();
-    assert_matches!(child_node.info, NodeInfo::Term(TermOp::Times));
+    assert_matches!(child_node.info, NodeInfo::Term(TermOp::Div));
 
     let child_child = Tree::get_child(&tree).unwrap();
     let child_child_node = Tree::get_child_node(&child_child).unwrap();
