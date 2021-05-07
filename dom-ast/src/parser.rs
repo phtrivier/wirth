@@ -70,6 +70,8 @@ impl Parser {
       }
       return Err(ParseError::UnexpectedToken(what.context));
     }
+
+
     return Err(ParseError::Todo); // If statement, etc...
   }
 
@@ -87,28 +89,6 @@ impl Parser {
 
   pub fn parse_expression<'a>(&self, _context: ScanContext, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
     return self.parse_simple_expression(scanner, scope);
-    // println!("parse_expression {:?}", self.current(scanner));
-
-    // // NOTE(pht) at the moment, expression := ident | integer...
-    // // let next = self.scan_next(scanner)?;
-    // let current = self.current(scanner)?;
-
-    // if let Scan {
-    //   token: Token::Int(constant_value),
-    //   ..
-    // } = current.as_ref()
-    // {
-    //   self.scan_next(scanner)?;
-    //   return Ok(Rc::new(Tree::Node(Node::constant(*constant_value))));
-    // }
-
-    // if let Scan { token: Token::Ident(ident), .. } = current.as_ref() {
-    //   let symbol = self.lookup(scope, &ident)?;
-
-    //   self.scan_next(scanner)?;
-    //   return Ok(Rc::new(Tree::Node(Node::ident(symbol))));
-    // }
-    // return Err(ParseError::UnexpectedToken(context));
   }
 
   pub fn parse_simple_expression<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
@@ -191,7 +171,7 @@ impl Parser {
   }
 
   pub fn parse_factor<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
-    let current = self.current(scanner)?;
+    let mut current = self.current(scanner)?;
 
     if let Scan {
       token: Token::Int(constant_value),
@@ -209,7 +189,16 @@ impl Parser {
       return Ok(Rc::new(Tree::Node(Node::ident(symbol))));
     }
 
-    // NOTE(pht) here I'll also have to parse nested expressions, etc...
+    if let Scan { token: Token::Lparen, context} = current.as_ref() {
+      self.scan_next(scanner)?;
+      let expression = self.parse_expression(*context, scanner, scope);
+
+      current = self.current(scanner)?;
+      if let Scan { token: Token::Rparen, ..} = current.as_ref() {
+        self.scan_next(scanner)?;
+        return expression;
+      }
+    }
 
     return Err(ParseError::UnexpectedToken(current.context));
   }

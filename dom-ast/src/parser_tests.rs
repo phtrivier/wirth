@@ -196,4 +196,20 @@ mod tests {
     assert_eq!(child.info, NodeInfo::SimpleExpression(SimpleExpressionOp::Plus));
   }
 
+  #[test]
+  fn can_parse_term_with_parens() {
+    let mut scope = scope(vec!["x", "y"]);
+    let tree = parse_term(&mut scope, "(x*42)").unwrap();
+    assert_matches!(tree.as_ref(), Tree::Node(_));
+
+    let first_statement = Tree::get_node(&tree).unwrap();
+    assert_eq!(first_statement.info, NodeInfo::Term(TermOp::Times));
+
+    let child = Tree::get_child_node(&tree).unwrap();
+    assert_matches!(child.info, NodeInfo::Ident(ident) if ident.name == "x");
+
+    let sibling = Tree::get_sibling_node(&tree).unwrap();
+    assert_eq!(sibling.info, NodeInfo::Constant(42));
+  }
+
 }

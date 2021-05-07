@@ -62,3 +62,20 @@
   - [X] Move the `example_tests` to the most appropriate place (in uc_simulator, now)
 
   - [X] Use uc_simulator in bin_simulator and bin_simulator_gui using flags to load assembler or binary file
+
+# Goal: Extract a function to get the 'current' token during parse
+
+## Scanner / Parser
+
+- [X] Change all types to allow this 'current' function
+- [X] Clarify that scan_next() just advances, and current() returns an Option
+# Goal: Program that does basic arithmetic
+## Parser
+  - [X] factor 
+  - [X] term
+  - [X] simple expression / expressions 
+  - [X] expression
+  - [X] expression in parenthesis
+
+## codegen
+  - [X] ADD and SUB and MUL and DIV

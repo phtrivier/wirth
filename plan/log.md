@@ -1,4 +1,11 @@
-# Wed 2021-05-06 18:00-20:00
+# Fri 2021-05-06 17:00-18:00
+- Finished arithmetic, including codegen and parenthesized expressions.
+Crazy how things go well when you let yourself "do the things that seems like the right solution.)
+# Thu 2021-05-06 19:00-20:00
+- Refactored current to use Rc<Scan> everywhere.
+- Started arithmetic (factor and terms), I'm getting slighly ambigous trees, but that's okay.
+Parens will resolve things.
+# Wed 2021-05-05 18:00-20:00
 - Finally caved in, and extracted an (ugly) function that gets the 'current' token.
 Normally, I now have what I need to parse an expression without loosing too much of my brain.
 # Tue 2021-05-04 13:00-14:00
