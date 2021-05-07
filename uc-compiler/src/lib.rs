@@ -17,7 +17,7 @@ pub fn compile(input: &str) -> std::result::Result<Vec<Instruction>, ParseError>
   scope.add("x");
   scope.add("y");
   
-  // Necessary because parse_statement_sequence is not the first thing to compile yet
+  // NOTE(pht) Necessary because parse_statement_sequence is not the first thing to compile yet
   parser.scan_next(&mut scanner)?;
   let ast = parser.parse_statement_sequence(&mut scanner, &scope)?;
 

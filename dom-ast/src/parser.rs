@@ -72,6 +72,7 @@ impl Parser {
     }
     return Err(ParseError::Todo); // If statement, etc...
   }
+
   fn parse_assignment<'a>(&self, subject: Rc<Tree<'a>>, context: ScanContext, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
     println!("parse_assignment {:?}", self.current(scanner));
 
@@ -84,29 +85,30 @@ impl Parser {
     })));
   }
 
-  pub fn parse_expression<'a>(&self, context: ScanContext, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
-    println!("parse_expression {:?}", self.current(scanner));
+  pub fn parse_expression<'a>(&self, _context: ScanContext, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
+    return self.parse_simple_expression(scanner, scope);
+    // println!("parse_expression {:?}", self.current(scanner));
 
-    // NOTE(pht) at the moment, expression := ident | integer...
-    // let next = self.scan_next(scanner)?;
-    let current = self.current(scanner)?;
+    // // NOTE(pht) at the moment, expression := ident | integer...
+    // // let next = self.scan_next(scanner)?;
+    // let current = self.current(scanner)?;
 
-    if let Scan {
-      token: Token::Int(constant_value),
-      ..
-    } = current.as_ref()
-    {
-      self.scan_next(scanner)?;
-      return Ok(Rc::new(Tree::Node(Node::constant(*constant_value))));
-    }
+    // if let Scan {
+    //   token: Token::Int(constant_value),
+    //   ..
+    // } = current.as_ref()
+    // {
+    //   self.scan_next(scanner)?;
+    //   return Ok(Rc::new(Tree::Node(Node::constant(*constant_value))));
+    // }
 
-    if let Scan { token: Token::Ident(ident), .. } = current.as_ref() {
-      let symbol = self.lookup(scope, &ident)?;
+    // if let Scan { token: Token::Ident(ident), .. } = current.as_ref() {
+    //   let symbol = self.lookup(scope, &ident)?;
 
-      self.scan_next(scanner)?;
-      return Ok(Rc::new(Tree::Node(Node::ident(symbol))));
-    }
-    return Err(ParseError::UnexpectedToken(context));
+    //   self.scan_next(scanner)?;
+    //   return Ok(Rc::new(Tree::Node(Node::ident(symbol))));
+    // }
+    // return Err(ParseError::UnexpectedToken(context));
   }
 
   pub fn parse_simple_expression<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {

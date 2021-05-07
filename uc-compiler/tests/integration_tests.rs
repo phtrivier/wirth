@@ -2,7 +2,7 @@ use risc::instructions::*;
 use risc::instructions::OpCode::*;
 
 #[test]
-fn compile_program() {
+fn compile_assignement_program() {
 
   // Technically, this is a unit test, because it's not an entirely valid program *yet*,
   // but I suppose the full proper test would be:

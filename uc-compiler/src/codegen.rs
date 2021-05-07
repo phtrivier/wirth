@@ -16,6 +16,8 @@ impl Codegen {
     }
   }
 
+  // NOTE(pht) follow the CODE from the codegen at page 51/52, and
+  // not the description (it is counter intuitive)
   pub fn generate_code(&mut self, tree: &Rc<Tree>) -> () {
     match tree.as_ref() {
       Tree::Nil => {},
@@ -71,6 +73,37 @@ impl Codegen {
             self.generate_code(&node.sibling);
           }
 
+          NodeInfo::Term(operator) => {
+            self.generate_code(&node.child);
+            self.generate_code(&node.sibling);
+            let opcode = match operator {
+              TermOp::Times => MUL,
+              TermOp::Div => DIV,
+            };
+            self.rh = self.rh - 1;
+            self.instructions.push(Instruction::Register{
+              o: opcode,
+              a: self.rh-1,
+              b: self.rh-1,
+              c: self.rh
+            })
+          }
+
+          NodeInfo::SimpleExpression(operator) => {
+            self.generate_code(&node.child);
+            self.generate_code(&node.sibling);
+            let opcode = match operator {
+              SimpleExpressionOp::Plus => ADD,
+              SimpleExpressionOp::Minus => SUB,
+            };
+            self.rh = self.rh - 1;
+            self.instructions.push(Instruction::Register{
+              o: opcode,
+              a: self.rh-1,
+              b: self.rh-1,
+              c: self.rh
+            })
+          }
         }
       }
     }
@@ -148,6 +181,30 @@ mod tests {
       Instruction::Memory{ u: MemoryMode::Store, a: 0, b: 14, offset: 1},
       Instruction::Memory{ u: MemoryMode::Load, a: 0, b: 14, offset: 1},
       Instruction::Memory{ u: MemoryMode::Store, a: 0, b: 14, offset: 0},
+    ])
+  }
+
+  #[test]
+  fn generate_instructions_for_multiplication() {
+    let mut scope = Scope::new();
+    scope.add("x");
+    scope.add("y");
+    let mut scanner = Scanner::new("x*y");
+    let p = Parser::new();
+    // Necessary because parse_statement_sequence is not the first thing to compile yet
+    p.scan_next(&mut scanner).unwrap();
+    let assignement = p.parse_term(&mut scanner, &mut scope).unwrap();
+    
+    let mut codegen = Codegen::new();
+    codegen.generate_code(&assignement);
+
+    assert_eq!(codegen.instructions, vec![
+      // Load ident X
+      Instruction::Memory{ u: MemoryMode::Load, a: 0, b: 14, offset: 0},
+      // Load ident Y
+      Instruction::Memory{ u: MemoryMode::Load, a: 1, b: 14, offset: 1},
+      // Multiply RH,RH,RH+1
+      Instruction::Register{o: MUL, a: 0, b: 0, c: 1}
     ])
   }
 
