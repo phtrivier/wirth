@@ -143,4 +143,26 @@ mod tests {
     );
   }
 
+  #[test]
+  fn test_scans_variable_declarations() {
+    let mut scanner = LineScanner::new(0, "VAR x,y: INTEGER ; z : INTEGER;");
+    assert_scans_all(
+      &mut scanner,
+      vec![
+        (0, 0, Token::Var),
+        (0, 4, Token::Ident(String::from("x"))),
+        (0, 5, Token::Comma),
+        (0, 6, Token::Ident(String::from("y"))),
+        (0, 7, Token::Colon),
+        (0, 9, Token::Ident(String::from("INTEGER"))),
+        (0, 17, Token::Semicolon),
+        (0, 19, Token::Ident(String::from("z"))),
+        (0, 21, Token::Colon),
+        (0, 23, Token::Ident(String::from("INTEGER"))),
+        (0, 30, Token::Semicolon),
+      ],
+    );
+  }
+
+
 }

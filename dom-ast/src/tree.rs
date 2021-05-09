@@ -14,33 +14,41 @@ pub enum SimpleExpressionOp{
 }
 
 #[derive(Debug, PartialEq)]
+pub enum Type {
+  Integer
+}
+
+#[derive(Debug, PartialEq)]
 pub enum NodeInfo<'a> {
   StatementSequence,
   Assignement,
   Constant(u32),
   Ident(&'a Symbol),
   Term(TermOp),
-  SimpleExpression(SimpleExpressionOp)
+  SimpleExpression(SimpleExpressionOp),
+  Declaration,
+  Var,
+  Type(Type)
 }
 
 #[derive(Debug)]
-pub struct Node<'a> {
+pub struct TreeNode<'a> {
   pub info: NodeInfo<'a>,
   pub child: Rc<Tree<'a>>, // NOTE(pht) I wonder if those could be either Boxes. Or, If I don't want to allocate memory, a reference to a vec ?
   pub sibling: Rc<Tree<'a>>,
 }
 
-impl Node<'_> {
-  pub fn ident<'a>(symbol: &'a Symbol) -> Node<'a> {
-    Node {
+impl TreeNode<'_> {
+  pub fn ident<'a>(symbol: &'a Symbol) -> TreeNode<'a> {
+    TreeNode {
       info: NodeInfo::Ident(symbol),
       child: Rc::new(Tree::Nil),
       sibling: Rc::new(Tree::Nil),
     }
   }
 
-  pub fn constant<'a>(c: u32) -> Node<'a> {
-    Node {
+  pub fn constant<'a>(c: u32) -> TreeNode<'a> {
+    TreeNode {
       info: NodeInfo::Constant(c),
       child: Rc::new(Tree::Nil),
       sibling: Rc::new(Tree::Nil),
@@ -50,14 +58,14 @@ impl Node<'_> {
 
 #[derive(Debug)]
 pub enum Tree<'a> {
-  Node(Node<'a>),
+  Node(TreeNode<'a>),
   Nil,
 }
 
 impl Tree<'_> {
   // Convenience method to allow exctracting the Node from a tree.
   // I don't know if I should use it except in tests ?
-  pub fn get_node<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a Node<'a>> {
+  pub fn get_node<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a TreeNode<'a>> {
     match tree.as_ref() {
       Tree::Node(node) => Some(node),
       Tree::Nil => None,
@@ -71,7 +79,7 @@ impl Tree<'_> {
     }
   }
 
-  pub fn get_child_node<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a Node<'a>> {
+  pub fn get_child_node<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a TreeNode<'a>> {
     return match tree.as_ref() {
       Tree::Node(node) => {
         Tree::get_node(&node.child)
@@ -87,7 +95,7 @@ impl Tree<'_> {
     }
   }
 
-  pub fn get_sibling_node<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a Node<'a>> {
+  pub fn get_sibling_node<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a TreeNode<'a>> {
     return match tree.as_ref() {
       Tree::Node(node) => {
         Tree::get_node(&node.sibling)
@@ -96,3 +104,4 @@ impl Tree<'_> {
     }
   }
 }
+

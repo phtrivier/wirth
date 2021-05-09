@@ -2,6 +2,11 @@ use crate::scanner::*;
 use crate::scope::*;
 use crate::token::*;
 use crate::tree::*;
+use crate::ast;
+
+// TODO(pht) remove this type completely and use fns from ast
+use crate::tree::TreeNode as Node;
+
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -10,6 +15,7 @@ pub enum ParseError {
   UndefinedSymbol(String),
   PrematureEof,
   UnexpectedToken(ScanContext),
+  SymbolAlreadyDeclared(String, ScanContext),
   Todo,
 }
 
@@ -21,6 +27,87 @@ pub struct Parser {}
 impl Parser {
   pub fn new() -> Parser {
     Parser {}
+  }
+
+  pub fn parse_var_declarations<'a>(&self, scanner: &mut Scanner, scope: &'a mut Scope) -> ParseResult<'a> {
+    /*
+    let mut idents: Vec<(String, ScanContext)> = vec![];
+
+    let mut current;
+    loop {
+      current = self.current(scanner)?;
+      println!("Scanning var declarations, current ? {:?}", current);
+  
+      if let Scan { token: Token::Ident(ident), context: ident_context } = current.as_ref() {
+        // NOTE(pht) Ideally, I would like not to have to clone the identifier, but since the token can fall
+        // out of scope, I don't see a way to do that.
+        idents.push((String::from(ident), ident_context.clone()));
+        self.scan_next(scanner)?;
+
+        current = self.current(scanner)?;
+        if let Scan { token: Token::Comma, .. } = current.as_ref() {
+          continue;
+        }
+      }
+      break;
+    }
+
+    current = self.current(scanner)?;
+    if let Scan { token: Token::Ident(type_ident), context: _type_ident_context } = current.as_ref() {
+
+      if type_ident != "INTEGER" {
+        return Err(ParseError::UndefinedSymbol(String::from(type_ident)));
+      }
+
+      let mut tree = ast::empty();
+      idents.reverse();
+      for (ident, ident_context) in idents {
+
+        let symbol = self.add_symbol(scope, &ident, ident_context)?;
+        let child = ast::leaf(NodeInfo::Ident(symbol));
+        let sibling = ast::leaf(NodeInfo::Type(Type::Integer));
+
+        let var = ast::node(NodeInfo::Var, child, sibling);
+
+        tree = ast::node(NodeInfo::Declaration, var, tree);  
+      }
+      return Ok(tree);
+
+    }
+    */
+
+    let current = self.current(scanner)?;
+    if let Scan { token: Token::Ident(ident), context: ident_context } = current.as_ref() {
+
+      self.scan_next(scanner)?;
+      let mut current = self.current(scanner)?;
+
+      if let Scan { token: Token::Colon, .. } = current.as_ref() {
+        self.scan_next(scanner)?;
+        current = self.current(scanner)?;
+
+        if let Scan {
+          token: Token::Ident(type_ident), ..
+        } = current.as_ref()
+        {
+          if type_ident == "INTEGER" {
+
+            let symbol = self.add_symbol(scope, &ident, *ident_context)?;
+            let child = ast::leaf(NodeInfo::Ident(symbol));
+            let sibling = ast::leaf(NodeInfo::Type(Type::Integer));
+
+            let var = ast::node(NodeInfo::Var, child, sibling);
+            return Ok(ast::node(NodeInfo::Declaration, var, ast::empty()));
+
+          } else {
+            return Err(ParseError::UndefinedSymbol(String::from(type_ident)));
+          }
+        }
+      }
+    }
+    
+    // return Err(ParseError::UnexpectedToken(current.as_ref().context));
+    return Err(ParseError::Todo);
   }
 
   pub fn parse_statement_sequence<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
@@ -70,7 +157,6 @@ impl Parser {
       }
       return Err(ParseError::UnexpectedToken(what.context));
     }
-
 
     return Err(ParseError::Todo); // If statement, etc...
   }
@@ -124,9 +210,8 @@ impl Parser {
           }
         }
       }
-      break; 
+      break;
     }
-    
     return Ok(tree);
   }
 
@@ -189,12 +274,12 @@ impl Parser {
       return Ok(Rc::new(Tree::Node(Node::ident(symbol))));
     }
 
-    if let Scan { token: Token::Lparen, context} = current.as_ref() {
+    if let Scan { token: Token::Lparen, context } = current.as_ref() {
       self.scan_next(scanner)?;
       let expression = self.parse_expression(*context, scanner, scope);
 
       current = self.current(scanner)?;
-      if let Scan { token: Token::Rparen, ..} = current.as_ref() {
+      if let Scan { token: Token::Rparen, .. } = current.as_ref() {
         self.scan_next(scanner)?;
         return expression;
       }
@@ -226,7 +311,22 @@ impl Parser {
     return scanner.current();
   }
 
+  fn add_symbol<'a>(&self, scope: &'a mut Scope, ident: &str, context: ScanContext) -> Result<&'a Symbol, ParseError> {
+
+    match scope.lookup(&ident) {
+      None => {
+        scope.add(ident);
+        return self.lookup(scope, ident);
+      }
+      Some(_symbol) => {
+        return Err(ParseError::SymbolAlreadyDeclared(String::from(ident), context));
+      }
+    }
+  }
+
   fn lookup<'a>(&self, scope: &'a Scope, ident: &str) -> Result<&'a Symbol, ParseError> {
     return scope.lookup(&ident).ok_or_else(|| ParseError::UndefinedSymbol(String::from(ident)));
   }
+
+
 }

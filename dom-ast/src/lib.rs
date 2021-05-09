@@ -7,7 +7,11 @@ pub mod scanner;
 mod scanner_tests;
 
 pub mod scope;
+
 pub mod tree;
 
 pub mod parser;
 mod parser_tests;
+
+pub mod ast;
+mod ast_tests;

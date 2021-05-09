@@ -85,7 +85,7 @@ impl LineScanner<'_> {
     return self.next();
   }
 
-  fn scan_ident(&mut self, column: usize) -> Option<ScanResult> {
+  fn scan_word(&mut self, column: usize) -> Option<ScanResult> {
     let mut ident = String::from("");
     loop {
       let p = self.chars.peek();
@@ -100,7 +100,10 @@ impl LineScanner<'_> {
         break;
       }
     }
-    return self.token_at(column, Token::Ident(ident));
+    return match &ident.to_ascii_lowercase()[..] {
+      "var" => self.token_at(column, Token::Var),
+      _ => self.token_at(column, Token::Ident(ident))
+    }
   }
 
   fn scan_integer(&mut self, column: usize) -> Option<ScanResult> {
@@ -171,7 +174,7 @@ impl Iterator for LineScanner<'_> {
           return self.scan_sigil(column, ':');
         }
         Some(&(column, ';')) => return self.scan_single(column, Token::Semicolon),
-        
+        Some(&(column, ',')) => return self.scan_single(column, Token::Comma),
         Some(&(column, '(')) => return self.scan_single(column, Token::Lparen),
         Some(&(column, ')')) => return self.scan_single(column, Token::Rparen),
         Some(&(column, '+')) => return self.scan_single(column, Token::Plus),
@@ -179,7 +182,7 @@ impl Iterator for LineScanner<'_> {
         Some(&(column, '*')) => return self.scan_single(column, Token::Times),
         Some(&(column, '/')) => return self.scan_single(column, Token::Div),
         Some(&(column, _first_char)) => {
-          return self.scan_ident(column);
+          return self.scan_word(column);
         }
         None => {
           self.current = None;

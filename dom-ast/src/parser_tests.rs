@@ -1,11 +1,12 @@
-
 #[cfg(test)]
 mod tests {
 
-  use crate::scope::*;
-  use crate::scanner::*;
-  use crate::tree::*;
+  use crate::ast;
   use crate::parser::*;
+  use crate::scanner::*;
+  use crate::scope::*;
+  use crate::token::*;
+  use crate::tree::*;
 
   fn scope(symbols: Vec<&str>) -> Scope {
     let mut scope = Scope::new();
@@ -14,7 +15,6 @@ mod tests {
     }
     return scope;
   }
-  
   fn parse_statement<'a>(scope: &'a Scope, content: &str) -> ParseResult<'a> {
     let mut scanner = Scanner::new(content);
     let p = Parser::new();
@@ -46,7 +46,6 @@ mod tests {
     assert_matches!(tree.unwrap_err(), ParseError::UndefinedSymbol(s) if s == "y");
   }
 
-  
   #[test]
   fn can_parse_statement() {
     let mut scope = scope(vec!["x"]);
@@ -87,7 +86,6 @@ mod tests {
 
     let second_statement = Tree::get_sibling(&tree).unwrap();
     assert_eq!(Tree::get_node(second_statement).unwrap().info, NodeInfo::StatementSequence);
-    
     let second_assignment = Tree::get_child(&second_statement).unwrap();
     assert_matches!(Tree::get_node(second_assignment).unwrap().info, NodeInfo::Assignement);
   }
@@ -212,4 +210,68 @@ mod tests {
     assert_eq!(sibling.info, NodeInfo::Constant(42));
   }
 
+  fn parse_var_declarations<'a>(scope: &'a mut Scope, content: &str) -> ParseResult<'a> {
+    let mut scanner = Scanner::new(content);
+    let p = Parser::new();
+    // Advance to the "VAR"
+    p.scan_next(&mut scanner)?;
+    // Consume the "VAR"
+    p.scan_next(&mut scanner)?;
+    return p.parse_var_declarations(&mut scanner, scope);
+  }
+
+  #[test]
+  fn fails_on_var_redeclaration() {
+    let mut scope = Scope::new();
+    scope.add("x");
+    let tree = parse_var_declarations(&mut scope, "VAR x: INTEGER");
+    assert_matches!(tree, Err(ParseError::SymbolAlreadyDeclared(ident, ScanContext{ line: 0, column: 4})) if ident == "x");
+  }
+
+  #[test]
+  fn can_parse_single_var_declaration() {
+    let mut scope = Scope::new();
+    let tree = parse_var_declarations(&mut scope, "VAR x: INTEGER").unwrap();
+    assert_matches!(ast::info(&tree).unwrap(), NodeInfo::Declaration);
+
+    let mut root = ast::Path::root();
+    let mut path = root.child();
+    assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Var);
+
+    path = root.child().child();
+    assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "x");
+
+    path = root.child().sibling();
+    assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Type(Type::Integer));
+
+    assert_matches!(scope.lookup("x"), Some(Symbol{name, ..}) if name == "x");
+  }
+
+  /*
+  #[test]
+  fn can_parse_multiple_var_declaration() {
+    let mut scope = Scope::new();
+    let tree = parse_var_declarations(&mut scope, "VAR x,y: INTEGER").unwrap();
+    assert_matches!(ast::info(&tree).unwrap(), NodeInfo::Declaration);
+
+    let mut root = ast::Path::root();
+    let mut path = root.child();
+    assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Var);
+
+    path = root.child().child();
+    assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "x");
+
+    path = root.child().sibling();
+    assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Type(Type::Integer));
+
+    path = root.sibling();
+    assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Var);
+
+    path = root.sibling().child();
+    assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "y");
+
+    path = root.child().sibling();
+    assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Type(Type::Integer));
+  }
+  */
 }

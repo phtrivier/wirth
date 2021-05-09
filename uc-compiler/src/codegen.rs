@@ -47,7 +47,7 @@ impl Codegen {
           }
 
           NodeInfo::Assignement => {
-            if let Tree::Node(Node{ 
+            if let Tree::Node(TreeNode{ 
               info: NodeInfo::Ident(symbol),
               child: _child,
               sibling: _sibling
@@ -133,7 +133,7 @@ mod tests {
     scope.add("x");
     let symbol = scope.lookup("x").unwrap();
 
-    let tree = Rc::new(Tree::Node(Node::ident(&symbol)));
+    let tree = Rc::new(Tree::Node(TreeNode::ident(&symbol)));
     
     codegen.generate_code(&tree);
 

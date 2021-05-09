@@ -95,7 +95,7 @@ fn invalid_oberon() {
 
 #[test]
 fn oberon_assignments() {
-  let content = String::from("x:=42;y:=x");
+  let content = String::from("VAR x,y: INTEGER; BEGIN x:=42;y:=x");
   let mut s = Simulator::from_oberon(&content).unwrap();
   let execution = Execution{
     program_address: 0,
@@ -108,7 +108,7 @@ fn oberon_assignments() {
 
 #[test]
 fn oberon_arithmetic() {
-  let content = String::from("x:=40+2;y:=((x+4)*2)/4-(10/2)");
+  let content = String::from("VAR x,y: INTEGER; x:=40+2;y:=((x+4)*2)/4-(10/2)");
   let mut s = Simulator::from_oberon(&content).unwrap();
   let execution = Execution{
     program_address: 0,

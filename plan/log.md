@@ -1,3 +1,5 @@
+# Sun 2021-05-09 11:00-12:45
+- Scanning declaration, starting parsing them
 # Fri 2021-05-06 17:00-18:00
 - Finished arithmetic, including codegen and parenthesized expressions.
 Crazy how things go well when you let yourself "do the things that seems like the right solution.)
