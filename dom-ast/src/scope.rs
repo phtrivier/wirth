@@ -67,4 +67,21 @@ mod tests {
     assert_eq!(s.lookup("y").unwrap().adr, 1);
   }
 
+  fn function_that_adds(s: &str, scope: &mut Scope) {
+    scope.add(s);
+  }
+  
+  fn function_that_adds_and_adds(scope: &mut Scope) {
+    function_that_adds("x", scope);
+    function_that_adds("x", scope);
+  }
+
+  #[test]
+  fn can_be_called_in_a_loop() {
+    let mut s = Scope::new();
+    function_that_adds("x", &mut s);
+    function_that_adds("y", &mut s);
+    function_that_adds_and_adds(&mut s);
+  }
+
 }

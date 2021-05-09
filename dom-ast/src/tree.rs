@@ -13,7 +13,7 @@ pub enum SimpleExpressionOp{
   Minus
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Type {
   Integer
 }
@@ -26,6 +26,9 @@ pub enum NodeInfo<'a> {
   Ident(&'a Symbol),
   Term(TermOp),
   SimpleExpression(SimpleExpressionOp),
+  // NOTE(pht) I really must stop caring avout the order in which declarations
+  // are done, except maybe for the ProcedureDefinitions that must be in the end ?
+  Declarations,
   Declaration,
   Var,
   Type(Type)

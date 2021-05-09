@@ -5,7 +5,7 @@ use crate::tree::Tree;
 use crate::tree::TreeNode;
 use crate::tree::NodeInfo;
 
-type Ast<'a> = Rc<Tree<'a>>;
+pub type Ast<'a> = Rc<Tree<'a>>;
 
 pub enum PathDir {
   Child,

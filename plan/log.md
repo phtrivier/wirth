@@ -1,3 +1,12 @@
+# Mon 2021-05-10 18:00-19:00
+- Wasted an hour trying to refactor the function to parse var_declaration.
+Again, I'm missing something about the lifetime of stuff, because
+the compiler tells me my naive version makes the data "owned" by the parser... not sure why... 
+
+# Sun 2021-05-09 14:00-18:00
+- Parsing declaration. Learned about loop imutability, though I'm not 100% sure I understood
+everything...
+
 # Sun 2021-05-09 11:00-12:45
 - Scanning declaration, starting parsing them
 # Fri 2021-05-06 17:00-18:00

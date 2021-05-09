@@ -1,8 +1,8 @@
+use crate::ast;
 use crate::scanner::*;
 use crate::scope::*;
 use crate::token::*;
 use crate::tree::*;
-use crate::ast;
 
 // TODO(pht) remove this type completely and use fns from ast
 use crate::tree::TreeNode as Node;
@@ -24,97 +24,129 @@ pub type ParseResult<'a> = Result<Rc<Tree<'a>>, ParseError>;
 
 pub struct Parser {}
 
+type IdentList = Vec<(String, ScanContext)>;
+
 impl Parser {
   pub fn new() -> Parser {
     Parser {}
   }
 
-  pub fn parse_var_declarations<'a>(&self, scanner: &mut Scanner, scope: &'a mut Scope) -> ParseResult<'a> {
-    /*
-    let mut idents: Vec<(String, ScanContext)> = vec![];
+  pub fn parse_var_declarations<'a, 'b>(&'a self, scanner: &mut Scanner, scope: &'b mut Scope) -> ParseResult<'b> {
+    // let current = current_token(scanner)?;
+    // if let Scan {
+    //   token: Token::Ident(..),
+    //   ..
+    // } = current.as_ref() {
 
-    let mut current;
-    loop {
-      current = self.current(scanner)?;
-      println!("Scanning var declarations, current ? {:?}", current);
-  
-      if let Scan { token: Token::Ident(ident), context: ident_context } = current.as_ref() {
-        // NOTE(pht) Ideally, I would like not to have to clone the identifier, but since the token can fall
-        // out of scope, I don't see a way to do that.
-        idents.push((String::from(ident), ident_context.clone()));
-        self.scan_next(scanner)?;
+    //   let declarations = self.parse_single_line_of_var_declarations(scanner, scope)?;
 
-        current = self.current(scanner)?;
-        if let Scan { token: Token::Comma, .. } = current.as_ref() {
-          continue;
-        }
-      }
-      break;
+    //   let next_declarations = self.parse_var_declarations(scanner, scope)?;
+    //   return Ok(ast::node(NodeInfo::Declarations, declarations, next_declarations));
+
+    // } else {
+    //   return Ok(ast::empty());
+    // }
+    return self.parse_single_line_of_var_declarations(scanner, scope);
+
+  }
+
+  pub fn parse_single_line_of_var_declarations<'a, 'b>(&self, scanner: &mut Scanner, scope: &'b mut Scope) -> ParseResult<'b> {
+    let idents = self.parse_ident_list(scanner)?;
+    println!("List of idents to declare after first loop {:?}", idents);
+
+    let mut current = current_token(scanner)?;
+    println!("After var declarations, current ? {:?}", current);
+
+    if let Scan { token: Token::Colon, .. } = current.as_ref() {
+      self.scan_next(scanner)?;
+    } else {
+      return Err(ParseError::UnexpectedToken(current.context));
     }
 
-    current = self.current(scanner)?;
-    if let Scan { token: Token::Ident(type_ident), context: _type_ident_context } = current.as_ref() {
-
+    current = current_token(scanner)?;
+    println!("After consumeing comma, current ? {:?}", current);
+    
+    if let Scan {
+      token: Token::Ident(type_ident),
+      context: _type_ident_context,
+    } = current.as_ref()
+    {
       if type_ident != "INTEGER" {
         return Err(ParseError::UndefinedSymbol(String::from(type_ident)));
       }
 
-      let mut tree = ast::empty();
-      idents.reverse();
-      for (ident, ident_context) in idents {
-
-        let symbol = self.add_symbol(scope, &ident, ident_context)?;
-        let child = ast::leaf(NodeInfo::Ident(symbol));
-        let sibling = ast::leaf(NodeInfo::Type(Type::Integer));
-
-        let var = ast::node(NodeInfo::Var, child, sibling);
-
-        tree = ast::node(NodeInfo::Declaration, var, tree);  
-      }
-      return Ok(tree);
-
-    }
-    */
-
-    let current = self.current(scanner)?;
-    if let Scan { token: Token::Ident(ident), context: ident_context } = current.as_ref() {
-
       self.scan_next(scanner)?;
-      let mut current = self.current(scanner)?;
-
-      if let Scan { token: Token::Colon, .. } = current.as_ref() {
-        self.scan_next(scanner)?;
-        current = self.current(scanner)?;
-
-        if let Scan {
-          token: Token::Ident(type_ident), ..
-        } = current.as_ref()
-        {
-          if type_ident == "INTEGER" {
-
-            let symbol = self.add_symbol(scope, &ident, *ident_context)?;
-            let child = ast::leaf(NodeInfo::Ident(symbol));
-            let sibling = ast::leaf(NodeInfo::Type(Type::Integer));
-
-            let var = ast::node(NodeInfo::Var, child, sibling);
-            return Ok(ast::node(NodeInfo::Declaration, var, ast::empty()));
-
-          } else {
-            return Err(ParseError::UndefinedSymbol(String::from(type_ident)));
-          }
+      current = current_token(scanner)?;
+      if let Scan {
+        token: Token::Semicolon,
+        ..
+      } = current.as_ref() {
+        for (ident, ident_context) in idents.iter() {
+          add_symbol(scope, &ident, *ident_context)?;
         }
+  
+        return Self::var_declarations(&mut idents.iter(), scope, Type::Integer);  
       }
     }
-    
-    // return Err(ParseError::UnexpectedToken(current.as_ref().context));
-    return Err(ParseError::Todo);
+
+    return Err(ParseError::UnexpectedToken(current.as_ref().context));
   }
 
+
+  fn parse_ident_list<'a>(&self, scanner: &mut Scanner) -> Result<IdentList, ParseError> {
+    let mut idents: IdentList = vec![];
+
+    let mut current;
+    loop {
+      current = current_token(scanner)?;
+      println!("Scanning var declarations, current ? {:?}", current);
+  
+      if let Scan {
+        token: Token::Ident(ident),
+        context: ident_context,
+      } = current.as_ref()
+      {
+        // NOTE(pht) Ideally, I would like not to have to clone the identifier, but since the token can fall
+        // out of scope, I don't see a way to do that.
+        idents.push((String::from(ident), ident_context.clone()));
+        self.scan_next(scanner)?;
+  
+        current = current_token(scanner)?;
+        if let Scan { token: Token::Comma, .. } = current.as_ref() {
+          self.scan_next(scanner)?;
+          continue;
+        } else {
+          break;
+        }
+      }
+      break;
+    } 
+    return Ok(idents);
+  }
+
+  pub fn var_declarations<'a>(idents: &mut dyn Iterator<Item=&(String, ScanContext)>, scope: &'a Scope, node_type: crate::tree::Type) -> ParseResult<'a> {
+
+    match idents.next() {
+      None => return Ok(ast::empty()),
+      Some((ident, _ident_context)) => {
+        let symbol = lookup(scope, ident)?;
+        let child = ast::leaf(NodeInfo::Ident(symbol));
+        let sibling = ast::leaf(NodeInfo::Type(node_type));
+        let var = ast::node(NodeInfo::Var, child, sibling);
+
+        let next_declaration = Self::var_declarations(idents, scope, node_type)?;
+
+        return Ok(ast::node(NodeInfo::Declaration, var, next_declaration));
+      }
+    }
+  }
+  
+
   pub fn parse_statement_sequence<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
-    println!("parse_statement_sequence {:?}", self.current(scanner));
+    println!("parse_statement_sequence {:?}", current_token(scanner));
 
     let first_statement = self.parse_statement(scanner, scope)?;
-    let current = self.current(scanner);
+    let current = current_token(scanner);
     println!("parse_statement current ? {:?}", current);
 
     if current.is_ok() {
@@ -137,18 +169,18 @@ impl Parser {
   }
 
   pub fn parse_statement<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
-    println!("parse_statement {:?}", self.current(scanner));
-    let current = self.current(scanner)?;
+    println!("parse_statement {:?}", current_token(scanner));
+    let current = current_token(scanner)?;
 
     if let Scan { token: Token::Ident(ident), .. } = current.as_ref() {
-      let ident_symbol = self.lookup(scope, &ident)?;
+      let ident_symbol = lookup(scope, &ident)?;
       let subject = Rc::new(Tree::Node(Node::ident(ident_symbol))); // NOTE(pht) this subject is either the ident, or a selector tree from the ident
 
-      println!("Current before calling scan_next {:?}", self.current(scanner));
+      println!("Current before calling scan_next {:?}", current_token(scanner));
       self.scan_next(scanner)?;
-      println!("Current after calling scan_next {:?}", self.current(scanner));
+      println!("Current after calling scan_next {:?}", current_token(scanner));
 
-      let what = self.current(scanner)?;
+      let what = current_token(scanner)?;
 
       println!("What ? {:?}", what);
       if what.as_ref().token == Token::Becomes {
@@ -162,7 +194,7 @@ impl Parser {
   }
 
   fn parse_assignment<'a>(&self, subject: Rc<Tree<'a>>, context: ScanContext, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
-    println!("parse_assignment {:?}", self.current(scanner));
+    println!("parse_assignment {:?}", current_token(scanner));
 
     let object = self.parse_expression(context, scanner, scope)?;
 
@@ -182,7 +214,7 @@ impl Parser {
     println!("parse_simple_expression ; parsed term {:?}", tree);
 
     loop {
-      let current = self.current_or_none(scanner);
+      let current = current_token_or_none(scanner);
       println!("parse_simple_expression in loop, current ? {:?}", current);
 
       if let Some(scan) = current.as_ref() {
@@ -218,7 +250,7 @@ impl Parser {
   pub fn parse_term<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
     let mut tree = self.parse_factor(scanner, scope)?;
     loop {
-      let current = self.current_or_none(scanner);
+      let current = current_token_or_none(scanner);
       println!("parse_term loop, current ? {:?}", current);
 
       match current {
@@ -256,7 +288,7 @@ impl Parser {
   }
 
   pub fn parse_factor<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
-    let mut current = self.current(scanner)?;
+    let mut current = current_token(scanner)?;
 
     if let Scan {
       token: Token::Int(constant_value),
@@ -268,7 +300,7 @@ impl Parser {
     }
 
     if let Scan { token: Token::Ident(ident), .. } = current.as_ref() {
-      let symbol = self.lookup(scope, &ident)?;
+      let symbol = lookup(scope, &ident)?;
 
       self.scan_next(scanner)?;
       return Ok(Rc::new(Tree::Node(Node::ident(symbol))));
@@ -278,7 +310,7 @@ impl Parser {
       self.scan_next(scanner)?;
       let expression = self.parse_expression(*context, scanner, scope);
 
-      current = self.current(scanner)?;
+      current = current_token(scanner)?;
       if let Scan { token: Token::Rparen, .. } = current.as_ref() {
         self.scan_next(scanner)?;
         return expression;
@@ -298,35 +330,32 @@ impl Parser {
       },
     }
   }
+}
 
-  fn current(&self, scanner: &mut Scanner) -> Result<Rc<Scan>, ParseError> {
-    let current = scanner.current();
-    match current {
-      Some(scan) => Ok(scan),
-      None => Err(ParseError::PrematureEof),
+fn current_token(scanner: &mut Scanner) -> Result<Rc<Scan>, ParseError> {
+  let current = scanner.current();
+  match current {
+    Some(scan) => Ok(scan),
+    None => Err(ParseError::PrematureEof),
+  }
+}
+
+fn current_token_or_none(scanner: &mut Scanner) -> Option<Rc<Scan>> {
+  return scanner.current();
+}
+
+fn add_symbol<'a>(scope: &'a mut Scope, ident: &str, context: ScanContext) -> Result<&'a Symbol, ParseError> {
+  match scope.lookup(&ident) {
+    None => {
+      scope.add(ident);
+      return lookup(scope, ident);
+    }
+    Some(_symbol) => {
+      return Err(ParseError::SymbolAlreadyDeclared(String::from(ident), context));
     }
   }
+}
 
-  fn current_or_none(&self, scanner: &mut Scanner) -> Option<Rc<Scan>> {
-    return scanner.current();
-  }
-
-  fn add_symbol<'a>(&self, scope: &'a mut Scope, ident: &str, context: ScanContext) -> Result<&'a Symbol, ParseError> {
-
-    match scope.lookup(&ident) {
-      None => {
-        scope.add(ident);
-        return self.lookup(scope, ident);
-      }
-      Some(_symbol) => {
-        return Err(ParseError::SymbolAlreadyDeclared(String::from(ident), context));
-      }
-    }
-  }
-
-  fn lookup<'a>(&self, scope: &'a Scope, ident: &str) -> Result<&'a Symbol, ParseError> {
-    return scope.lookup(&ident).ok_or_else(|| ParseError::UndefinedSymbol(String::from(ident)));
-  }
-
-
+fn lookup<'a>(scope: &'a Scope, ident: &str) -> Result<&'a Symbol, ParseError> {
+  return scope.lookup(&ident).ok_or_else(|| ParseError::UndefinedSymbol(String::from(ident)));
 }

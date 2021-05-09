@@ -224,14 +224,14 @@ mod tests {
   fn fails_on_var_redeclaration() {
     let mut scope = Scope::new();
     scope.add("x");
-    let tree = parse_var_declarations(&mut scope, "VAR x: INTEGER");
+    let tree = parse_var_declarations(&mut scope, "VAR x: INTEGER;");
     assert_matches!(tree, Err(ParseError::SymbolAlreadyDeclared(ident, ScanContext{ line: 0, column: 4})) if ident == "x");
   }
 
   #[test]
   fn can_parse_single_var_declaration() {
     let mut scope = Scope::new();
-    let tree = parse_var_declarations(&mut scope, "VAR x: INTEGER").unwrap();
+    let tree = parse_var_declarations(&mut scope, "VAR x: INTEGER;").unwrap();
     assert_matches!(ast::info(&tree).unwrap(), NodeInfo::Declaration);
 
     let mut root = ast::Path::root();
@@ -247,14 +247,16 @@ mod tests {
     assert_matches!(scope.lookup("x"), Some(Symbol{name, ..}) if name == "x");
   }
 
-  /*
   #[test]
   fn can_parse_multiple_var_declaration() {
     let mut scope = Scope::new();
-    let tree = parse_var_declarations(&mut scope, "VAR x,y: INTEGER").unwrap();
+    let tree = parse_var_declarations(&mut scope, "VAR x,y: INTEGER;").unwrap();
+
+    // TODO(pht) this actually returns a Declarations list, and I have to add child level everywhere
     assert_matches!(ast::info(&tree).unwrap(), NodeInfo::Declaration);
 
     let mut root = ast::Path::root();
+
     let mut path = root.child();
     assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Var);
 
@@ -265,13 +267,36 @@ mod tests {
     assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Type(Type::Integer));
 
     path = root.sibling();
-    assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Var);
+    assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Declaration);
 
     path = root.sibling().child();
+    assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Var);
+
+    path = root.sibling().child().child();
     assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "y");
 
-    path = root.child().sibling();
+    path = root.sibling().child().sibling();
     assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Type(Type::Integer));
   }
-  */
+
+  // #[test]
+  // fn can_parse_multiple_var_declarations() {
+  //   let mut scope = Scope::new();
+  //   let tree = parse_var_declarations(&mut scope, "VAR x,y: INTEGER; z: INTEGER").unwrap();
+  //   assert_matches!(ast::info(&tree).unwrap(), NodeInfo::Declaration);
+        
+  //   let mut root = ast::Path::root();
+
+  //   let mut path = root.sibling();
+  //   assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Declaration);
+
+  //   path = root.sibling().sibling();
+  //   assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Declaration);
+
+  //   path = root.sibling().sibling().child();
+  //   assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Var);
+    
+  //   path = root.sibling().sibling().child().child();
+  //   assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "z");
+  // }
 }
