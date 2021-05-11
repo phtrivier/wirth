@@ -1,3 +1,6 @@
+use std::rc::Rc;
+use std::cell::RefCell;
+
 #[derive(Debug, PartialEq)]
 pub struct Symbol {
   pub name: String,
@@ -5,40 +8,48 @@ pub struct Symbol {
   pub adr: usize
 }
 
-pub struct Scope {
-  symbols: Vec<Symbol>,
+struct Content {
+  symbols: Vec<Rc<Symbol>>,
   next_adr: usize
+}
+
+pub struct Scope {
+  content: RefCell<Content>
 }
 impl Scope {
 
   pub fn new() -> Scope {
     Scope{
-      symbols: vec![],
-      next_adr: 0
+      content: RefCell::new(Content{
+        symbols: vec![],
+        next_adr: 0  
+      })
     }
   }
 
-  // TODO(pht) adding might fail, actually, if the symbol already exists.
-  pub fn add(&mut self, s: &str) -> () {
+  pub fn add(&self, s: &str) -> () {
+    let mut content = self.content.borrow_mut();
+
     let symbol = Symbol{
       name: String::from(s),
-      adr: self.next_adr
+      adr: content.next_adr
     };
-    self.symbols.push(symbol);
-    self.next_adr = self.next_adr + 1;
+
+    content.next_adr = content.next_adr + 1;
+    content.symbols.push(Rc::new(symbol));
   }
 
-  pub fn lookup<'a>(&'a self, s: &str) -> Option<&'a Symbol> {
-    for symbol in self.symbols.iter() {
+  pub fn lookup<'a>(&'a self, s: &str) -> Option<Rc<Symbol>> {
+    let content = self.content.borrow();
+
+    for symbol in content.symbols.iter() {
       if symbol.name == s {
-        return Some(&symbol);
+        return Some(symbol.clone());
       }
     }
     return None;
   }
 }
-
-
 
 #[cfg(test)]
 mod tests {

@@ -5,7 +5,7 @@ use crate::tree::Tree;
 use crate::tree::TreeNode;
 use crate::tree::NodeInfo;
 
-pub type Ast<'a> = Rc<Tree<'a>>;
+pub type Ast = Rc<Tree>;
 
 pub enum PathDir {
   Child,
@@ -33,7 +33,7 @@ impl Path {
     return self;
   }
 
-  pub fn follow<'a>(&'a mut self, ast: &'a Ast<'a>) -> Option<&'a NodeInfo> {
+  pub fn follow<'a>(&'a mut self, ast: &'a Ast) -> Option<&'a NodeInfo> {
     match self.dirs.pop_front() {
       None => return info(&ast),
       Some(PathDir::Child) => 
@@ -58,11 +58,11 @@ impl Path {
   }
 }
 
-pub fn empty<'a>() -> Ast<'a> {
+pub fn empty<'a>() -> Ast {
   return Rc::new(Tree::Nil);
 }
 
-pub fn info<'a>(ast: &'a Ast<'a>) -> Option<&'a NodeInfo> {
+pub fn info<'a>(ast: &'a Ast) -> Option<&'a NodeInfo> {
   match ast.as_ref() {
     Tree::Node(TreeNode{
       info,
@@ -72,7 +72,7 @@ pub fn info<'a>(ast: &'a Ast<'a>) -> Option<&'a NodeInfo> {
   }
 }
 
-pub fn sibling<'a>(ast: &'a Ast<'a>) -> Option<&'a Ast<'a>> {
+pub fn sibling<'a>(ast: &'a Ast) -> Option<&'a Ast> {
   match ast.as_ref() {
     Tree::Node(TreeNode{
       sibling,
@@ -83,7 +83,7 @@ pub fn sibling<'a>(ast: &'a Ast<'a>) -> Option<&'a Ast<'a>> {
 }
 
 
-pub fn child<'a>(ast: &'a Ast<'a>) -> Option<&'a Ast<'a>> {
+pub fn child<'a>(ast: &'a Ast) -> Option<&'a Ast> {
   match ast.as_ref() {
     Tree::Node(TreeNode{
       child,
@@ -94,7 +94,7 @@ pub fn child<'a>(ast: &'a Ast<'a>) -> Option<&'a Ast<'a>> {
 }
 
 
-pub fn leaf<'a>(node_info: NodeInfo<'a>) -> Ast<'a> {
+pub fn leaf<'a>(node_info: NodeInfo) -> Ast {
   return Rc::new(Tree::Node(TreeNode{
     info: node_info,
     child: empty(),
@@ -102,7 +102,7 @@ pub fn leaf<'a>(node_info: NodeInfo<'a>) -> Ast<'a> {
   }));
 }
 
-pub fn node<'a>(node_info: NodeInfo<'a>, child: Ast<'a>, sibling: Ast<'a>) -> Ast<'a> {
+pub fn node<'a>(node_info: NodeInfo, child: Ast, sibling: Ast) -> Ast {
   return Rc::new(Tree::Node(TreeNode{
     info: node_info,
     child: child,

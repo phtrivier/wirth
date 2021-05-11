@@ -19,8 +19,7 @@ pub enum ParseError {
   Todo,
 }
 
-// I have to decide with myself if this goes into uc-parser. Sleep on it.
-pub type ParseResult<'a> = Result<Rc<Tree<'a>>, ParseError>;
+pub type ParseResult = Result<Rc<Tree>, ParseError>;
 
 pub struct Parser {}
 
@@ -31,26 +30,25 @@ impl Parser {
     Parser {}
   }
 
-  pub fn parse_var_declarations<'a, 'b>(&'a self, scanner: &mut Scanner, scope: &'b mut Scope) -> ParseResult<'b> {
-    // let current = current_token(scanner)?;
-    // if let Scan {
-    //   token: Token::Ident(..),
-    //   ..
-    // } = current.as_ref() {
+  pub fn parse_var_declarations(&self, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
+    let current = current_token(scanner)?;
+    if let Scan {
+      token: Token::Ident(..),
+      ..
+    } = current.as_ref() {
 
-    //   let declarations = self.parse_single_line_of_var_declarations(scanner, scope)?;
+      let declarations = self.parse_single_line_of_var_declarations(scanner, scope)?;
 
-    //   let next_declarations = self.parse_var_declarations(scanner, scope)?;
-    //   return Ok(ast::node(NodeInfo::Declarations, declarations, next_declarations));
+      let next_declarations = self.parse_var_declarations(scanner, scope)?;
+      return Ok(ast::node(NodeInfo::Declarations, declarations, next_declarations));
 
-    // } else {
-    //   return Ok(ast::empty());
-    // }
-    return self.parse_single_line_of_var_declarations(scanner, scope);
-
+    } else {
+      return Ok(ast::empty());
+    }
+    // return self.parse_single_line_of_var_declarations(scanner, scope);
   }
 
-  pub fn parse_single_line_of_var_declarations<'a, 'b>(&self, scanner: &mut Scanner, scope: &'b mut Scope) -> ParseResult<'b> {
+  pub fn parse_single_line_of_var_declarations(&self, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     let idents = self.parse_ident_list(scanner)?;
     println!("List of idents to declare after first loop {:?}", idents);
 
@@ -93,7 +91,7 @@ impl Parser {
   }
 
 
-  fn parse_ident_list<'a>(&self, scanner: &mut Scanner) -> Result<IdentList, ParseError> {
+  fn parse_ident_list(&self, scanner: &mut Scanner) -> Result<IdentList, ParseError> {
     let mut idents: IdentList = vec![];
 
     let mut current;
@@ -124,7 +122,7 @@ impl Parser {
     return Ok(idents);
   }
 
-  pub fn var_declarations<'a>(idents: &mut dyn Iterator<Item=&(String, ScanContext)>, scope: &'a Scope, node_type: crate::tree::Type) -> ParseResult<'a> {
+  pub fn var_declarations(idents: &mut dyn Iterator<Item=&(String, ScanContext)>, scope: &Scope, node_type: crate::tree::Type) -> ParseResult {
 
     match idents.next() {
       None => return Ok(ast::empty()),
@@ -142,7 +140,7 @@ impl Parser {
   }
   
 
-  pub fn parse_statement_sequence<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
+  pub fn parse_statement_sequence(&self, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     println!("parse_statement_sequence {:?}", current_token(scanner));
 
     let first_statement = self.parse_statement(scanner, scope)?;
@@ -168,7 +166,7 @@ impl Parser {
     })));
   }
 
-  pub fn parse_statement<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
+  pub fn parse_statement(&self, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     println!("parse_statement {:?}", current_token(scanner));
     let current = current_token(scanner)?;
 
@@ -193,7 +191,7 @@ impl Parser {
     return Err(ParseError::Todo); // If statement, etc...
   }
 
-  fn parse_assignment<'a>(&self, subject: Rc<Tree<'a>>, context: ScanContext, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
+  fn parse_assignment(&self, subject: Rc<Tree>, context: ScanContext, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     println!("parse_assignment {:?}", current_token(scanner));
 
     let object = self.parse_expression(context, scanner, scope)?;
@@ -205,11 +203,11 @@ impl Parser {
     })));
   }
 
-  pub fn parse_expression<'a>(&self, _context: ScanContext, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
+  pub fn parse_expression(&self, _context: ScanContext, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     return self.parse_simple_expression(scanner, scope);
   }
 
-  pub fn parse_simple_expression<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
+  pub fn parse_simple_expression(&self, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     let mut tree = self.parse_term(scanner, scope)?;
     println!("parse_simple_expression ; parsed term {:?}", tree);
 
@@ -247,7 +245,7 @@ impl Parser {
     return Ok(tree);
   }
 
-  pub fn parse_term<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
+  pub fn parse_term(&self, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     let mut tree = self.parse_factor(scanner, scope)?;
     loop {
       let current = current_token_or_none(scanner);
@@ -287,7 +285,7 @@ impl Parser {
     return Ok(tree);
   }
 
-  pub fn parse_factor<'a>(&self, scanner: &mut Scanner, scope: &'a Scope) -> ParseResult<'a> {
+  pub fn parse_factor(&self, scanner: &mut Scanner, scope: &Scope) -> ParseResult{
     let mut current = current_token(scanner)?;
 
     if let Scan {
@@ -303,7 +301,7 @@ impl Parser {
       let symbol = lookup(scope, &ident)?;
 
       self.scan_next(scanner)?;
-      return Ok(Rc::new(Tree::Node(Node::ident(symbol))));
+      return Ok(Rc::new(Tree::Node(Node::ident(symbol.clone()))));
     }
 
     if let Scan { token: Token::Lparen, context } = current.as_ref() {
@@ -344,7 +342,7 @@ fn current_token_or_none(scanner: &mut Scanner) -> Option<Rc<Scan>> {
   return scanner.current();
 }
 
-fn add_symbol<'a>(scope: &'a mut Scope, ident: &str, context: ScanContext) -> Result<&'a Symbol, ParseError> {
+fn add_symbol(scope: &Scope, ident: &str, context: ScanContext) -> Result<Rc<Symbol>, ParseError> {
   match scope.lookup(&ident) {
     None => {
       scope.add(ident);
@@ -356,6 +354,6 @@ fn add_symbol<'a>(scope: &'a mut Scope, ident: &str, context: ScanContext) -> Re
   }
 }
 
-fn lookup<'a>(scope: &'a Scope, ident: &str) -> Result<&'a Symbol, ParseError> {
+fn lookup(scope: &Scope, ident: &str) -> Result<Rc<Symbol>, ParseError> {
   return scope.lookup(&ident).ok_or_else(|| ParseError::UndefinedSymbol(String::from(ident)));
 }

@@ -19,11 +19,11 @@ pub enum Type {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum NodeInfo<'a> {
+pub enum NodeInfo {
   StatementSequence,
   Assignement,
   Constant(u32),
-  Ident(&'a Symbol),
+  Ident(Rc<Symbol>),
   Term(TermOp),
   SimpleExpression(SimpleExpressionOp),
   // NOTE(pht) I really must stop caring avout the order in which declarations
@@ -35,14 +35,14 @@ pub enum NodeInfo<'a> {
 }
 
 #[derive(Debug)]
-pub struct TreeNode<'a> {
-  pub info: NodeInfo<'a>,
-  pub child: Rc<Tree<'a>>, // NOTE(pht) I wonder if those could be either Boxes. Or, If I don't want to allocate memory, a reference to a vec ?
-  pub sibling: Rc<Tree<'a>>,
+pub struct TreeNode {
+  pub info: NodeInfo,
+  pub child: Rc<Tree>, // NOTE(pht) I wonder if those could be either Boxes. Or, If I don't want to allocate memory, a reference to a vec ?
+  pub sibling: Rc<Tree>,
 }
 
-impl TreeNode<'_> {
-  pub fn ident<'a>(symbol: &'a Symbol) -> TreeNode<'a> {
+impl TreeNode {
+  pub fn ident(symbol: Rc<Symbol>) -> TreeNode {
     TreeNode {
       info: NodeInfo::Ident(symbol),
       child: Rc::new(Tree::Nil),
@@ -50,7 +50,7 @@ impl TreeNode<'_> {
     }
   }
 
-  pub fn constant<'a>(c: u32) -> TreeNode<'a> {
+  pub fn constant(c: u32) -> TreeNode {
     TreeNode {
       info: NodeInfo::Constant(c),
       child: Rc::new(Tree::Nil),
@@ -60,51 +60,53 @@ impl TreeNode<'_> {
 }
 
 #[derive(Debug)]
-pub enum Tree<'a> {
-  Node(TreeNode<'a>),
+pub enum Tree {
+  Node(TreeNode),
   Nil,
 }
 
-impl Tree<'_> {
+/*
+impl Tree {
   // Convenience method to allow exctracting the Node from a tree.
   // I don't know if I should use it except in tests ?
-  pub fn get_node<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a TreeNode<'a>> {
+  pub fn get_node<'a>(tree: Rc<Tree>) -> Option<&'a TreeNode> {
     match tree.as_ref() {
       Tree::Node(node) => Some(node),
       Tree::Nil => None,
     }
   }
 
-  pub fn get_child<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a Rc<Tree<'a>>> {
+  pub fn get_child<'a>(tree: &'a Rc<Tree>) -> Option<&'a Rc<Tree>> {
     match tree.as_ref() {
       Tree::Node(node) => Some(&node.child),
       Tree::Nil => None
     }
   }
 
-  pub fn get_child_node<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a TreeNode<'a>> {
+  pub fn get_child_node<'a>(tree: &'a Rc<Tree>) -> Option<&'a TreeNode> {
     return match tree.as_ref() {
       Tree::Node(node) => {
-        Tree::get_node(&node.child)
+        Tree::get_node(node.child)
       }
       Tree::Nil => None,
     }
   }
 
-  pub fn get_sibling<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a Rc<Tree<'a>>> {
+  pub fn get_sibling<'a>(tree: &'a Rc<Tree>) -> Option<&'a Rc<Tree>> {
     match tree.as_ref() {
       Tree::Node(node) => Some(&node.sibling),
       Tree::Nil => None
     }
   }
 
-  pub fn get_sibling_node<'a>(tree: &'a Rc<Tree<'a>>) -> Option<&'a TreeNode<'a>> {
+  pub fn get_sibling_node<'a>(tree: &'a Rc<Tree>) -> Option<&'a TreeNode> {
     return match tree.as_ref() {
       Tree::Node(node) => {
-        Tree::get_node(&node.sibling)
+        Tree::get_node(node.sibling)
       }
       Tree::Nil => None,
     }
   }
 }
 
+*/

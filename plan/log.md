@@ -1,3 +1,11 @@
+# Tue 2021-05-11 12:00-14:30
+- Managed to extract the parse_var_declarations function, and make it recursive.
+But calling `scope.add` multiple times (or passing the mutable reference to several functions) still does not work. 
+I don't understand what kind of bug Rust is trying to protect me from, and
+I can't find a minimal example to explain the problem. 
+
+Also, where do I ask this question ?
+
 # Mon 2021-05-10 18:00-19:00
 - Wasted an hour trying to refactor the function to parse var_declaration.
 Again, I'm missing something about the lifetime of stuff, because
