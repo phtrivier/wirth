@@ -1,3 +1,7 @@
+# Wed 2021-05-12 13:00-14:00
+- For Helene's birthday, the elements gave to me the power of recursion, and understanding
+how to produce a `Declarations` tree that contains a list of `Declaration` in the right order.
+ 
 # Tue 2021-05-11 12:00-14:30
 - Managed to extract the parse_var_declarations function, and make it recursive.
 But calling `scope.add` multiple times (or passing the mutable reference to several functions) still does not work. 

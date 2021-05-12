@@ -1,4 +1,5 @@
 use crate::ast;
+use crate::ast::Ast;
 use crate::scanner::*;
 use crate::scope::*;
 use crate::token::*;
@@ -31,24 +32,16 @@ impl Parser {
   }
 
   pub fn parse_var_declarations(&self, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
-    let current = current_token(scanner)?;
-    if let Scan {
-      token: Token::Ident(..),
-      ..
-    } = current.as_ref() {
-
-      let declarations = self.parse_single_line_of_var_declarations(scanner, scope)?;
-
-      let next_declarations = self.parse_var_declarations(scanner, scope)?;
-      return Ok(ast::node(NodeInfo::Declarations, declarations, next_declarations));
-
-    } else {
-      return Ok(ast::empty());
-    }
-    // return self.parse_single_line_of_var_declarations(scanner, scope);
+    let declarations = self.recur_parse_declaration(scanner, scope)?;
+    return Ok(ast::node(NodeInfo::Declarations, declarations, ast::empty()));
   }
 
-  pub fn parse_single_line_of_var_declarations(&self, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
+  pub fn recur_parse_declaration(&self, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
+    let current = current_token_or_none(scanner);
+    if current == None {
+      return Ok(ast::empty());
+    }
+
     let idents = self.parse_ident_list(scanner)?;
     println!("List of idents to declare after first loop {:?}", idents);
 
@@ -62,8 +55,6 @@ impl Parser {
     }
 
     current = current_token(scanner)?;
-    println!("After consumeing comma, current ? {:?}", current);
-    
     if let Scan {
       token: Token::Ident(type_ident),
       context: _type_ident_context,
@@ -79,17 +70,19 @@ impl Parser {
         token: Token::Semicolon,
         ..
       } = current.as_ref() {
+
+        self.scan_next(scanner)?;
+
         for (ident, ident_context) in idents.iter() {
           add_symbol(scope, &ident, *ident_context)?;
         }
   
-        return Self::var_declarations(&mut idents.iter(), scope, Type::Integer);  
+        return Self::var_declarations(&mut idents.iter(), scope, Type::Integer, self.recur_parse_declaration(scanner, scope)?);  
       }
     }
 
     return Err(ParseError::UnexpectedToken(current.as_ref().context));
   }
-
 
   fn parse_ident_list(&self, scanner: &mut Scanner) -> Result<IdentList, ParseError> {
     let mut idents: IdentList = vec![];
@@ -122,19 +115,17 @@ impl Parser {
     return Ok(idents);
   }
 
-  pub fn var_declarations(idents: &mut dyn Iterator<Item=&(String, ScanContext)>, scope: &Scope, node_type: crate::tree::Type) -> ParseResult {
+  pub fn var_declarations(idents: &mut dyn Iterator<Item=&(String, ScanContext)>, scope: &Scope, node_type: crate::tree::Type, final_sibling: Ast) -> ParseResult {
 
     match idents.next() {
-      None => return Ok(ast::empty()),
+      None => return Ok(final_sibling),
       Some((ident, _ident_context)) => {
         let symbol = lookup(scope, ident)?;
         let child = ast::leaf(NodeInfo::Ident(symbol));
         let sibling = ast::leaf(NodeInfo::Type(node_type));
         let var = ast::node(NodeInfo::Var, child, sibling);
 
-        let next_declaration = Self::var_declarations(idents, scope, node_type)?;
-
-        return Ok(ast::node(NodeInfo::Declaration, var, next_declaration));
+        return Ok(ast::node(NodeInfo::Declaration, var, Self::var_declarations(idents, scope, node_type, final_sibling)?));
       }
     }
   }

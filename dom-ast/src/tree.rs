@@ -65,7 +65,7 @@ pub enum Tree {
   Nil,
 }
 
-/*
+/* TODO(pht) make sure no ones need this
 impl Tree {
   // Convenience method to allow exctracting the Node from a tree.
   // I don't know if I should use it except in tests ?
@@ -108,5 +108,4 @@ impl Tree {
     }
   }
 }
-
 */
