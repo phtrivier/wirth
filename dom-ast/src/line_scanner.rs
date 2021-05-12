@@ -102,6 +102,9 @@ impl LineScanner<'_> {
     }
     return match &ident.to_ascii_lowercase()[..] {
       "var" => self.token_at(column, Token::Var),
+      "module" => self.token_at(column, Token::Module),
+      "begin" => self.token_at(column, Token::Begin),
+      "end" => self.token_at(column, Token::End),
       _ => self.token_at(column, Token::Ident(ident))
     }
   }
@@ -181,6 +184,7 @@ impl Iterator for LineScanner<'_> {
         Some(&(column, '-')) => return self.scan_single(column, Token::Minus),
         Some(&(column, '*')) => return self.scan_single(column, Token::Times),
         Some(&(column, '/')) => return self.scan_single(column, Token::Div),
+        Some(&(column, '.')) => return self.scan_single(column, Token::Period),
         Some(&(column, _first_char)) => {
           return self.scan_word(column);
         }

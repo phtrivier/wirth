@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
 
-  use std::rc::Rc;
   use crate::ast;
+  use crate::parser;
   use crate::parser::*;
   use crate::scanner::*;
   use crate::scope::*;
@@ -10,7 +10,7 @@ mod tests {
   use crate::tree::*;
 
   fn scope(symbols: Vec<&str>) -> Scope {
-    let mut scope = Scope::new();
+    let scope = Scope::new();
     for symbol in symbols {
       scope.add(symbol);
     }
@@ -18,9 +18,8 @@ mod tests {
   }
   fn parse_statement<'a>(scope: &'a Scope, content: &str) -> ParseResult {
     let mut scanner = Scanner::new(content);
-    let p = Parser::new();
-    p.scan_next(&mut scanner)?;
-    return p.parse_statement(&mut scanner, scope);
+    parser::scan_next(&mut scanner)?;
+    return parser::parse_statement(&mut scanner, scope);
   }
 
   #[test]
@@ -47,179 +46,171 @@ mod tests {
     assert_matches!(tree.unwrap_err(), ParseError::UndefinedSymbol(s) if s == "y");
   }
 
-  /*
+  
   #[test]
   fn can_parse_statement() {
     let mut scope = scope(vec!["x"]);
-    let tree = parse_statement(&mut scope, "x:=42").unwrap();
-    assert_matches!(tree.as_ref(), Tree::Node(_));
+    let root_tree = parse_statement(&mut scope, "x:=42").unwrap();
 
-    let node = Tree::get_node(tree).unwrap();
+    let mut root = ast::Path::root();
+    assert_matches!(root.follow(&root_tree).unwrap(), NodeInfo::Assignement);
 
-    assert_eq!(node.info, NodeInfo::Assignement);
-    assert_matches!(node.child.as_ref(), Tree::Node(_));
+    let path = root.child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Ident(s) if s.name == "x");
 
-    let child_node = Tree::get_node(node.child).unwrap();
-    assert_matches!(child_node.info, NodeInfo::Ident(s) if s.name == "x");
-
-    let sibling_node = Tree::get_node(node.sibling).unwrap();
-    assert_matches!(sibling_node.info, NodeInfo::Constant(c) if c == 42);
+    let path = root.sibling();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Constant(42));
   }
+
 
   fn parse_statement_sequence<'a>(scope: &'a Scope, content: &str) -> ParseResult {
     let mut scanner = Scanner::new(content);
-    let p = Parser::new();
-    p.scan_next(&mut scanner)?;
-    return p.parse_statement_sequence(&mut scanner, scope);
+    parser::scan_next(&mut scanner)?;
+    return parser::parse_statement_sequence(&mut scanner, scope);
   }
 
+  
   #[test]
   fn can_parse_statement_sequence() {
     let mut scope = scope(vec!["x", "y"]);
-    let tree = parse_statement_sequence(&mut scope, "x:=42;\ny:=x").unwrap();
-    assert_matches!(tree.as_ref(), Tree::Node(_));
+    let root_tree = parse_statement_sequence(&mut scope, "x:=42;\ny:=x").unwrap();
 
-    let first_statement = Tree::get_node(tree).unwrap();
-    assert_eq!(first_statement.info, NodeInfo::StatementSequence);
-    assert_matches!(first_statement.child.as_ref(), Tree::Node(_));
+    let mut root = ast::Path::root();
+    assert_matches!(root.follow(&root_tree).unwrap(), NodeInfo::StatementSequence);
 
-    let first_assignment = Tree::get_child(&tree).unwrap();
-    assert_matches!(Tree::get_node(first_assignment.clone()).unwrap().info, NodeInfo::Assignement);
+    let path = root.child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Assignement);
 
-    let second_statement = Tree::get_sibling(&tree).unwrap();
-    assert_eq!(Tree::get_node(second_statement.clone()).unwrap().info, NodeInfo::StatementSequence);
-    let second_assignment = Tree::get_child(&second_statement).unwrap();
-    assert_matches!(Tree::get_node(second_assignment.clone()).unwrap().info, NodeInfo::Assignement);
+    let path = root.sibling();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::StatementSequence);
+
+    let path = root.sibling().child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Assignement);
   }
 
   fn parse_factor<'a>(scope: &'a Scope, content: &str) -> ParseResult {
     let mut scanner = Scanner::new(content);
-    let p = Parser::new();
-    p.scan_next(&mut scanner)?;
-    return p.parse_factor(&mut scanner, scope);
+    parser::scan_next(&mut scanner)?;
+    return parser::parse_factor(&mut scanner, scope);
   }
 
   #[test]
   fn can_parse_factor() {
     let mut scope = scope(vec!["x", "y"]);
     let tree = parse_factor(&mut scope, "42").unwrap();
-    assert_matches!(tree.as_ref(), Tree::Node(_));
-
-    let first_statement = Tree::get_node(&tree).unwrap();
-    assert_eq!(first_statement.info, NodeInfo::Constant(42));
+    assert_matches!(ast::info(&tree).unwrap(), NodeInfo::Constant(42));
 
     let tree = parse_factor(&mut scope, "x").unwrap();
-    assert_matches!(tree.as_ref(), Tree::Node(_));
-
-    let first_statement = Tree::get_node(&tree).unwrap();
-    assert_matches!(first_statement.info, NodeInfo::Ident(ident) if ident.name == "x");
+    assert_matches!(ast::info(&tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "x");
   }
 
+  
   fn parse_term<'a>(scope: &'a Scope, content: &str) -> ParseResult {
     let mut scanner = Scanner::new(content);
-    let p = Parser::new();
-    p.scan_next(&mut scanner)?;
-    return p.parse_term(&mut scanner, scope);
+    parser::scan_next(&mut scanner)?;
+    return parser::parse_term(&mut scanner, scope);
   }
 
   #[test]
   fn can_parse_term_with_one_level() {
     let mut scope = scope(vec!["x", "y"]);
-    let tree = parse_term(&mut scope, "x*42").unwrap();
-    assert_matches!(tree.as_ref(), Tree::Node(_));
+    let root_tree = parse_term(&mut scope, "x*42").unwrap();
 
-    let first_statement = Tree::get_node(&tree).unwrap();
-    assert_eq!(first_statement.info, NodeInfo::Term(TermOp::Times));
+    let mut root = ast::Path::root();
+    assert_matches!(root.follow(&root_tree).unwrap(), NodeInfo::Term(TermOp::Times));
 
-    let child = Tree::get_child_node(&tree).unwrap();
-    assert_matches!(child.info, NodeInfo::Ident(ident) if ident.name == "x");
+    let path = root.child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "x");
 
-    let sibling = Tree::get_sibling_node(&tree).unwrap();
-    assert_eq!(sibling.info, NodeInfo::Constant(42));
+    let path = root.sibling();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Constant(42));
   }
 
+  
   #[test]
   fn can_parse_term_with_multiple_operators() {
     let mut scope = scope(vec!["x", "y"]);
 
     // NOTE: the tree here is a bit ambiguous, so the user will have to use parentheses.
-    let tree = parse_term(&mut scope, "x/42*y").unwrap();
+    let root_tree = parse_term(&mut scope, "x/42*y").unwrap();
 
-    let first_statement = Tree::get_node(&tree).unwrap();
-    assert_eq!(first_statement.info, NodeInfo::Term(TermOp::Times));
+    let mut root = ast::Path::root();
+    assert_matches!(root.follow(&root_tree).unwrap(), NodeInfo::Term(TermOp::Times));
 
-    let child_node = Tree::get_child_node(&tree).unwrap();
-    assert_matches!(child_node.info, NodeInfo::Term(TermOp::Div));
+    let path = root.child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Term(TermOp::Div));
 
-    let child_child = Tree::get_child(&tree).unwrap();
-    let child_child_node = Tree::get_child_node(&child_child).unwrap();
-    assert_matches!(child_child_node.info, NodeInfo::Ident(ident) if ident.name == "x");
+    let path = root.child().child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "x");
 
-    let sibling_node = Tree::get_sibling_node(&tree).unwrap();
-    assert_matches!(sibling_node.info, NodeInfo::Ident(ident) if ident.name == "y");
+    let path = root.child().sibling();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Constant(42));
+
+    let path = root.sibling();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "y"); 
   }
 
   // NOTE(pht) maybe those functions can be automagically created with macros ?
   fn parse_simple_expression<'a>(scope: &'a Scope, content: &str) -> ParseResult {
     let mut scanner = Scanner::new(content);
-    let p = Parser::new();
-    p.scan_next(&mut scanner)?;
-    return p.parse_simple_expression(&mut scanner, scope);
+    parser::scan_next(&mut scanner)?;
+    return parser::parse_simple_expression(&mut scanner, scope);
   }
 
   #[test]
   fn can_parse_simple_expression_with_one_level() {
     let mut scope = scope(vec!["x", "y"]);
-    let tree = parse_simple_expression(&mut scope, "x*y+42").unwrap();
-    assert_matches!(tree.as_ref(), Tree::Node(_));
+    let root_tree = parse_simple_expression(&mut scope, "x*y+42").unwrap();
 
-    let first_statement = Tree::get_node(&tree).unwrap();
-    assert_eq!(first_statement.info, NodeInfo::SimpleExpression(SimpleExpressionOp::Plus));
+    let mut root = ast::Path::root();
+    assert_matches!(root.follow(&root_tree).unwrap(), NodeInfo::SimpleExpression(SimpleExpressionOp::Plus));
 
-    let child = Tree::get_child_node(&tree).unwrap();
-    assert_matches!(child.info, NodeInfo::Term(TermOp::Times));
+    let path = root.child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Term(TermOp::Times));
 
-    let sibling = Tree::get_sibling_node(&tree).unwrap();
-    assert_eq!(sibling.info, NodeInfo::Constant(42));
+    let path = root.sibling();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Constant(42));
   }
+
 
   #[test]
   fn can_parse_simple_expression_with_multiple_level() {
     let mut scope = scope(vec!["x", "y"]);
-    let tree = parse_simple_expression(&mut scope, "x*y+42*13-12").unwrap();
-    assert_matches!(tree.as_ref(), Tree::Node(_));
+    let root_tree = parse_simple_expression(&mut scope, "x*y+42*13-12").unwrap();
 
-    let first_statement = Tree::get_node(&tree).unwrap();
-    assert_eq!(first_statement.info, NodeInfo::SimpleExpression(SimpleExpressionOp::Minus));
+    let mut root = ast::Path::root();
+    assert_matches!(root.follow(&root_tree).unwrap(), NodeInfo::SimpleExpression(SimpleExpressionOp::Minus));
 
-    let child = Tree::get_child_node(&tree).unwrap();
-    assert_eq!(child.info, NodeInfo::SimpleExpression(SimpleExpressionOp::Plus));
+    let path = root.child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::SimpleExpression(SimpleExpressionOp::Plus));
   }
 
   #[test]
   fn can_parse_term_with_parens() {
     let mut scope = scope(vec!["x", "y"]);
-    let tree = parse_term(&mut scope, "(x*42)").unwrap();
-    assert_matches!(tree.as_ref(), Tree::Node(_));
+    let root_tree = parse_term(&mut scope, "(x*42)").unwrap();
 
-    let first_statement = Tree::get_node(&tree).unwrap();
-    assert_eq!(first_statement.info, NodeInfo::Term(TermOp::Times));
+    let mut root = ast::Path::root();
+    assert_matches!(root.follow(&root_tree).unwrap(), NodeInfo::Term(TermOp::Times));
 
-    let child = Tree::get_child_node(&tree).unwrap();
-    assert_matches!(child.info, NodeInfo::Ident(ident) if ident.name == "x");
+    let path = root.child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "x");
 
-    let sibling = Tree::get_sibling_node(&tree).unwrap();
-    assert_eq!(sibling.info, NodeInfo::Constant(42));
+    let path = root.sibling();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Constant(42));
   }
-  */
+  
+  fn finish_parsing(_scanner: &mut Scanner, _scope: &Scope) -> ParseResult {
+    return Ok(ast::empty());
+  }
+
   fn parse_var_declarations<'a>(scope: &'a mut Scope, content: &str) -> ParseResult {
     let mut scanner = Scanner::new(content);
-    let p = Parser::new();
     // Advance to the "VAR"
-    p.scan_next(&mut scanner)?;
+    parser::scan_next(&mut scanner)?;
     // Consume the "VAR"
-    p.scan_next(&mut scanner)?;
-    return p.parse_var_declarations(&mut scanner, scope);
+    parser::scan_next(&mut scanner)?;
+    return parser::parse_var_declarations(&mut scanner, scope, &mut finish_parsing);
   }
   
   #[test]
@@ -312,4 +303,115 @@ mod tests {
     assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "z");
   }
   
+  #[test]
+  fn can_parse_empty_declarations() {
+    let mut scope = Scope::new();
+    let mut scanner = Scanner::new("");
+    
+    let root_tree = parser::parse_declarations(&mut scanner, &mut scope, &mut finish_parsing).unwrap();
+    assert_matches!(ast::info(&root_tree).unwrap(), NodeInfo::Declarations);
+
+    assert!(ast::is_empty(ast::child(&root_tree).unwrap()));
+  }
+
+  #[test]
+  fn can_parse_declarations() {
+    let mut scope = Scope::new();
+    let mut scanner = Scanner::new("VAR x,y: INTEGER;");
+    parser::scan_next(&mut scanner).unwrap();
+    let root_tree = parser::parse_declarations(&mut scanner, &mut scope, &mut finish_parsing).unwrap();
+    assert_matches!(ast::info(&root_tree).unwrap(), NodeInfo::Declarations);
+    assert!(!ast::is_empty(ast::child(&root_tree).unwrap()));
+  }
+
+  fn parse_module(scope: &Scope, content: &str) -> ParseResult {
+    let mut scanner = Scanner::new(content);
+    parser::scan_next(&mut scanner).unwrap(); 
+    return parser::parse_module(&mut scanner, scope);
+  }
+
+  #[test]
+  fn can_not_parse_invalid_module() {
+    let mut scope = Scope::new();
+    let root_tree = parse_module(&mut scope, "x");
+    assert_matches!(root_tree, Err(ParseError::UnexpectedToken(_)));
+  }
+
+  #[test]
+  fn can_not_redefine_module_name() {
+    let mut scope = scope(vec!["x"]);
+    let root_tree = parse_module(&mut scope, "MODULE x; END x.");
+    assert_matches!(root_tree, Err(ParseError::SymbolAlreadyDeclared(s, _)) if s == "x");
+  }
+
+  #[test]
+  fn can_parse_module_without_declarations_or_body() {
+    let mut scope = Scope::new();
+    let root_tree = parse_module(&mut scope, "MODULE ModuleName; END ModuleName.").unwrap();
+    
+    let mut root = ast::Path::root();
+    assert_matches!(root.follow(&root_tree).unwrap(), NodeInfo::Module);
+
+    let path = root.child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "ModuleName");
+
+    let path = root.sibling();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Declarations);
+
+    assert!(ast::is_empty(ast::child(ast::sibling(&root_tree).unwrap()).unwrap()));
+  }
+
+  #[test]
+  fn can_parse_module_without_body() {
+    let mut scope = Scope::new();
+    let root_tree = parse_module(&mut scope, "MODULE ModuleName; VAR x: INTEGER; y: INTEGER; END ModuleName.").unwrap();
+    
+    let mut root = ast::Path::root();
+    assert_matches!(root.follow(&root_tree).unwrap(), NodeInfo::Module);
+
+    println!("{:?}", root_tree);
+
+    let path = root.child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "ModuleName");
+
+    let path = root.sibling();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Declarations);
+
+    let path = root.sibling().child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Declaration);   
+  }
+
+  #[test]
+  fn can_parse_module_wit_declarations_and_body() {
+    let mut scope = Scope::new();
+    let root_tree = parse_module(&mut scope, "MODULE ModuleName; VAR x,y: INTEGER; z: INTEGER; BEGIN x:= 1; y:= 2 END ModuleName.").unwrap();
+    
+    let mut root = ast::Path::root();
+    assert_matches!(root.follow(&root_tree).unwrap(), NodeInfo::Module);
+
+    let path = root.child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "ModuleName");
+
+    let path = root.sibling();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Declarations);
+
+    let path = root.sibling().child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Declaration);
+    
+    let path = root.sibling().child().sibling();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Declaration);
+
+    let path = root.sibling().sibling();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::StatementSequence);
+
+    let path = root.sibling().sibling().child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Assignement);
+
+    let path = root.sibling().sibling().sibling();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::StatementSequence);
+
+    let path = root.sibling().sibling().sibling().child();
+    assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Assignement);
+
+  }
 }

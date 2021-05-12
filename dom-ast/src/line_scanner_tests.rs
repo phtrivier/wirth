@@ -164,5 +164,22 @@ mod tests {
     );
   }
 
+  #[test]
+  fn test_scans_module_definition() {
+    let mut scanner = LineScanner::new(0, "MODULE ModuleName; BEGIN WriteLn END ModuleName.");
+    assert_scans_all(
+      &mut scanner,
+      vec![
+        (0, 0, Token::Module),
+        (0, 7, Token::Ident(String::from("ModuleName"))),
+        (0, 17, Token::Semicolon),
+        (0, 19, Token::Begin),
+        (0, 25, Token::Ident(String::from("WriteLn"))),
+        (0, 33, Token::End),
+        (0, 37, Token::Ident(String::from("ModuleName"))),
+        (0, 47, Token::Period)
+      ],
+    );
+  }
 
 }

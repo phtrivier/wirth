@@ -109,3 +109,32 @@ pub fn node<'a>(node_info: NodeInfo, child: Ast, sibling: Ast) -> Ast {
     sibling: sibling
   }));
 }
+
+pub fn is_empty(ast: &Ast) -> bool {
+  match ast.as_ref() {
+    Tree::Nil => true,
+    _ => false
+  }
+}
+
+pub fn print(ast: &Ast) -> () {
+  print_indentation("", ast);
+  print!("\n");
+}
+
+fn print_indentation(prefix: &str, ast: &Ast) -> () {
+  print!("{}", prefix);
+  match ast.as_ref() {
+    Tree::Nil => {
+      print!("Nil");
+    }
+    Tree::Node(node) => {
+      print!("{:?}", node.info);
+      print!("\n");
+      print_indentation((String::from(prefix) + " ").as_str(), &node.child);
+      print!("\n");
+      print_indentation((String::from(prefix)).as_str(), &node.sibling);
+    }
+  }
+
+}

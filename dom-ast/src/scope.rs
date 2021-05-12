@@ -64,14 +64,14 @@ mod tests {
 
   #[test]
   fn can_find_symbol() {
-    let mut s = Scope::new();
+    let s = Scope::new();
     s.add("x");
     assert_eq!(s.lookup("x").unwrap().name, "x");
   }
 
   #[test]
   fn maintains_addresses_when_adding_symbol() {
-    let mut s = Scope::new();
+    let s = Scope::new();
     s.add("x");
     s.add("y");
     assert_eq!(s.lookup("x").unwrap().adr, 0);
