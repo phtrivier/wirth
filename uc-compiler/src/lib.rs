@@ -1,6 +1,6 @@
 use risc::instructions::*;
 use ast::scanner::*;
-use ast::parser::*;
+use ast::parser;
 use ast::scope::*;
 
 mod codegen;
@@ -11,10 +11,11 @@ pub use ast::parser::ParseError;
 
 pub fn compile(input: &str) -> std::result::Result<Vec<Instruction>, ParseError>  {
   let mut scanner = Scanner::new(&input);
-  let parser = Parser::new();
 
-  let mut scope = Scope::new();
-  let ast = parser.parse_module(&mut scanner, &scope)?;
+  let scope = Scope::new();
+  // Still needed because `parsemodule` is not yet `compile`
+  parser::scan_next(&mut scanner)?;
+  let ast = parser::parse_module(&mut scanner, &scope)?;
 
   let mut codegen = codegen::Codegen::new();
   codegen.generate_code(&ast);
@@ -29,4 +30,3 @@ pub fn compile(input: &str) -> std::result::Result<Vec<Instruction>, ParseError>
 
   return Ok(instructions);
 }
-

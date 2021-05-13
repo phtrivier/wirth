@@ -122,6 +122,8 @@ pub fn print(ast: &Ast) -> () {
   print!("\n");
 }
 
+
+
 fn print_indentation(prefix: &str, ast: &Ast) -> () {
   print!("{}", prefix);
   match ast.as_ref() {

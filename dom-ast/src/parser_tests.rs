@@ -345,6 +345,34 @@ mod tests {
   }
 
   #[test]
+  fn can_not_parse_module_without_ending() {
+    let mut scope = Scope::new();
+    let root_tree = parse_module(&mut scope, "MODULE x;");
+    assert_matches!(root_tree, Err(ParseError::PrematureEof));
+  }
+
+  #[test]
+  fn can_not_parse_module_with_invalid_ending_name() {
+    let mut scope = Scope::new();
+    let root_tree = parse_module(&mut scope, "MODULE ModuleName; END OtherModuleName");
+    assert_matches!(root_tree, Err(ParseError::UnexpectedBlockEnding{ expected, found}) if expected == "ModuleName" && found == "OtherModuleName");
+  }
+
+  #[test]
+  fn can_not_parse_module_without_ending_period() {
+    let mut scope = Scope::new();
+    let root_tree = parse_module(&mut scope, "MODULE ModuleName; END ModuleName");
+    assert_matches!(root_tree, Err(ParseError::PrematureEof));
+  }
+
+  #[test]
+  fn can_not_parse_module_with_anything_after_the_period() {
+    let mut scope = Scope::new();
+    let root_tree = parse_module(&mut scope, "MODULE ModuleName; END ModuleName. 42");
+    assert_matches!(root_tree, Err(ParseError::UnexpectedToken(_)));
+  }
+
+  #[test]
   fn can_parse_module_without_declarations_or_body() {
     let mut scope = Scope::new();
     let root_tree = parse_module(&mut scope, "MODULE ModuleName; END ModuleName.").unwrap();
@@ -412,6 +440,6 @@ mod tests {
 
     let path = root.sibling().sibling().sibling().child();
     assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Assignement);
-
   }
+
 }

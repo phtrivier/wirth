@@ -28,7 +28,7 @@ struct Opt {
     execution_stack_base: usize,
 
     /// Memory position to dump data from
-    #[structopt(long, default_value = "30")]
+    #[structopt(long, default_value = "1000")]
     memory_dump_from: usize,
 
     /// Number of memory position to dump data

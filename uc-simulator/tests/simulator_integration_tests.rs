@@ -90,12 +90,12 @@ fn primes() {
 fn invalid_oberon() {
   let content = String::from("INVALID OBERON");
   let s = Simulator::from_oberon(&content);
-  assert_matches!(s, Err(ParseError::UndefinedSymbol(_)));
+  assert_matches!(s, Err(ParseError::UnexpectedToken(_)));
 }
 
 #[test]
 fn oberon_assignments() {
-  let content = String::from("VAR x,y: INTEGER; BEGIN x:=42;y:=x");
+  let content = String::from("MODULE Test; VAR x,y: INTEGER; BEGIN x:=42;y:=x END Test.");
   let mut s = Simulator::from_oberon(&content).unwrap();
   let execution = Execution{
     program_address: 0,
@@ -103,12 +103,12 @@ fn oberon_assignments() {
     max_cycles: 5
   };
   s.execute(execution).unwrap();
-  assert_eq!(s.memory(execution.stack_base, 2), [42, 42]);
+  assert_eq!(s.memory(execution.stack_base, 3), [0, 42, 42]);
 }
 
 #[test]
 fn oberon_arithmetic() {
-  let content = String::from("VAR x,y: INTEGER; x:=40+2;y:=((x+4)*2)/4-(10/2)");
+  let content = String::from("MODULE Test; VAR x,y: INTEGER; BEGIN x:=40+2;y:=((x+4)*2)/4-(10/2) END Test.");
   let mut s = Simulator::from_oberon(&content).unwrap();
   let execution = Execution{
     program_address: 0,
@@ -116,6 +116,6 @@ fn oberon_arithmetic() {
     max_cycles: 20
   };
   s.execute(execution).unwrap();
-  assert_eq!(s.memory(execution.stack_base, 2), [42, 18]);
+  assert_eq!(s.memory(execution.stack_base, 3), [0, 42, 18]);
 }
 

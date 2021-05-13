@@ -1,3 +1,7 @@
+# Tue 2021-05-13 18:00-19:00
+And, finaly, after learning about closures and accepting to just "pass a function that lets you complete the tree", 
+I was able to parse a module that does arithmetic. Now, everything works pretty much as I expected.
+
 # Wed 2021-05-12 13:00-14:00
 - For Helene's birthday, the elements gave to me the power of recursion, and understanding
 how to produce a `Declarations` tree that contains a list of `Declaration` in the right order.

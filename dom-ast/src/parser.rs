@@ -14,6 +14,7 @@ pub enum ParseError {
   PrematureEof,
   UnexpectedToken(Rc<Scan>),
   SymbolAlreadyDeclared(String, ScanContext),
+  UnexpectedBlockEnding{expected: String, found: String},
   Todo,
 }
 
@@ -29,7 +30,7 @@ pub fn parse_module(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
 
       current = current_token(scanner)?;
       if let Scan {
-        token: Token::Ident(ident),
+        token: Token::Ident(module_ident),
         context,
       } = current.as_ref()
       {
@@ -37,15 +38,64 @@ pub fn parse_module(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
         let current = current_token(scanner)?;
         if let Scan { token: Token::Semicolon, .. } = current.as_ref() {
           // NOTE(pht) copying the scan context might not be usefull here.
-          add_symbol(scope, ident, *context)?;
-          let symbol = lookup(scope, ident)?;
+          add_symbol(scope, module_ident, *context)?;
+          let symbol = lookup(scope, module_ident)?;
 
           let child = ast::leaf(NodeInfo::Ident(symbol));
 
           scan_next(scanner)?;
           let sibling = parse_declarations(scanner, scope, &mut parse_begin_end)?;
 
-          return Ok(ast::node(NodeInfo::Module, child, sibling));
+          let current = current_token(scanner)?;
+          if let Scan {
+            token: Token::End,
+            ..
+          } = current.as_ref() {
+
+            scan_next(scanner)?;
+            let current = current_token(scanner)?;
+
+            if let Scan {
+              token: Token::Ident(ending_ident),
+              ..
+            } = current.as_ref() {
+
+              if ending_ident == module_ident {
+
+                scan_next(scanner)?;
+                let current = current_token(scanner)?;
+                if let Scan {
+                  token: Token::Period,
+                  ..
+                } = current.as_ref() {
+
+                  scan_next(scanner)?;
+
+                  let current = current_token_or_none(scanner);
+                  match current {
+                    None => {
+                      return Ok(ast::node(NodeInfo::Module, child, sibling));    
+                    }
+                    Some(scan) => {
+                      return Err(ParseError::UnexpectedToken(scan));
+                    }
+                  }
+
+                }
+
+              } else {
+
+                return Err(ParseError::UnexpectedBlockEnding{ expected: String::from(module_ident), found: String::from(ending_ident)});
+              }
+
+            }
+          
+
+
+          } else {
+            return Err(ParseError::PrematureEof);
+          }
+
         } else {
           return Err(ParseError::UnexpectedToken(current));
         }

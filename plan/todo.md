@@ -1,15 +1,32 @@
+# Goal: Refactor parser to clean things up
+
+See how I can improve the chains of if let xxx = ... with Result<Rc<Option<Foo>>> ; maybe unwrap_or ? maybe something else ?
 # Goal: Conditionnals
+
+## Scanner
+  - [ ] IF
+  - [ ] THEN
+  - [ ] Else
+
+## Parser
+  - [ ] If Statement
+  - [ ] Comparison of simple expressions
+  - [ ] Typechecking ?
+
+## Codegen
+  - [ ] Branch appropriately based on expressions...
 
 # Goal: Loops
 
-# Goal: Variables 
-
-
 # Goal: Procedures
 
-# Goal: Module
+# Goal: Record types
 
-# Goal: Types
+# Goal: Array types
+
+# Goal: Optimization
+
+Rewrite the tree to avoid unnecessary computations, optimize things, etc...
 
 # Goal: Improve code coverage
 ## Libraries
@@ -21,6 +38,9 @@
   - [ ] Then simply exclude the "main" function from tarpaulin because it becomes irrelevant
 
 # Goal: Druid simulator gui
+
+Use druid (or something more modern than raylib ?)
+Add Step by step execution of the program ? Display the values 
 
 # Goal: Literate Programming editor
 

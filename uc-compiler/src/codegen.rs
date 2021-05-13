@@ -1,7 +1,7 @@
 use risc::instructions::*;
 use risc::instructions::OpCode::*;
-use ast::tree::*;
-use std::rc::Rc;
+use ast::ast::{Ast, sibling};
+use ast::tree::{Tree, TreeNode, NodeInfo, TermOp, SimpleExpressionOp};
 
 pub struct Codegen {
   pub instructions: Vec<Instruction>,
@@ -18,11 +18,37 @@ impl Codegen {
 
   // NOTE(pht) follow the CODE from the codegen at page 51/52, and
   // not the description (it is counter intuitive)
-  pub fn generate_code(&mut self, tree: &Rc<Tree>) -> () {
+  pub fn generate_code(&mut self, tree: &Ast) -> () {
+
+    // println!("Generating code for ast");
+    // ast::ast::print(tree);
+    // println!("");
+
     match tree.as_ref() {
       Tree::Nil => {},
       Tree::Node(node) => {
         match &node.info {
+
+          NodeInfo::Module => {
+            self.generate_code(sibling(tree).unwrap());
+          }
+
+          NodeInfo::Declarations => {
+            self.generate_code(sibling(tree).unwrap());
+          }
+
+          NodeInfo::Declaration => {
+            //
+          }
+
+          NodeInfo::Var => {
+            //
+          }
+
+          NodeInfo::Type(_) => {
+            //
+          }
+
           NodeInfo::Ident(symbol) => {
             self.instructions.push(Instruction::Memory{
               u: MemoryMode::Load,
@@ -114,14 +140,15 @@ impl Codegen {
 mod tests {
 
   use super::*;
-  use ast::parser::*;
+  use ast::ast::{empty, leaf};
+  use ast::parser;
   use ast::scanner::*;
   use ast::scope::Scope;  
 
   #[test]
   fn generate_no_instruction_for_empty_tree() {
     let mut codegen = Codegen::new();
-    let tree = Rc::new(Tree::Nil);
+    let tree = empty();
     codegen.generate_code(&tree,);
     assert_eq!(codegen.instructions, vec![]);
   }
@@ -129,11 +156,11 @@ mod tests {
   #[test]
   fn generate_load_instruction_for_single_ident() {
     let mut codegen = Codegen::new();
-    let mut scope = Scope::new();
+    let scope = Scope::new();
     scope.add("x");
     let symbol = scope.lookup("x").unwrap();
 
-    let tree = Rc::new(Tree::Node(TreeNode::ident(&symbol)));
+    let tree = leaf(NodeInfo::Ident(symbol));
     
     codegen.generate_code(&tree);
 
@@ -148,10 +175,9 @@ mod tests {
     scope.add("x");
     scope.add("y");
     let mut scanner = Scanner::new("y:=42");
-    let p = Parser::new();
     // Necessary because parse_statement_sequence is not the first thing to compile yet
-    p.scan_next(&mut scanner).unwrap();
-    let assignement = p.parse_statement_sequence(&mut scanner, &mut scope).unwrap();
+    parser::scan_next(&mut scanner).unwrap();
+    let assignement = parser::parse_statement_sequence(&mut scanner, &mut scope).unwrap();
     
     let mut codegen = Codegen::new();
     codegen.generate_code(&assignement);
@@ -168,10 +194,9 @@ mod tests {
     scope.add("x");
     scope.add("y");
     let mut scanner = Scanner::new("y:=42;x:=y");
-    let p = Parser::new();
     // Necessary because parse_statement_sequence is not the first thing to compile yet
-    p.scan_next(&mut scanner).unwrap();
-    let assignement = p.parse_statement_sequence(&mut scanner, &mut scope).unwrap();
+    parser::scan_next(&mut scanner).unwrap();
+    let assignement = parser::parse_statement_sequence(&mut scanner, &mut scope).unwrap();
     
     let mut codegen = Codegen::new();
     codegen.generate_code(&assignement);
@@ -190,10 +215,9 @@ mod tests {
     scope.add("x");
     scope.add("y");
     let mut scanner = Scanner::new("x*y");
-    let p = Parser::new();
     // Necessary because parse_statement_sequence is not the first thing to compile yet
-    p.scan_next(&mut scanner).unwrap();
-    let assignement = p.parse_term(&mut scanner, &mut scope).unwrap();
+    parser::scan_next(&mut scanner).unwrap();
+    let assignement = parser::parse_term(&mut scanner, &mut scope).unwrap();
     
     let mut codegen = Codegen::new();
     codegen.generate_code(&assignement);

@@ -40,24 +40,6 @@ pub struct TreeNode {
   pub sibling: Rc<Tree>,
 }
 
-impl TreeNode {
-  pub fn ident(symbol: Rc<Symbol>) -> TreeNode {
-    TreeNode {
-      info: NodeInfo::Ident(symbol),
-      child: Rc::new(Tree::Nil),
-      sibling: Rc::new(Tree::Nil),
-    }
-  }
-
-  pub fn constant(c: u32) -> TreeNode {
-    TreeNode {
-      info: NodeInfo::Constant(c),
-      child: Rc::new(Tree::Nil),
-      sibling: Rc::new(Tree::Nil),
-    }
-  }
-}
-
 #[derive(Debug)]
 pub enum Tree {
   Node(TreeNode),
