@@ -41,7 +41,7 @@ pub enum BranchCondition {
     NV = 15, // Never
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Instruction {
     Register { a: usize, b: usize, o: OpCode, c: usize },
     RegisterIm { a: usize, b: usize, o: OpCode, im: i32 },        // 'v' modified is implied by im > 0 or im < 0, I suppose ?
@@ -234,7 +234,6 @@ impl Instruction {
         };
     }
 
-    // TODO(pht) Make this return an error if necessary
     pub fn serialize_all(instructions: Vec<Instruction>) -> Vec<u8> {
         let instruction_bits: Vec<u32> = instructions
             .iter()
@@ -246,7 +245,6 @@ impl Instruction {
         return bincode::serialize(&instruction_bits).unwrap();
     }
 
-    // TODO(pht) Make this return an error if necessary
     pub fn deserialize_all(bytes: &[u8]) -> Vec<Instruction> {
         let instructions_bits: Vec<u32> = bincode::deserialize_from(&bytes[..]).unwrap();
         return instructions_bits
@@ -257,7 +255,6 @@ impl Instruction {
             .collect();
     }
 
-    // TODO(pht) test serialize_all and deserialize_all
 }
 
 #[cfg(test)]
@@ -378,4 +375,15 @@ mod tests {
         let parsed = Instruction::parse(i).unwrap();
         assert_eq!(*expected, parsed)
     }
+
+    #[test]
+    fn test_serde() {
+        let instruction = Instruction::Register { o: OpCode::MOV, a: 2, b: 5, c: 1 };
+        let mut instructions = vec![];
+        instructions.push(instruction);
+        let serialized = Instruction::serialize_all(instructions);
+        let deserialized = Instruction::deserialize_all(&serialized[..]);
+        assert_eq!(Instruction::encode(&instruction), Instruction::encode(&(deserialized[0])));
+    }
+
 }

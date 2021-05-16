@@ -1,3 +1,7 @@
+# Sun 2021-05-16 20:00-21:00
+
+Cleaned up the chain of `if let Scan{ .... } = ` in `parse_module`.
+
 # Tue 2021-05-13 18:00-19:00
 And, finaly, after learning about closures and accepting to just "pass a function that lets you complete the tree", 
 I was able to parse a module that does arithmetic. Now, everything works pretty much as I expected.

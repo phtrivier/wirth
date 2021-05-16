@@ -1,6 +1,3 @@
-# Goal: Refactor parser to clean things up
-
-See how I can improve the chains of if let xxx = ... with Result<Rc<Option<Foo>>> ; maybe unwrap_or ? maybe something else ?
 # Goal: Conditionnals
 
 ## Scanner

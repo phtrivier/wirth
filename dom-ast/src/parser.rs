@@ -14,7 +14,7 @@ pub enum ParseError {
   PrematureEof,
   UnexpectedToken(Rc<Scan>),
   SymbolAlreadyDeclared(String, ScanContext),
-  UnexpectedBlockEnding{expected: String, found: String},
+  UnexpectedBlockEnding { expected: String, found: String },
   Todo,
 }
 
@@ -23,122 +23,119 @@ pub type ParseResult = Result<Rc<Tree>, ParseError>;
 type IdentList = Vec<(String, ScanContext)>;
 
 pub fn parse_module(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
-  let mut current = current_token(scanner)?;
-  match current.as_ref() {
+  let current = current_token(scanner)?;
+
+  let current = match current.as_ref() {
     Scan { token: Token::Module, .. } => {
       scan_next(scanner)?;
-
-      current = current_token(scanner)?;
-      if let Scan {
-        token: Token::Ident(module_ident),
-        context,
-      } = current.as_ref()
-      {
-        scan_next(scanner)?;
-        let current = current_token(scanner)?;
-        if let Scan { token: Token::Semicolon, .. } = current.as_ref() {
-          // NOTE(pht) copying the scan context might not be usefull here.
-          add_symbol(scope, module_ident, *context)?;
-          let symbol = lookup(scope, module_ident)?;
-
-          let child = ast::leaf(NodeInfo::Ident(symbol));
-
-          scan_next(scanner)?;
-          let sibling = parse_declarations(scanner, scope, &mut parse_begin_end)?;
-
-          let current = current_token(scanner)?;
-          if let Scan {
-            token: Token::End,
-            ..
-          } = current.as_ref() {
-
-            scan_next(scanner)?;
-            let current = current_token(scanner)?;
-
-            if let Scan {
-              token: Token::Ident(ending_ident),
-              ..
-            } = current.as_ref() {
-
-              if ending_ident == module_ident {
-
-                scan_next(scanner)?;
-                let current = current_token(scanner)?;
-                if let Scan {
-                  token: Token::Period,
-                  ..
-                } = current.as_ref() {
-
-                  scan_next(scanner)?;
-
-                  let current = current_token_or_none(scanner);
-                  match current {
-                    None => {
-                      return Ok(ast::node(NodeInfo::Module, child, sibling));    
-                    }
-                    Some(scan) => {
-                      return Err(ParseError::UnexpectedToken(scan));
-                    }
-                  }
-
-                }
-
-              } else {
-
-                return Err(ParseError::UnexpectedBlockEnding{ expected: String::from(module_ident), found: String::from(ending_ident)});
-              }
-
-            }
-          
-
-
-          } else {
-            return Err(ParseError::PrematureEof);
-          }
-
-        } else {
-          return Err(ParseError::UnexpectedToken(current));
-        }
-      }
+      current_token(scanner)?
     }
     _ => {
-      println!("Unexpected token {:?}", current);
       return Err(ParseError::UnexpectedToken(current));
     }
-  }
+  };
 
-  return Err(ParseError::Todo);
+  let module_ident;
+  let current = match current.as_ref() {
+    Scan { token: Token::Ident(ident), .. } => {
+      scan_next(scanner)?;
+      module_ident = ident;
+      current_token(scanner)?
+    }
+    _ => {
+      return Err(ParseError::UnexpectedToken(current));
+    }
+  };
+
+  let symbol: Rc<Symbol>;
+  let child: Ast;
+  let sibling: Ast;
+  let current = match current.as_ref() {
+    Scan { token: Token::Semicolon, .. } => {
+      add_symbol(scope, module_ident, current.context)?;
+      symbol = lookup(scope, module_ident)?;
+
+      child = ast::leaf(NodeInfo::Ident(symbol));
+      scan_next(scanner)?;
+      sibling = parse_declarations(scanner, scope, &mut parse_begin_end)?;
+
+      current_token(scanner)?
+    }
+    _ => {
+      return Err(ParseError::UnexpectedToken(current));
+    }
+  };
+
+  let current = match current.as_ref() {
+    Scan { token: Token::End, .. } => {
+      scan_next(scanner)?;
+      current_token(scanner)?
+    }
+    _ => {
+      return Err(ParseError::UnexpectedToken(current));
+    }
+  };
+
+  let current = match current.as_ref() {
+    Scan {
+      token: Token::Ident(ending_ident),
+      ..
+    } => {
+      if ending_ident != module_ident {
+        return Err(ParseError::UnexpectedBlockEnding {
+          expected: String::from(module_ident),
+          found: String::from(ending_ident),
+        });
+      }
+      scan_next(scanner)?;
+      current_token(scanner)?
+    }
+    _ => {
+      return Err(ParseError::UnexpectedToken(current));
+    }
+  };
+
+  let current = match current.as_ref() {
+    Scan { token: Token::Period, .. } => {
+      scan_next(scanner)?;
+      current_token_or_none(scanner)
+    }
+    _ => {
+      return Err(ParseError::UnexpectedToken(current));
+    }
+  };
+
+  match current {
+    None => {
+      return Ok(ast::node(NodeInfo::Module, child, sibling));
+    }
+    Some(scan) => {
+      return Err(ParseError::UnexpectedToken(scan));
+    }
+  }
 }
 
 pub fn parse_begin_end(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
   match current_token(scanner)?.as_ref() {
-    Scan{
-      token: Token::Begin,
-      ..
-    } => {
+    Scan { token: Token::Begin, .. } => {
       scan_next(scanner)?;
       return parse_statement_sequence(scanner, scope);
-    },
+    }
     _ => {
       return Ok(ast::empty());
     }
   }
-
-
 }
 
-pub fn parse_declarations(scanner: &mut Scanner, scope: &Scope, and_then: &mut dyn FnMut (&mut Scanner, &Scope) -> ParseResult) -> ParseResult {
-
+pub fn parse_declarations(scanner: &mut Scanner, scope: &Scope, and_then: &mut dyn FnMut(&mut Scanner, &Scope) -> ParseResult) -> ParseResult {
   // It should actually just be "parse_const_declarations".
   // Which should, in the end, try to parse the "var_declarations"
-  // Which should try to parse all aother declarations ; 
-  // Which should, in the end, try to parse the statement_sequences. 
-  // The problem is that you don't know what has to happen next, so there will need to 
+  // Which should try to parse all aother declarations ;
+  // Which should, in the end, try to parse the statement_sequences.
+  // The problem is that you don't know what has to happen next, so there will need to
   // be some sort of difference between 'parsing the module declaration' and 'parsing a procedure declaration'.
-  // ALthough, maybe it's going to be the same in the end ? 
+  // ALthough, maybe it's going to be the same in the end ?
 
-  // NOTE(pht) this is going to come to bite be, the minute I want to parse_declarations
-  // AND THEN parse statement_sequence... 
   let mut declarations = ast::node(NodeInfo::Declarations, ast::empty(), ast::empty());
 
   let current = current_token_or_none(scanner);
@@ -156,10 +153,9 @@ pub fn parse_declarations(scanner: &mut Scanner, scope: &Scope, and_then: &mut d
   return Ok(declarations);
 }
 
-pub fn parse_var_declarations(scanner: &mut Scanner, scope: &Scope, and_then: &mut dyn FnMut (&mut Scanner, &Scope) -> ParseResult) -> ParseResult {
+pub fn parse_var_declarations(scanner: &mut Scanner, scope: &Scope, and_then: &mut dyn FnMut(&mut Scanner, &Scope) -> ParseResult) -> ParseResult {
   let declarations = recur_parse_declaration(scanner, scope)?;
 
-  // TODO(pht) replace this ast::empty() by "parse_statement_sequence". There is simply no way to do this otherwhise.
   return Ok(ast::node(NodeInfo::Declarations, declarations, and_then(scanner, scope)?));
 }
 
