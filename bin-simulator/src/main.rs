@@ -47,13 +47,14 @@ struct Opt {
     debug: bool,
 }
 
-
+#[cfg(not(tarpaulin_include))]
 fn dump_regs(s: &Simulator) {
     for (index, reg) in s.registers().iter().enumerate() {
         println!("REG {:04}: 0x{:08X} 0b{:032b} {:12}", index, reg, reg, reg)
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 fn dump_mem(s: &Simulator, from: usize, count: usize) {
     let memory = s.memory(from, count);
     for (index, m) in memory.iter().enumerate() {
@@ -61,6 +62,7 @@ fn dump_mem(s: &Simulator, from: usize, count: usize) {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 fn main() {
 
     let opt = Opt::from_args();

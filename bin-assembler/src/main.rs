@@ -12,7 +12,7 @@ struct Opt {
     input: PathBuf,
 }
 
-
+#[cfg(not(tarpaulin_include))]
 fn main() -> std::io::Result<()> {
     let opt = Opt::from_args();
     let filename = opt.input.into_os_string().into_string().expect("Filename is malformed.");

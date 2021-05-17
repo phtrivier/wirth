@@ -40,6 +40,7 @@ struct Opt {
     debug: bool,
 }
 
+#[cfg(not(tarpaulin_include))]
 fn main() {
 
     let opt = Opt::from_args();
