@@ -130,12 +130,7 @@ pub fn parse_begin_end(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
 pub fn parse_declarations(scanner: &mut Scanner, scope: &Scope, and_then: &mut dyn FnMut(&mut Scanner, &Scope) -> ParseResult) -> ParseResult {
   // It should actually just be "parse_const_declarations".
   // Which should, in the end, try to parse the "var_declarations"
-  // Which should try to parse all aother declarations ;
-  // Which should, in the end, try to parse the statement_sequences.
-  // The problem is that you don't know what has to happen next, so there will need to
-  // be some sort of difference between 'parsing the module declaration' and 'parsing a procedure declaration'.
-  // ALthough, maybe it's going to be the same in the end ?
-
+  // ...
   let mut declarations = ast::node(NodeInfo::Declarations, ast::empty(), ast::empty());
 
   let current = current_token_or_none(scanner);
@@ -254,26 +249,22 @@ pub fn parse_statement_sequence(scanner: &mut Scanner, scope: &Scope) -> ParseRe
   println!("parse_statement_sequence {:?}", current_token(scanner));
 
   let first_statement = parse_statement(scanner, scope)?;
-  let current = current_token(scanner);
+  let current = current_token_or_none(scanner);
   println!("parse_statement current ? {:?}", current);
 
-  if current.is_ok() {
-    if let Scan { token: Token::Semicolon, .. } = *(current.unwrap()) {
-      let _next = scan_next(scanner);
-
-      return Ok(Rc::new(Tree::Node(TreeNode {
-        info: NodeInfo::StatementSequence,
-        child: first_statement,
-        sibling: parse_statement_sequence(scanner, scope)?,
-      })));
+  let next_statement = match current {
+    Some(scan) => {
+      if let Scan { token: Token::Semicolon, .. } = scan.as_ref() {
+        scan_next(scanner)?;
+        parse_statement_sequence(scanner, scope)?
+      } else {
+        ast::empty()
+      }
     }
-  }
+    _ => ast::empty(),
+  };
 
-  return Ok(Rc::new(Tree::Node(TreeNode {
-    info: NodeInfo::StatementSequence,
-    child: first_statement,
-    sibling: Rc::new(Tree::Nil),
-  })));
+  return Ok(ast::node(NodeInfo::StatementSequence, first_statement, next_statement));
 }
 
 pub fn parse_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
@@ -293,18 +284,23 @@ pub fn parse_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     println!("What ? {:?}", what);
     if what.as_ref().token == Token::Becomes {
       scan_next(scanner)?;
-      return parse_assignment(subject, what.context, scanner, scope);
+      return parse_assignment(subject, scanner, scope);
     }
     return Err(ParseError::UnexpectedToken(what));
   }
 
-  return Err(ParseError::Todo); // If statement, etc...
+  if let Scan { token: Token::If, .. } = current.as_ref() {
+    scan_next(scanner)?;
+    return parse_if_statement(scanner, scope);
+  }
+
+  return Err(ParseError::UnexpectedToken(current));
 }
 
-fn parse_assignment(subject: Rc<Tree>, context: ScanContext, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
+fn parse_assignment(subject: Rc<Tree>, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
   println!("parse_assignment {:?}", current_token(scanner));
 
-  let object = parse_expression(context, scanner, scope)?;
+  let object = parse_expression(scanner, scope)?;
 
   return Ok(Rc::new(Tree::Node(TreeNode {
     info: NodeInfo::Assignement,
@@ -313,8 +309,50 @@ fn parse_assignment(subject: Rc<Tree>, context: ScanContext, scanner: &mut Scann
   })));
 }
 
-pub fn parse_expression(_context: ScanContext, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
-  return parse_simple_expression(scanner, scope);
+fn parse_if_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
+  println!("parse_if_statement {:?}", current_token(scanner));
+  let test_expression = parse_expression(scanner, scope)?;
+
+  let statement_sequence;
+  let current = current_token(scanner)?;
+  let current = match current.as_ref() {
+    Scan{token: Token::Then, ..} => {
+      scan_next(scanner)?;
+      statement_sequence = parse_statement_sequence(scanner, scope)?;
+      current_token(scanner)?
+    }
+    _ => {
+      return Err(ParseError::UnexpectedToken(current));
+    }
+  };
+
+  if let Scan{token: Token::End, ..} = current.as_ref() {
+    scan_next(scanner)?;
+    return Ok(ast::node(NodeInfo::IfStatement, test_expression, statement_sequence));
+  }
+    
+  return Err(ParseError::UnexpectedToken(current));  
+}
+
+pub fn parse_expression(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
+  let first_expression = parse_simple_expression(scanner, scope)?;
+
+  let current = current_token_or_none(scanner);
+  match current {
+    None => return Ok(first_expression),
+    Some(scan) => match scan.token {
+      Token::Eql => {
+        scan_next(scanner)?;
+
+        let second_expression = parse_simple_expression(scanner, scope)?;
+
+        return Ok(ast::node(NodeInfo::Expression(ExpressionOp::Eql), first_expression, second_expression));
+      }
+      _ => {
+        return Ok(first_expression);
+      }
+    },
+  }
 }
 
 pub fn parse_simple_expression(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
@@ -414,9 +452,9 @@ pub fn parse_factor(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     return Ok(ast::leaf(NodeInfo::Ident(symbol)));
   }
 
-  if let Scan { token: Token::Lparen, context } = current.as_ref() {
+  if let Scan { token: Token::Lparen, .. } = current.as_ref() {
     scan_next(scanner)?;
-    let expression = parse_expression(*context, scanner, scope);
+    let expression = parse_expression(scanner, scope);
 
     current = current_token(scanner)?;
     if let Scan { token: Token::Rparen, .. } = current.as_ref() {

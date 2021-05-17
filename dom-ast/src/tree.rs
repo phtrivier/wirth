@@ -13,6 +13,11 @@ pub enum SimpleExpressionOp{
   Minus
 }
 
+#[derive(Debug, PartialEq)]
+pub enum ExpressionOp {
+  Eql
+}
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Type {
   Integer
@@ -31,6 +36,8 @@ pub enum NodeInfo {
   Ident(Rc<Symbol>),
   Term(TermOp),
   SimpleExpression(SimpleExpressionOp),
+  Expression(ExpressionOp),
+  IfStatement
 }
 
 #[derive(Debug)]
