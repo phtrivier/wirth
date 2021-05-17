@@ -1,6 +1,6 @@
 use risc::instructions::*;
 use risc::instructions::OpCode::*;
-use ast::ast::{Ast, sibling};
+use ast::ast::{Ast, sibling, child};
 use ast::tree::{Tree, TreeNode, NodeInfo, TermOp, SimpleExpressionOp};
 
 pub struct Codegen {
@@ -48,6 +48,48 @@ impl Codegen {
           NodeInfo::Type(_) => {
             //
           }
+
+          NodeInfo::Expression(_operator) => {
+            self.generate_code(child(tree).unwrap());
+            self.generate_code(sibling(tree).unwrap());
+            // The "decr by 2" seems a bit too simple for what I do :D
+            self.rh = self.rh - 2;
+
+            // TODO(pht) take the operator into account ?
+            self.instructions.push(Instruction::Register{
+              o: OpCode::SUB,
+              a: self.rh,
+              b: self.rh,
+              c: self.rh +1
+            });
+
+          }
+
+          NodeInfo::IfStatement => {
+            self.generate_code(child(tree).unwrap());
+
+            self.instructions.push(Instruction::BranchOff{
+              cond: BranchCondition::NE,
+              link: false,
+              offset: 0 // Offset will be fixedup later
+            });
+
+            let fixup_index = self.instructions.len() - 1;
+
+            self.generate_code(sibling(tree).unwrap());
+
+            let destination_index = self.instructions.len();
+
+            let fixup = (destination_index - fixup_index - 1) as i32;
+
+            self.instructions[fixup_index] = Instruction::BranchOff{
+              cond: BranchCondition::NE,
+              link: false,
+              offset: fixup // Offset will be fixedup later
+            };
+
+          }
+
 
           NodeInfo::Ident(symbol) => {
             self.instructions.push(Instruction::Memory{
@@ -215,7 +257,7 @@ mod tests {
     scope.add("x");
     scope.add("y");
     let mut scanner = Scanner::new("x*y");
-    // Necessary because parse_statement_sequence is not the first thing to compile yet
+    // Necessary because parse_xxx is not the first thing to compile yet
     parser::scan_next(&mut scanner).unwrap();
     let assignement = parser::parse_term(&mut scanner, &mut scope).unwrap();
     
@@ -232,4 +274,37 @@ mod tests {
     ])
   }
 
+  #[test]
+  fn generate_instructions_for_branching() {
+    let mut scope = Scope::new();
+    scope.add("x");
+    let mut scanner = Scanner::new("IF 0 = 1 THEN x:= 1 END");
+    // Necessary because parse_xxx is not the first thing to compile yet
+    parser::scan_next(&mut scanner).unwrap();
+    parser::scan_next(&mut scanner).unwrap();
+    let assignement = parser::parse_if_statement(&mut scanner, &mut scope).unwrap();
+    
+    let mut codegen = Codegen::new();
+    codegen.generate_code(&assignement);
+  
+    assert_eq!(codegen.instructions, vec![
+      // Load 0
+      Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 0 },
+      // Load 1
+      Instruction::RegisterIm { o: MOV, a: 1, b: 0, im: 1 },
+      // Compare 0 and 1
+      Instruction::Register{o: SUB, a: 0, b: 0, c: 1},
+      // Branch if not equals to fixed-up location
+      Instruction::BranchOff{cond: BranchCondition::NE, offset: 2, link: false}, 
+      // Load 1
+      Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 1 },
+      // Assign 1 to x
+      Instruction::Memory {
+        u: MemoryMode::Store,
+        a: 0,
+        b: 14,
+        offset: 0
+      },
+    ])
+  }
 }

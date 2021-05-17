@@ -1,3 +1,7 @@
+# Mon 2021-05-17 18:00-20:00
+
+Scanned, parsed and generated code for a basic IF expression that does some computation.
+This feels surreal.
 # Sun 2021-05-16 20:00-21:00
 
 Cleaned up the chain of `if let Scan{ .... } = ` in `parse_module`.

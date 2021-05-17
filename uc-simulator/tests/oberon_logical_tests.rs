@@ -23,6 +23,7 @@ fn statement_is_not_executed_if_condition_is_false() {
   assert_eq!(s.memory(execution.stack_base, 2), [0, 0]);
 }
 
+
 #[test]
 fn statement_is_executed_if_condition_is_true() {
   let content = String::from("
@@ -42,6 +43,7 @@ fn statement_is_executed_if_condition_is_true() {
   s.execute(execution).unwrap();
   assert_eq!(s.memory(execution.stack_base, 2), [0, 1]);
 }
+
 
 #[test]
 fn all_statements_are_executed_if_condition_is_true() {
@@ -64,6 +66,7 @@ fn all_statements_are_executed_if_condition_is_true() {
   assert_eq!(s.memory(execution.stack_base, 3), [0, 1, 2]);
 }
 
+/*
 #[test]
 fn else_statement_is_executed_if_condition_is_false() {
   let content = String::from("
@@ -185,3 +188,4 @@ fn elseif_statements_are_not_executed_if_all_other_conditions_are_false() {
   s.execute(execution).unwrap();
   assert_eq!(s.memory(execution.stack_base, 2), [0, 4]);
 }
+*/

@@ -309,7 +309,7 @@ fn parse_assignment(subject: Rc<Tree>, scanner: &mut Scanner, scope: &Scope) -> 
   })));
 }
 
-fn parse_if_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
+pub fn parse_if_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
   println!("parse_if_statement {:?}", current_token(scanner));
   let test_expression = parse_expression(scanner, scope)?;
 
