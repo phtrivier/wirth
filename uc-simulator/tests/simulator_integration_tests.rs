@@ -118,4 +118,3 @@ fn oberon_arithmetic() {
   s.execute(execution).unwrap();
   assert_eq!(s.memory(execution.stack_base, 3), [0, 42, 18]);
 }
-
