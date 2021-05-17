@@ -182,4 +182,45 @@ mod tests {
     );
   }
 
+  #[test]
+  fn test_scans_logical_expressions() {
+    let mut scanner = LineScanner::new(0, "IF x # y THEN foo ELSIF x >= 0 THEN bar ELSE baz END");
+    assert_scans_all(
+      &mut scanner,
+      vec![
+        (0, 0, Token::If),
+        (0, 3, Token::Ident(String::from("x"))),
+        (0, 5, Token::Neq),
+        (0, 7, Token::Ident(String::from("y"))),
+        (0, 9, Token::Then),
+        (0, 14, Token::Ident(String::from("foo"))),
+        (0, 18, Token::Elsif),
+        (0, 24, Token::Ident(String::from("x"))),
+        (0, 26, Token::Geq),
+        (0, 29, Token::Int(0)),
+        (0, 31, Token::Then),
+        (0, 36, Token::Ident(String::from("bar"))),
+        (0, 40, Token::Else),
+        (0, 45, Token::Ident(String::from("baz"))),
+        (0, 49, Token::End)
+      ],
+    );
+  }
+
+  #[test]
+  fn test_scans_logical_operators() {
+    let mut scanner = LineScanner::new(0, "# = < <= > >=");
+    assert_scans_all(
+      &mut scanner,
+      vec![
+        (0, 0, Token::Neq),
+        (0, 2, Token::Eql),
+        (0, 4, Token::Lss),
+        (0, 6, Token::Leq),
+        (0, 9, Token::Gtr),
+        (0, 11, Token::Geq)
+      ],
+    );
+  }
+
 }

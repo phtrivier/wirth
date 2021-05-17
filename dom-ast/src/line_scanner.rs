@@ -5,7 +5,6 @@ use crate::token::*;
 
 use std::rc::Rc;
 
-// <@scanner/line-scanner
 #[derive(Debug, Clone)]
 pub struct LineScanner<'a> {
   line_number: u32,
@@ -13,7 +12,6 @@ pub struct LineScanner<'a> {
   chars: Peekable<CharIndices<'a>>,
   pub current: Option<Rc<Scan>>
 }
-// @>scanner/line-scanner
 
 impl LineScanner<'_> {
   pub fn new<'a>(line_number: u32, line: &'a str) -> LineScanner<'a> {
@@ -105,6 +103,10 @@ impl LineScanner<'_> {
       "module" => self.token_at(column, Token::Module),
       "begin" => self.token_at(column, Token::Begin),
       "end" => self.token_at(column, Token::End),
+      "if" => self.token_at(column, Token::If),
+      "then" => self.token_at(column, Token::Then),
+      "else" => self.token_at(column, Token::Else),
+      "elsif" => self.token_at(column, Token::Elsif),      
       _ => self.token_at(column, Token::Ident(ident))
     }
   }
@@ -141,6 +143,22 @@ impl LineScanner<'_> {
           return self.token_at(column, Token::Colon);
         }
       }
+      '>' => {
+        if let Some(&(_column, '=')) = p {
+          self.forward();
+          return self.token_at(column, Token::Geq);
+        } else {
+          return self.token_at(column, Token::Gtr);
+        }
+      }
+      '<' => {
+        if let Some(&(_column, '=')) = p {
+          self.forward();
+          return self.token_at(column, Token::Leq);
+        } else {
+          return self.token_at(column, Token::Lss);
+        }
+      }
       _ => {
         panic!(
           "Programmer error: function `LineScanner::scan_sigil` called with character `{:?}` that does not start a sigil.",
@@ -149,6 +167,7 @@ impl LineScanner<'_> {
       }
     }
   }
+
 }
 
 impl Iterator for LineScanner<'_> {
@@ -176,6 +195,12 @@ impl Iterator for LineScanner<'_> {
         Some(&(column, ':')) => {
           return self.scan_sigil(column, ':');
         }
+        Some(&(column, '>')) => {
+          return self.scan_sigil(column, '>');
+        }
+        Some(&(column, '<')) => {
+          return self.scan_sigil(column, '<');
+        }
         Some(&(column, ';')) => return self.scan_single(column, Token::Semicolon),
         Some(&(column, ',')) => return self.scan_single(column, Token::Comma),
         Some(&(column, '(')) => return self.scan_single(column, Token::Lparen),
@@ -185,6 +210,8 @@ impl Iterator for LineScanner<'_> {
         Some(&(column, '*')) => return self.scan_single(column, Token::Times),
         Some(&(column, '/')) => return self.scan_single(column, Token::Div),
         Some(&(column, '.')) => return self.scan_single(column, Token::Period),
+        Some(&(column, '=')) => return self.scan_single(column, Token::Eql),
+        Some(&(column, '#')) => return self.scan_single(column, Token::Neq),
         Some(&(column, _first_char)) => {
           return self.scan_word(column);
         }
