@@ -25,16 +25,22 @@ fn compile_false_condition_test() {
             Instruction::Register { o: SUB, a: 0, b: 0, c: 1 },
             Instruction::BranchOff {
                 cond: BranchCondition::NE,
-                offset: 2,
+                offset: 3,
                 link: false
             },
-            // Instruction for the then branch, will not be taken
+            // Instruction for the then branch, will be ignored
             Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 1 },
             Instruction::Memory {
                 u: MemoryMode::Store,
                 a: 0,
                 b: 14,
                 offset: 1
+            },
+            // End of the if then else, continue to next instruction
+            Instruction::BranchOff {
+                cond: BranchCondition::AW,
+                offset: 1,
+                link: false
             },
             // Footer to exit
             Instruction::RegisterIm {
@@ -53,7 +59,6 @@ fn compile_false_condition_test() {
 }
 
 #[test]
-#[ignore] // TODO
 fn compile_else_condition_test() {
     let content = String::from(
         "
@@ -79,16 +84,21 @@ fn compile_else_condition_test() {
             Instruction::Register { o: SUB, a: 0, b: 0, c: 1 },
             Instruction::BranchOff {
                 cond: BranchCondition::NE,
-                offset: 2,
+                offset: 3,
                 link: false
             },
-            // Instruction for the then branch, will not be taken
+            // Instructions for the then branch, will not be taken
             Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 1 },
             Instruction::Memory {
                 u: MemoryMode::Store,
                 a: 0,
                 b: 14,
                 offset: 1
+            },
+            Instruction::BranchOff {
+                cond: BranchCondition::AW,
+                offset: 3,
+                link: false
             },
             // Instruction for the else branch, should be taken
             Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 2 },

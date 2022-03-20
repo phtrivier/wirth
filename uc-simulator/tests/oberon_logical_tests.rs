@@ -70,7 +70,6 @@ fn all_statements_are_executed_if_condition_is_true() {
 }
 
 #[test]
-#[ignore] // TODO(pht)
 fn else_statement_is_executed_if_condition_is_false() {
     let content = String::from(
         "

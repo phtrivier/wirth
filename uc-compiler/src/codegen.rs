@@ -60,8 +60,10 @@ impl Codegen {
                     }
 
                     NodeInfo::IfStatement => {
+                        // This generate the code for the "test" part of the if
                         self.generate_code(child(tree).unwrap());
 
+                        // This has to branch either to the end, or not branch at all
                         self.instructions.push(Instruction::BranchOff {
                             cond: BranchCondition::NE,
                             link: false,
@@ -70,8 +72,18 @@ impl Codegen {
 
                         let fixup_index = self.instructions.len() - 1;
 
+                        // This generates the code for the "then" part of the if
                         self.generate_code(sibling(tree).unwrap());
 
+                        // This wants to go to the last expression of the if / then else. 
+                        // There is no else at the moment, so it can just move on to the next expression
+                        self.instructions.push(Instruction::BranchOff {
+                            cond: BranchCondition::AW,
+                            link: false,
+                            offset: 1, // NOTE(pht) in case there is an else block, this offset will have to change
+                        });
+
+                        // This fixes up the jump to the else part of the tree
                         let destination_index = self.instructions.len();
 
                         let fixup = (destination_index - fixup_index - 1) as i32;
@@ -79,8 +91,17 @@ impl Codegen {
                         self.instructions[fixup_index] = Instruction::BranchOff {
                             cond: BranchCondition::NE,
                             link: false,
-                            offset: fixup, // Offset will be fixedup later
+                            offset: fixup, // Offset is not fixed up
                         };
+
+                        // What is still missing here is an unconditionnal jump
+                        // to the "END" part, to allow sandwhiching:
+                        // TEST
+                        // Jump to ELSE if false
+                        // Inst for IF
+                        // Jump to END
+                        // Inst for ELSE
+                        // END
                     }
 
                     NodeInfo::Then => {
@@ -338,7 +359,7 @@ mod tests {
                 // Branch if not equals to fixed-up location
                 Instruction::BranchOff {
                     cond: BranchCondition::NE,
-                    offset: 2,
+                    offset: 3,
                     link: false
                 },
                 // Load 1
@@ -350,6 +371,70 @@ mod tests {
                     b: 14,
                     offset: 0
                 },
+                // Branch to the very end of the if/else branch ; in this case, it would be the next 
+                // location since there is no "ELSE"
+                Instruction::BranchOff {
+                    cond: BranchCondition::AW,
+                    offset: 1,
+                    link: false
+                }
+            ]
+        )
+    }
+
+    #[test]
+    fn generate_instructions_for_branching_with_else() {
+        let scope = Scope::new();
+        scope.add("x");
+        let mut scanner = Scanner::new("IF 0 = 1 THEN x:= 1 ELSE x:= 2 END");
+        // Necessary because parse_xxx is not the first thing to compile yet
+        parser::scan_next(&mut scanner).unwrap();
+        parser::scan_next(&mut scanner).unwrap();
+        let assignement = parser::parse_if_statement(&mut scanner, &scope).unwrap();
+
+        let mut codegen = Codegen::new();
+        codegen.generate_code(&assignement);
+
+        assert_eq!(
+            codegen.instructions,
+            vec![
+                // Load 0
+                Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 0 },
+                // Load 1
+                Instruction::RegisterIm { o: MOV, a: 1, b: 0, im: 1 },
+                // Compare 0 and 1
+                Instruction::Register { o: SUB, a: 0, b: 0, c: 1 },
+                // Branch if not equals to fixed-up location
+                Instruction::BranchOff {
+                    cond: BranchCondition::NE,
+                    offset: 3,
+                    link: false
+                },
+                // Load 1
+                Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 1 },
+                // Assign 1 to x
+                Instruction::Memory {
+                    u: MemoryMode::Store,
+                    a: 0,
+                    b: 14,
+                    offset: 0
+                },
+                // Branch to the very end of the if/else branch ; in this case, it would be the next 
+                // location since there is no "ELSE"
+                Instruction::BranchOff {
+                    cond: BranchCondition::AW,
+                    offset: 2,
+                    link: false
+                },
+                // Load 2
+                Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 2 },
+                // Assign 2 to x
+                Instruction::Memory {
+                    u: MemoryMode::Store,
+                    a: 0,
+                    b: 14,
+                    offset: 0
+                }
             ]
         )
     }
