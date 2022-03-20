@@ -313,12 +313,12 @@ pub fn parse_if_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
   println!("parse_if_statement {:?}", current_token(scanner));
   let test_expression = parse_expression(scanner, scope)?;
 
-  let statement_sequence;
+  let then_statement_sequence;
   let current = current_token(scanner)?;
   let current = match current.as_ref() {
-    Scan{token: Token::Then, ..} => {
+    Scan { token: Token::Then, .. } => {
       scan_next(scanner)?;
-      statement_sequence = parse_statement_sequence(scanner, scope)?;
+      then_statement_sequence = parse_statement_sequence(scanner, scope)?;
       current_token(scanner)?
     }
     _ => {
@@ -326,12 +326,29 @@ pub fn parse_if_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     }
   };
 
-  if let Scan{token: Token::End, ..} = current.as_ref() {
+  let else_statement_sequence;
+  let current = match current.as_ref() {
+    Scan { token: Token::Else, .. } => {
+      scan_next(scanner)?;
+      else_statement_sequence = parse_statement_sequence(scanner, scope)?;
+      current_token(scanner)?
+    }
+    _ => {
+      else_statement_sequence = ast::empty();
+      current
+    }
+  };
+
+  if let Scan { token: Token::End, .. } = current.as_ref() {
     scan_next(scanner)?;
-    return Ok(ast::node(NodeInfo::IfStatement, test_expression, statement_sequence));
+    return Ok(ast::node(
+      NodeInfo::IfStatement,
+      test_expression,
+      ast::node(NodeInfo::Then, then_statement_sequence, else_statement_sequence),
+    ));
   }
-    
-  return Err(ParseError::UnexpectedToken(current));  
+
+  return Err(ParseError::UnexpectedToken(current));
 }
 
 pub fn parse_expression(scanner: &mut Scanner, scope: &Scope) -> ParseResult {

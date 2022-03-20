@@ -66,8 +66,8 @@ fn all_statements_are_executed_if_condition_is_true() {
   assert_eq!(s.memory(execution.stack_base, 3), [0, 1, 2]);
 }
 
-/*
 #[test]
+#[ignore] // TODO(pht)
 fn else_statement_is_executed_if_condition_is_false() {
   let content = String::from("
   MODULE Test; 
@@ -89,6 +89,7 @@ fn else_statement_is_executed_if_condition_is_false() {
   assert_eq!(s.memory(execution.stack_base, 2), [0, 2]);
 }
 
+/*
 #[test]
 fn elseif_statement_is_executed_if_other_condition_is_true() {
   let content = String::from("

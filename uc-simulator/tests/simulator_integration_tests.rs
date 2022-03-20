@@ -3,6 +3,7 @@ use simulator::Simulator;
 use simulator::*;
 use assembler::*;
 use ast::parser::*;
+use std::assert_matches::assert_matches;
 
 fn from_assembler(s: &str) -> Simulator {
   let content = String::from(s);

@@ -1,6 +1,7 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 
+
 #[derive(Debug, PartialEq)]
 pub struct Symbol {
   pub name: String,
@@ -53,6 +54,7 @@ impl Scope {
 
 #[cfg(test)]
 mod tests {
+  use std::assert_matches::assert_matches;
 
   use super::*;
 

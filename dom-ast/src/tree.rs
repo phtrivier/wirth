@@ -37,7 +37,8 @@ pub enum NodeInfo {
   Term(TermOp),
   SimpleExpression(SimpleExpressionOp),
   Expression(ExpressionOp),
-  IfStatement
+  IfStatement,
+  Then
 }
 
 #[derive(Debug)]

@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+  use std::assert_matches::assert_matches;
   use crate::ast;
   
   use crate::tree::NodeInfo;

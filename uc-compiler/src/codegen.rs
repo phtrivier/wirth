@@ -87,9 +87,11 @@ impl Codegen {
               link: false,
               offset: fixup // Offset will be fixedup later
             };
-
           }
 
+          NodeInfo::Then => {
+            self.generate_code(child(tree).unwrap());
+          }
 
           NodeInfo::Ident(symbol) => {
             self.instructions.push(Instruction::Memory{
