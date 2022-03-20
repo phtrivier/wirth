@@ -20,7 +20,7 @@ fn assemble_full_program() {
     @END    MOV  R2,0      ; Put 0 in the R2, and branch to 0 to exit
             B    R2
     ";
-    let instructions = assemble(&program).unwrap();
+    let instructions = assemble(program).unwrap();
 
     assert_eq!(8, instructions.len());
 

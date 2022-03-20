@@ -107,10 +107,10 @@ pub fn parse_module(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
 
   match current {
     None => {
-      return Ok(ast::node(NodeInfo::Module, child, sibling));
+      Ok(ast::node(NodeInfo::Module, child, sibling))
     }
     Some(scan) => {
-      return Err(ParseError::UnexpectedToken(scan));
+      Err(ParseError::UnexpectedToken(scan))
     }
   }
 }
@@ -119,10 +119,10 @@ pub fn parse_begin_end(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
   match current_token(scanner)?.as_ref() {
     Scan { token: Token::Begin, .. } => {
       scan_next(scanner)?;
-      return parse_statement_sequence(scanner, scope);
+      parse_statement_sequence(scanner, scope)
     }
     _ => {
-      return Ok(ast::empty());
+      Ok(ast::empty())
     }
   }
 }
@@ -134,24 +134,21 @@ pub fn parse_declarations(scanner: &mut Scanner, scope: &Scope, and_then: &mut d
   let mut declarations = ast::node(NodeInfo::Declarations, ast::empty(), ast::empty());
 
   let current = current_token_or_none(scanner);
-  match current.as_ref() {
-    Some(scan) => {
-      if let Scan { token: Token::Var, .. } = scan.as_ref() {
-        scan_next(scanner)?;
-        // NOTE(pht) and_then is passed to parse_declaration, but in the end
-        // it should be passed to the last function that parses declaration
-        declarations = parse_var_declarations(scanner, scope, and_then)?;
-      }
+  if let Some(scan) = current.as_ref() {
+    if let Scan { token: Token::Var, .. } = scan.as_ref() {
+      scan_next(scanner)?;
+      // NOTE(pht) and_then is passed to parse_declaration, but in the end
+      // it should be passed to the last function that parses declaration
+      declarations = parse_var_declarations(scanner, scope, and_then)?;
     }
-    _ => {}
   }
-  return Ok(declarations);
+  Ok(declarations)
 }
 
 pub fn parse_var_declarations(scanner: &mut Scanner, scope: &Scope, and_then: &mut dyn FnMut(&mut Scanner, &Scope) -> ParseResult) -> ParseResult {
   let declarations = recur_parse_declaration(scanner, scope)?;
 
-  return Ok(ast::node(NodeInfo::Declarations, declarations, and_then(scanner, scope)?));
+  Ok(ast::node(NodeInfo::Declarations, declarations, and_then(scanner, scope)?))
 }
 
 fn recur_parse_declaration(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
@@ -163,7 +160,7 @@ fn recur_parse_declaration(scanner: &mut Scanner, scope: &Scope) -> ParseResult 
   let idents = parse_ident_list(scanner)?;
   println!("List of idents to declare after first loop {:?}", idents);
 
-  if idents.len() == 0 {
+  if idents.is_empty() {
     return Ok(ast::empty());
   }
 
@@ -192,14 +189,14 @@ fn recur_parse_declaration(scanner: &mut Scanner, scope: &Scope) -> ParseResult 
       scan_next(scanner)?;
 
       for (ident, ident_context) in idents.iter() {
-        add_symbol(scope, &ident, *ident_context)?;
+        add_symbol(scope, ident, *ident_context)?;
       }
 
       return var_declarations(&mut idents.iter(), scope, Type::Integer, recur_parse_declaration(scanner, scope)?);
     }
   }
 
-  return Err(ParseError::UnexpectedToken(current));
+  Err(ParseError::UnexpectedToken(current))
 }
 
 fn parse_ident_list(scanner: &mut Scanner) -> Result<IdentList, ParseError> {
@@ -216,7 +213,7 @@ fn parse_ident_list(scanner: &mut Scanner) -> Result<IdentList, ParseError> {
     {
       // NOTE(pht) Ideally, I would like not to have to clone the identifier, but since the token can fall
       // out of scope, I don't see a way to do that.
-      idents.push((String::from(ident), ident_context.clone()));
+      idents.push((String::from(ident), *ident_context));
       scan_next(scanner)?;
       current = current_token(scanner)?;
       if let Scan { token: Token::Comma, .. } = current.as_ref() {
@@ -228,19 +225,19 @@ fn parse_ident_list(scanner: &mut Scanner) -> Result<IdentList, ParseError> {
     }
     break;
   }
-  return Ok(idents);
+  Ok(idents)
 }
 
 pub fn var_declarations(idents: &mut dyn Iterator<Item = &(String, ScanContext)>, scope: &Scope, node_type: crate::tree::Type, final_sibling: Ast) -> ParseResult {
   match idents.next() {
-    None => return Ok(final_sibling),
+    None => Ok(final_sibling),
     Some((ident, _ident_context)) => {
       let symbol = lookup(scope, ident)?;
       let child = ast::leaf(NodeInfo::Ident(symbol));
       let sibling = ast::leaf(NodeInfo::Type(node_type));
       let var = ast::node(NodeInfo::Var, child, sibling);
 
-      return Ok(ast::node(NodeInfo::Declaration, var, var_declarations(idents, scope, node_type, final_sibling)?));
+      Ok(ast::node(NodeInfo::Declaration, var, var_declarations(idents, scope, node_type, final_sibling)?))
     }
   }
 }
@@ -264,7 +261,7 @@ pub fn parse_statement_sequence(scanner: &mut Scanner, scope: &Scope) -> ParseRe
     _ => ast::empty(),
   };
 
-  return Ok(ast::node(NodeInfo::StatementSequence, first_statement, next_statement));
+  Ok(ast::node(NodeInfo::StatementSequence, first_statement, next_statement))
 }
 
 pub fn parse_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
@@ -272,7 +269,7 @@ pub fn parse_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
   let current = current_token(scanner)?;
 
   if let Scan { token: Token::Ident(ident), .. } = current.as_ref() {
-    let ident_symbol = lookup(scope, &ident)?;
+    let ident_symbol = lookup(scope, ident)?;
     let subject = ast::leaf(NodeInfo::Ident(ident_symbol));
 
     println!("Current before calling scan_next {:?}", current_token(scanner));
@@ -294,7 +291,7 @@ pub fn parse_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     return parse_if_statement(scanner, scope);
   }
 
-  return Err(ParseError::UnexpectedToken(current));
+  Err(ParseError::UnexpectedToken(current))
 }
 
 fn parse_assignment(subject: Rc<Tree>, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
@@ -302,11 +299,11 @@ fn parse_assignment(subject: Rc<Tree>, scanner: &mut Scanner, scope: &Scope) -> 
 
   let object = parse_expression(scanner, scope)?;
 
-  return Ok(Rc::new(Tree::Node(TreeNode {
+  Ok(Rc::new(Tree::Node(TreeNode {
     info: NodeInfo::Assignement,
     child: subject,
     sibling: object,
-  })));
+  })))
 }
 
 pub fn parse_if_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
@@ -348,7 +345,7 @@ pub fn parse_if_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     ));
   }
 
-  return Err(ParseError::UnexpectedToken(current));
+  Err(ParseError::UnexpectedToken(current))
 }
 
 pub fn parse_expression(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
@@ -356,17 +353,17 @@ pub fn parse_expression(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
 
   let current = current_token_or_none(scanner);
   match current {
-    None => return Ok(first_expression),
+    None => Ok(first_expression),
     Some(scan) => match scan.token {
       Token::Eql => {
         scan_next(scanner)?;
 
         let second_expression = parse_simple_expression(scanner, scope)?;
 
-        return Ok(ast::node(NodeInfo::Expression(ExpressionOp::Eql), first_expression, second_expression));
+        Ok(ast::node(NodeInfo::Expression(ExpressionOp::Eql), first_expression, second_expression))
       }
       _ => {
-        return Ok(first_expression);
+        Ok(first_expression)
       }
     },
   }
@@ -395,7 +392,7 @@ pub fn parse_simple_expression(scanner: &mut Scanner, scope: &Scope) -> ParseRes
           let node = TreeNode {
             info: NodeInfo::SimpleExpression(operator),
             child: tree,
-            sibling: sibling,
+            sibling,
           };
           tree = Rc::new(Tree::Node(node));
           continue;
@@ -407,7 +404,7 @@ pub fn parse_simple_expression(scanner: &mut Scanner, scope: &Scope) -> ParseRes
     }
     break;
   }
-  return Ok(tree);
+  Ok(tree)
 }
 
 pub fn parse_term(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
@@ -435,7 +432,7 @@ pub fn parse_term(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
             let node = TreeNode {
               info: NodeInfo::Term(operator),
               child: tree,
-              sibling: sibling,
+              sibling,
             };
             tree = Rc::new(Tree::Node(node));
             continue;
@@ -447,7 +444,7 @@ pub fn parse_term(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
       }
     }
   }
-  return Ok(tree);
+  Ok(tree)
 }
 
 pub fn parse_factor(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
@@ -463,7 +460,7 @@ pub fn parse_factor(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
   }
 
   if let Scan { token: Token::Ident(ident), .. } = current.as_ref() {
-    let symbol = lookup(scope, &ident)?;
+    let symbol = lookup(scope, ident)?;
 
     scan_next(scanner)?;
     return Ok(ast::leaf(NodeInfo::Ident(symbol)));
@@ -480,7 +477,7 @@ pub fn parse_factor(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     }
   }
 
-  return Err(ParseError::UnexpectedToken(current.clone()));
+  Err(ParseError::UnexpectedToken(current))
 }
 
 pub fn scan_next(scanner: &mut Scanner) -> Result<(), ParseError> {
@@ -503,21 +500,21 @@ fn current_token(scanner: &mut Scanner) -> Result<Rc<Scan>, ParseError> {
 }
 
 fn current_token_or_none(scanner: &mut Scanner) -> Option<Rc<Scan>> {
-  return scanner.current();
+  scanner.current()
 }
 
 fn add_symbol(scope: &Scope, ident: &str, context: ScanContext) -> Result<Rc<Symbol>, ParseError> {
-  match scope.lookup(&ident) {
+  match scope.lookup(ident) {
     None => {
       scope.add(ident);
-      return lookup(scope, ident);
+      lookup(scope, ident)
     }
     Some(_symbol) => {
-      return Err(ParseError::SymbolAlreadyDeclared(String::from(ident), context));
+      Err(ParseError::SymbolAlreadyDeclared(String::from(ident), context))
     }
   }
 }
 
 fn lookup(scope: &Scope, ident: &str) -> Result<Rc<Symbol>, ParseError> {
-  return scope.lookup(&ident).ok_or_else(|| ParseError::UndefinedSymbol(String::from(ident)));
+  scope.lookup(ident).ok_or_else(|| ParseError::UndefinedSymbol(String::from(ident)))
 }

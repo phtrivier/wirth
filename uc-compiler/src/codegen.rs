@@ -18,7 +18,7 @@ impl Codegen {
 
   // NOTE(pht) follow the CODE from the codegen at page 51/52, and
   // not the description (it is counter intuitive)
-  pub fn generate_code(&mut self, tree: &Ast) -> () {
+  pub fn generate_code(&mut self, tree: &Ast) {
 
     // println!("Generating code for ast");
     // ast::ast::print(tree);
@@ -53,7 +53,7 @@ impl Codegen {
             self.generate_code(child(tree).unwrap());
             self.generate_code(sibling(tree).unwrap());
             // The "decr by 2" seems a bit too simple for what I do :D
-            self.rh = self.rh - 2;
+            self.rh -= 2;
 
             // TODO(pht) take the operator into account ?
             self.instructions.push(Instruction::Register{
@@ -100,7 +100,7 @@ impl Codegen {
               b: 14,
               offset: symbol.adr as u32
             });
-            self.rh = self.rh + 1;
+            self.rh += 1;
   
           }
 
@@ -112,7 +112,7 @@ impl Codegen {
               b: 0,
               im: value as i32
             });
-            self.rh = self.rh + 1;
+            self.rh += 1;
   
           }
 
@@ -128,7 +128,7 @@ impl Codegen {
               // NOTE(pht): it is not absolutely clear if the rh = rh - 1 
               // has to be done before or after the STW ; but it only 
               // makes sense for me to do it before.
-              self.rh = self.rh - 1;
+              self.rh -= 1;
               self.instructions.push(Instruction::Memory{
                 u: MemoryMode::Store,
                 a: self.rh,
@@ -150,7 +150,7 @@ impl Codegen {
               TermOp::Times => MUL,
               TermOp::Div => DIV,
             };
-            self.rh = self.rh - 1;
+            self.rh -= 1;
             self.instructions.push(Instruction::Register{
               o: opcode,
               a: self.rh-1,
@@ -166,7 +166,7 @@ impl Codegen {
               SimpleExpressionOp::Plus => ADD,
               SimpleExpressionOp::Minus => SUB,
             };
-            self.rh = self.rh - 1;
+            self.rh -= 1;
             self.instructions.push(Instruction::Register{
               o: opcode,
               a: self.rh-1,

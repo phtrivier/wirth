@@ -28,7 +28,7 @@ impl Scope {
     }
   }
 
-  pub fn add(&self, s: &str) -> () {
+  pub fn add(&self, s: &str) {
     let mut content = self.content.borrow_mut();
 
     let symbol = Symbol{
@@ -36,11 +36,11 @@ impl Scope {
       adr: content.next_adr
     };
 
-    content.next_adr = content.next_adr + 1;
+    content.next_adr += 1;
     content.symbols.push(Rc::new(symbol));
   }
 
-  pub fn lookup<'a>(&'a self, s: &str) -> Option<Rc<Symbol>> {
+  pub fn lookup(&self, s: &str) -> Option<Rc<Symbol>> {
     let content = self.content.borrow();
 
     for symbol in content.symbols.iter() {
@@ -48,9 +48,17 @@ impl Scope {
         return Some(symbol.clone());
       }
     }
-    return None;
+    None
   }
 }
+
+impl Default for Scope {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
+
 
 #[cfg(test)]
 mod tests {

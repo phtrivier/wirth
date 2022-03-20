@@ -16,7 +16,7 @@ struct Opt {
 fn main() -> std::io::Result<()> {
     let opt = Opt::from_args();
     let filename = opt.input.into_os_string().into_string().expect("Filename is malformed.");
-    let content = std::fs::read_to_string(&filename).expect(&format!("Unable to open file {:?}", &filename));
+    let content = std::fs::read_to_string(&filename).unwrap_or_else(|_| panic!("Unable to open file {:?}", &filename));
 
     match assembler::assemble(&content) {
         Ok(instructions) => {
@@ -29,5 +29,5 @@ fn main() -> std::io::Result<()> {
         }
     }
 
-    return Ok(());
+    Ok(())
 }

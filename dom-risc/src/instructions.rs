@@ -70,7 +70,7 @@ impl Instruction {
 
     fn encode_register(op: OpCode, a: usize, b: usize, c: usize) -> u32 {
         //  0000(4) a(4) b(4) [op](4) 000000000000(12) c (4)
-        return 0b0000_0000_0000_0000_00_00_00_00_00_00_0000 | c as u32 | (op as u32) << (4 + 12) | (b as u32) << (4 + 12 + 4) | (a as u32) << (4 + 4 + 12 + 4);
+        0b0000_0000_0000_0000_00_00_00_00_00_00_0000 | c as u32 | (op as u32) << (4 + 12) | (b as u32) << (4 + 12 + 4) | (a as u32) << (4 + 4 + 12 + 4)
     }
 
     const F1_IM_EXTENSION_MASK: u32 = 0b0000_0000_0000_0000_11_11_11_11_11_11_11_11;
@@ -82,12 +82,12 @@ impl Instruction {
         }
 
         //  0100(4) a(4) b(4) [op](4) im(16)
-        return 0b0100_0000_0000_0000_00_00_00_00_00_00_00_00
+        0b0100_0000_0000_0000_00_00_00_00_00_00_00_00
             | ((im as u32) & Self::F1_IM_EXTENSION_MASK)
             | (op as u32) << (4 + 12)
             | (b as u32) << (4 + 12 + 4)
             | (a as u32) << (4 + 4 + 12 + 4)
-            | (v as u32) << (32 - 4);
+            | (v as u32) << (32 - 4)
     }
 
     fn encode_memory(a: usize, b: usize, offset: u32, u: MemoryMode) -> u32 {
@@ -96,11 +96,11 @@ impl Instruction {
             uv = 0b1010;
         }
 
-        return 0b0000_0000_0000_00000_00000_00000_00000
-            | ((offset as u32) & 0b0000_0000_0000_11111_11111_11111_11111)
+        0b0000_0000_0000_0000_0000_0000_0000_0000
+            | ((offset as u32) & 0b0000_0000_0000_1111_1111_1111_1111_1111)
             | (b as u32) << (20)
             | (a as u32) << (4 + 20)
-            | (uv as u32) << (32 - 4);
+            | (uv as u32) << (32 - 4)
     }
 
     fn encode_branch(cond: BranchCondition, c: usize, link: bool) -> u32 {
@@ -109,7 +109,7 @@ impl Instruction {
             uv = 0b1101;
         }
 
-        return 0b0000_0000_00000_00000_00000_00000_0000 | (c as u32) | (cond as u32) << 20 + 4 | (uv as u32) << (32 - 4);
+        0b0000_0000_0000_0000_0000_0000_0000_0000 | (c as u32) | (cond as u32) << (20 + 4) | (uv as u32) << (32 - 4)
     }
 
     fn encode_branch_offset(cond: BranchCondition, offset: i32, link: bool) -> u32 {
@@ -118,7 +118,7 @@ impl Instruction {
             uv = 0b1111;
         }
 
-        return 0b0000_0000_00000_00000_00000_00000_0000 | ((offset as u32) & 0b0000_0000_11111_11111_11111_11111_1111) | (cond as u32) << 24 | (uv as u32) << (32 - 4);
+        0b0000_0000_0000_0000_0000_0000_0000_0000 | ((offset as u32) & 0b0000_0000_1111_1111_1111_1111_1111_1111) | (cond as u32) << 24 | (uv as u32) << (32 - 4)
     }
 
     pub fn parse(i: u32) -> Result<Instruction, InstructionParseError> {
@@ -128,13 +128,13 @@ impl Instruction {
         // as well as the organisation.
         // But that's a job for later !
         if (i / 0x80000000) % 2 == 0 {
-            return Instruction::parse_register(i);
+            Instruction::parse_register(i)
         } else if (i / 0x40000000) % 2 == 0 {
-            return Instruction::parse_memory(i);
+            Instruction::parse_memory(i)
         } else if (i & 0b0010_0000_0000_0000_0000_0000_0000_0000) == 0 {
-            return Instruction::parse_branch(i);
+            Instruction::parse_branch(i)
         } else {
-            return Instruction::parse_branch_offset(i);
+            Instruction::parse_branch_offset(i)
         }
     }
 
@@ -148,17 +148,17 @@ impl Instruction {
 
         let o = Instruction::parse_op_code(op)?;
         if ((i / 0x40000000) % 2) == 0 {
-            return Ok(Instruction::Register { a, b, o: o, c });
+            Ok(Instruction::Register { a, b, o, c })
         } else if (i / 0x10000000) % 2 == 0 {
-            return Ok(Instruction::RegisterIm { a, b, o: o, im });
+            Ok(Instruction::RegisterIm { a, b, o, im })
         } else {
             let im_extended = ((im as u32) | 0xFFFF0000) as i32;
-            return Ok(Instruction::RegisterIm { a, b, o: o, im: im_extended });
+            Ok(Instruction::RegisterIm { a, b, o, im: im_extended })
         }
     }
 
     fn parse_op_code(op: u8) -> Result<OpCode, InstructionParseError> {
-        return match op {
+        match op {
             0 => Ok(OpCode::MOV), // R.a n
             1 => Ok(OpCode::LSL), // R.a R.b <- n (shift left),
             2 => Ok(OpCode::ASR), // R.a R.b -> n (shift right with sign extension),
@@ -173,7 +173,7 @@ impl Instruction {
             11 => Ok(OpCode::DIV),
             12 => Ok(OpCode::MOD),
             _ => Err(InstructionParseError::InvalidOpCode(op)),
-        };
+        }
     }
 
     fn parse_memory(i: u32) -> Result<Instruction, InstructionParseError> {
@@ -184,7 +184,7 @@ impl Instruction {
         if i & 0b0010_0000_0000_0000_0000_0000_0000_0000 != 0 {
             u = MemoryMode::Store;
         }
-        return Ok(Instruction::Memory { a, b, offset, u });
+        Ok(Instruction::Memory { a, b, offset, u })
     }
 
     fn parse_branch(i: u32) -> Result<Instruction, InstructionParseError> {
@@ -192,7 +192,7 @@ impl Instruction {
         let cond = Instruction::parse_cond(a)?;
         let c = (i % 0x10) as usize;
         let link = (i & 0b0001_0000_0000_0000_0000_0000_0000_0000) > 0;
-        return Ok(Instruction::Branch { cond, c, link });
+        Ok(Instruction::Branch { cond, c, link })
     }
 
     fn parse_branch_offset(i: u32) -> Result<Instruction, InstructionParseError> {
@@ -201,19 +201,19 @@ impl Instruction {
 
         let mut offset = (i as u32) & 0b0000_0000_1111_1111_1111_1111_1111_1111;
         if offset & 0b0000_0000_1000_0000_0000_0000_0000_0000 > 0 {
-            offset = offset | 0b1111_1111_0000_0000_0000_0000_0000_0000;
+            offset |= 0b1111_1111_0000_0000_0000_0000_0000_0000;
         }
 
         let link = (i & 0b0001_0000_0000_0000_0000_0000_0000_0000) > 0;
-        return Ok(Instruction::BranchOff {
+        Ok(Instruction::BranchOff {
             cond,
             offset: offset as i32,
             link,
-        });
+        })
     }
 
     fn parse_cond(a: usize) -> Result<BranchCondition, InstructionParseError> {
-        return match a {
+        match a {
             0 => Ok(BranchCondition::MI),
             1 => Ok(BranchCondition::EQ),
             // Ignored 2 => Ok(BranchCondition::CS),
@@ -231,26 +231,26 @@ impl Instruction {
             14 => Ok(BranchCondition::GT),
             15 => Ok(BranchCondition::NV),
             _ => Err(InstructionParseError::InvalidBranchCondition(a as u32)),
-        };
+        }
     }
 
     pub fn serialize_all(instructions: Vec<Instruction>) -> Vec<u8> {
         let instruction_bits: Vec<u32> = instructions
             .iter()
             .map(|instruction| {
-                return Instruction::encode(instruction);
+                Instruction::encode(instruction)
             })
             .collect();
         // FIXME(pht) the type of the serialize function can not be infered, it seems
-        return bincode::serialize(&instruction_bits).unwrap();
+        bincode::serialize(&instruction_bits).unwrap()
     }
 
     pub fn deserialize_all(bytes: &[u8]) -> Vec<Instruction> {
-        let instructions_bits: Vec<u32> = bincode::deserialize_from(&bytes[..]).unwrap();
+        let instructions_bits: Vec<u32> = bincode::deserialize_from(bytes).unwrap();
         return instructions_bits
             .iter()
             .map(|i: &u32| {
-                return Instruction::parse(*i).unwrap();
+                Instruction::parse(*i).unwrap()
             })
             .collect();
     }
@@ -300,7 +300,7 @@ mod tests {
                 b: 3,
                 offset: 2,
             },
-            0b1000_0001_0011_00000_00000_00000_00010,
+            0b1000_0001_0011_0000_0000_0000_0000_0010,
         );
     }
 
@@ -312,7 +312,7 @@ mod tests {
                 c: 3,
                 link: true,
             },
-            0b1101_0001_00000_00000_00000_00000_0011,
+            0b1101_0001_0000_0000_0000_0000_0000_0011,
         );
     }
 
@@ -324,7 +324,7 @@ mod tests {
                 offset: 3,
                 link: false,
             },
-            0b1110_1000_00000_00000_00000_00000_0011,
+            0b1110_1000_0000_0000_0000_0000_0000_0011,
         );
     }
 
@@ -336,7 +336,7 @@ mod tests {
                 offset: -5,
                 link: false,
             },
-            0b1110_1000_11111_11111_11111_11111_1011,
+            0b1110_1000_1111_1111_1111_1111_1111_1011,
         );
 
         // 0b1110_1000_11111_11111_11111_11111_1011 ???
@@ -347,7 +347,7 @@ mod tests {
             offset: -5,
             link: false,
         });
-        assert_eq!(0b1110_1000_11111_11111_11111_11111_1011, i);
+        assert_eq!(0b1110_1000_1111_1111_1111_1111_1111_1011, i);
         println!("{}", i);
         println!("{:032b}", i);
 
@@ -356,7 +356,7 @@ mod tests {
         println!("{:?}", inst);
 
         let i2 = Instruction::encode(&inst);
-        assert_eq!(0b1110_1000_11111_11111_11111_11111_1011, i2);
+        assert_eq!(0b1110_1000_1111_1111_1111_1111_1111_1011, i2);
         println!("{:032b}", i2);
 
         assert_eq!(i, i2);
@@ -368,7 +368,7 @@ mod tests {
     }
 
     fn assert_encoded(inst: &Instruction, expected: u32) {
-        let actual = Instruction::encode(&inst);
+        let actual = Instruction::encode(inst);
         assert_eq!(format!("{:032b}", expected), format!("{:032b}", actual))
     }
 

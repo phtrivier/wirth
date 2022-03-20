@@ -13,13 +13,13 @@ mod tests {
     for symbol in symbols {
       scope.add(symbol);
     }
-    return scope;
+    scope
   }
 
   fn parse_module(scope: &Scope, content: &str) -> ParseResult {
     let mut scanner = Scanner::new(content);
     parser::scan_next(&mut scanner).unwrap();
-    return parser::parse_module(&mut scanner, scope);
+    parser::parse_module(&mut scanner, scope)
   }
   
   #[test]

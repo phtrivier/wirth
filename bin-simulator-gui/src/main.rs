@@ -31,13 +31,13 @@ struct Opt {
     #[structopt(long, default_value = "1000")]
     memory_dump_from: usize,
 
-    /// Number of memory position to dump data
-    #[structopt(long, default_value = "15")]
-    memory_dump_count: usize,
+    // / Number of memory position to dump data
+    // #[structopt(long, default_value = "15")]
+    // memory_dump_count: usize,
     
-    /// Debug mode
-    #[structopt(short, long)]
-    debug: bool,
+    // / Debug mode
+    // #[structopt(short, long)]
+    // debug: bool,
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -48,11 +48,10 @@ fn main() {
 
     let content = std::fs::read_to_string(filename).expect("Unable to read from input file.");
 
-    let mut simulator;
-    if opt.compile {
-        simulator = simulator::Simulator::from_oberon(&content).unwrap();
+    let mut sim = if opt.compile {
+        simulator::Simulator::from_oberon(&content).unwrap()
     } else {
-        simulator = simulator::Simulator::from_assembler(&content).unwrap();
+        simulator::Simulator::from_assembler(&content).unwrap()
     };
 
     let (mut rl, thread) = raylib::init()
@@ -75,13 +74,13 @@ fn main() {
         .expect("couldn't load font");
 
 
-    match simulator.execute(Execution{
+    match sim.execute(Execution{
         program_address: 0,
         max_cycles: opt.execution_max_cycles,
         stack_base: opt.execution_stack_base,
     }) {
-        Ok(_) => (),
-        Err(_) => ()
+        Ok(_) => {} ,
+        Err(err) => { println!("Error executing simulator code {:?}", err); }
     };
 
     let size = font.base_size() as f32 / 2.0;
@@ -102,8 +101,8 @@ fn main() {
         );
 
         let mut y: f32 = 32.0;
-        for (i, reg) in simulator.registers().iter().enumerate() {
-            y = y + 1.5 * INTERLINE;
+        for (i, reg) in sim.registers().iter().enumerate() {
+            y += 1.5 * INTERLINE;
             let text = format!("REG {:02}: 0x{:04X} {:032b}", i, reg, reg);
             d.draw_text_ex(&font, &text, Vector2::new(10.0, y), size, 1.0, foreground);
         }
@@ -118,8 +117,8 @@ fn main() {
             foreground,
         );
         let mut y: f32 = 32.0;
-        for (i, mem) in simulator.memory(opt.memory_dump_from, opt.memory_dump_from).iter().enumerate() {
-            y = y + 1.5 * INTERLINE;
+        for (i, mem) in sim.memory(opt.memory_dump_from, opt.memory_dump_from).iter().enumerate() {
+            y += 1.5 * INTERLINE;
             let text = format!("MEM {:02}: 0x{:04X} {:032b} {:?}", i, mem, mem, mem);
             d.draw_text_ex(&font, &text, Vector2::new(700.0, y), size, 1.0, foreground);
         }

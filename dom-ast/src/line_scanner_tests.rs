@@ -4,24 +4,24 @@ mod tests {
   use crate::token::*;
   use crate::line_scanner::*;
 
-  fn assert_scans_all(scanner: &mut LineScanner, tests: Vec<(u32, u32, Token)>) -> () {
+  fn assert_scans_all(scanner: &mut LineScanner, tests: Vec<(u32, u32, Token)>) {
     for (l, c, t) in tests {
       assert_scans(scanner, l, c, t);
     }
     assert_done(scanner);
   }
 
-  fn assert_scans(scanner: &mut LineScanner, line: u32, column: u32, token: Token) -> () {
+  fn assert_scans(scanner: &mut LineScanner, line: u32, column: u32, token: Token) {
     assert_eq!(
       Scan {
-        context: ScanContext { line: line, column: column },
-        token: token
+        context: ScanContext { line, column },
+        token
       },
       *(scanner.next().unwrap().unwrap().as_ref())
     );  
   }
 
-  fn assert_scans_error(scanner: &mut LineScanner, line: u32, column: u32, error_type: ScanErrorType) -> () {
+  fn assert_scans_error(scanner: &mut LineScanner, line: u32, column: u32, error_type: ScanErrorType) {
     assert_eq!(
       Err(ScanError {
         context: ScanContext { line, column },
@@ -31,7 +31,7 @@ mod tests {
     );
   }
 
-  fn assert_done(scanner: &mut LineScanner) -> () {
+  fn assert_done(scanner: &mut LineScanner) {
     assert_eq!(None, scanner.next());
   }
 
@@ -60,7 +60,7 @@ mod tests {
   #[test]
   fn test_scans_identifier() {
     let content = "foo";
-    let mut scanner = LineScanner::new(1, &content);
+    let mut scanner = LineScanner::new(1, content);
 
     assert_scans(&mut scanner, 1, 0, Token::Ident(String::from("foo")));
 
@@ -77,7 +77,7 @@ mod tests {
   #[test]
   fn test_skips_whitespace() {
     let content = "  foo()";
-    let mut scanner = LineScanner::new(1, &content);
+    let mut scanner = LineScanner::new(1, content);
 
     assert_scans_all(
       &mut scanner,
@@ -92,7 +92,7 @@ mod tests {
   #[test]
   fn test_scans_assignements() {
     let content = "  foo := 742 ; bar()";
-    let mut scanner = LineScanner::new(0, &content);
+    let mut scanner = LineScanner::new(0, content);
     assert_scans_all(
       &mut scanner,
       vec![

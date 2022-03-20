@@ -25,8 +25,8 @@ impl Simulator {
         let instructions = assembler::assemble(s)?;
         let mut computer = Computer::new();
         computer.load_instructions(instructions);
-        return Ok(Simulator{
-            computer: computer
+        Ok(Simulator{
+            computer
         })
     }
 
@@ -34,21 +34,21 @@ impl Simulator {
         let instructions = compiler::compile(s)?;
         let mut computer = Computer::new();
         computer.load_instructions(instructions);
-        return Ok(Simulator{
-            computer: computer
+        Ok(Simulator{
+            computer
         })
     }
 
     pub fn registers(&self) -> &[i32] {
-        return &self.computer.regs[..];
+        &self.computer.regs[..]
     }
 
     pub fn memory(&self, start: usize, count: usize) -> &[i32] {
         if start > risc::computer::MEMORY_SIZE {
-            return &[];
+            &[]
         } else {
             let upper_bound = std::cmp::min(risc::computer::MEMORY_SIZE, start+count);
-            return &self.computer.mem[start..upper_bound];
+            &self.computer.mem[start..upper_bound]
         }
 
     }
@@ -61,9 +61,9 @@ impl Simulator {
         self.computer.execute(execution.max_cycles, debug);
 
         if self.computer.pc == 0 {
-            return Ok(());
+            Ok(())
         } else {
-            return Err(ExecutionError::MaxCycleReached);
+            Err(ExecutionError::MaxCycleReached)
         }
     }
 }

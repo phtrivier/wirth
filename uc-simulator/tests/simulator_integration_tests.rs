@@ -7,7 +7,7 @@ use std::assert_matches::assert_matches;
 
 fn from_assembler(s: &str) -> Simulator {
   let content = String::from(s);
-  return Simulator::from_assembler(&content).unwrap();
+  Simulator::from_assembler(&content).unwrap()
 }
 
 #[test]
@@ -43,7 +43,7 @@ fn incomplete_execution() {
 
 fn from_assembler_file(filename: &str) -> Simulator {
   let content = std::fs::read_to_string(filename).unwrap();
-  return  Simulator::from_assembler(&content).unwrap();
+  Simulator::from_assembler(&content).unwrap()
 }
 
 #[test]

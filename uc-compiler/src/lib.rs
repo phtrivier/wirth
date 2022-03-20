@@ -10,7 +10,7 @@ mod codegen;
 pub use ast::parser::ParseError;
 
 pub fn compile(input: &str) -> std::result::Result<Vec<Instruction>, ParseError>  {
-  let mut scanner = Scanner::new(&input);
+  let mut scanner = Scanner::new(input);
 
   let scope = Scope::new();
   // Still needed because `parsemodule` is not yet `compile`
@@ -28,5 +28,5 @@ pub fn compile(input: &str) -> std::result::Result<Vec<Instruction>, ParseError>
   instructions.push(Instruction::RegisterIm{o: OpCode::MOV, a: 15, b: 0, im: 0});
   instructions.push(Instruction::Branch{cond: BranchCondition::AW, c: 15, link: false});
 
-  return Ok(instructions);
+  Ok(instructions)
 }

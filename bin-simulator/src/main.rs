@@ -42,9 +42,9 @@ struct Opt {
     #[structopt(long, default_value = "15")]
     memory_dump_count: usize,
 
-    /// Debug mode
-    #[structopt(short, long)]
-    debug: bool,
+    // / Debug mode
+    // #[structopt(short, long)]
+    // debug: bool,
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -71,11 +71,10 @@ fn main() {
 
     let content = std::fs::read_to_string(filename).expect("Unable to read from input file.");
 
-    let mut simulator;
-    if opt.compile {
-        simulator = simulator::Simulator::from_oberon(&content).unwrap();
+    let mut simulator = if opt.compile {
+        simulator::Simulator::from_oberon(&content).unwrap()
     } else {
-        simulator = simulator::Simulator::from_assembler(&content).unwrap();
+        simulator::Simulator::from_assembler(&content).unwrap()
     };
 
     // Dump before
@@ -89,14 +88,11 @@ fn main() {
     println!(">>>>>>");
     println!("Executing program...");
 
-    let success = match simulator.execute(Execution{
+    let success = simulator.execute(Execution{
         program_address: 0,
         max_cycles: opt.execution_max_cycles,
         stack_base: opt.execution_stack_base,
-    }) {
-        Ok(_) => true,
-        Err(_) => false
-    };
+    }).is_ok();
 
     println!("<<<<<<");
     println!("After execution:");

@@ -7,14 +7,14 @@ mod tests {
   #[test]
   fn test_finds_nothing_in_empty_content() {
     let content = "";
-    let mut scanner = Scanner::new(&content);
+    let mut scanner = Scanner::new(content);
     assert_eq!(None, scanner.next());
   }
 
   #[test]
   fn test_scan_tokens_on_multiple_lines() {
     let content = " foo \n\n  bar";
-    let mut scanner = Scanner::new(&content);
+    let mut scanner = Scanner::new(content);
     assert_eq!(
       Scan {
         context: ScanContext{

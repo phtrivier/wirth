@@ -16,7 +16,7 @@ pub struct LineScanner<'a> {
 impl LineScanner<'_> {
   pub fn new<'a>(line_number: u32, line: &'a str) -> LineScanner<'a> {
     LineScanner {
-      line_number: line_number,
+      line_number,
       column_number: 0,
       chars: line.char_indices().peekable(),
       current: None
@@ -24,22 +24,19 @@ impl LineScanner<'_> {
   }
   
   pub fn current(&mut self) -> Option<Rc<Scan>> {
-    match &self.current {
-      None => None,
-      Some(rc) => Some(rc.clone())
-    }
+    self.current.as_ref().cloned()
   }
 
   fn context(&self, column_number: u32) -> ScanContext {
-    return ScanContext {
+    ScanContext {
       line: self.line_number,
       column: column_number as u32,
-    };
+    }
   }
 
-  fn forward(&mut self) -> () {
+  fn forward(&mut self) {
     self.chars.next();
-    self.column_number = self.column_number + 1;
+    self.column_number += 1;
   }
 
   fn token_at(&mut self, column: usize, token: Token) -> Option<ScanResult> {
@@ -51,19 +48,19 @@ impl LineScanner<'_> {
 
     self.current = Some(scan.clone());
 
-    return Some(Ok(scan.clone()));
+    Some(Ok(scan))
   }
 
   fn error_at(&self, column: usize, error_type: ScanErrorType) -> Option<ScanResult> {
-    return Some(Err(ScanError {
+    Some(Err(ScanError {
       context: self.context(column as u32),
       error_type,
-    }));
+    }))
   }
 
   fn scan_single(&mut self, column: usize, token: Token) -> Option<ScanResult> {
     self.chars.next();
-    return self.token_at(column, token);
+    self.token_at(column, token)
   }
 
   fn skip_whitespaces(&mut self) -> Option<ScanResult> {
@@ -80,7 +77,7 @@ impl LineScanner<'_> {
         break;
       }
     }
-    return self.next();
+    self.next()
   }
 
   fn scan_word(&mut self, column: usize) -> Option<ScanResult> {
@@ -98,7 +95,7 @@ impl LineScanner<'_> {
         break;
       }
     }
-    return match &ident.to_ascii_lowercase()[..] {
+    match &ident.to_ascii_lowercase()[..] {
       "var" => self.token_at(column, Token::Var),
       "module" => self.token_at(column, Token::Module),
       "begin" => self.token_at(column, Token::Begin),
@@ -128,7 +125,7 @@ impl LineScanner<'_> {
         break;
       }
     }
-    return self.token_at(column, Token::Int(n));
+    self.token_at(column, Token::Int(n))
   }
 
   fn scan_sigil(&mut self, column: usize, first_char: char) -> Option<ScanResult> {
@@ -138,25 +135,25 @@ impl LineScanner<'_> {
       ':' => {
         if let Some(&(_column, '=')) = p {
           self.forward();
-          return self.token_at(column, Token::Becomes);
+          self.token_at(column, Token::Becomes)
         } else {
-          return self.token_at(column, Token::Colon);
+          self.token_at(column, Token::Colon)
         }
       }
       '>' => {
         if let Some(&(_column, '=')) = p {
           self.forward();
-          return self.token_at(column, Token::Geq);
+          self.token_at(column, Token::Geq)
         } else {
-          return self.token_at(column, Token::Gtr);
+          self.token_at(column, Token::Gtr)
         }
       }
       '<' => {
         if let Some(&(_column, '=')) = p {
           self.forward();
-          return self.token_at(column, Token::Leq);
+          self.token_at(column, Token::Leq)
         } else {
-          return self.token_at(column, Token::Lss);
+          self.token_at(column, Token::Lss)
         }
       }
       _ => {
@@ -173,53 +170,52 @@ impl LineScanner<'_> {
 impl Iterator for LineScanner<'_> {
   type Item = ScanResult;
 
-  fn next<'a>(&mut self) -> Option<ScanResult> {
-    loop {
-      let peek = self.chars.peek();
-      match peek {
-        Some(&(_column, c)) if (c == ' ' || c == '\t') => {
-          return self.skip_whitespaces();
-        }
-        Some(&(column, '\n')) => {
-          self.chars.next();
-          return self.error_at(column, ScanErrorType::UnexpectedNewLine);
-        }
-        Some(&(column, c)) if !c.is_ascii() => {
-          self.chars.next();
-          return self.error_at(column, ScanErrorType::InvalidChar(c));
-        }
-        
-        Some(&(column, c)) if c.is_numeric() => {
-          return self.scan_integer(column);
-        }
-        Some(&(column, ':')) => {
-          return self.scan_sigil(column, ':');
-        }
-        Some(&(column, '>')) => {
-          return self.scan_sigil(column, '>');
-        }
-        Some(&(column, '<')) => {
-          return self.scan_sigil(column, '<');
-        }
-        Some(&(column, ';')) => return self.scan_single(column, Token::Semicolon),
-        Some(&(column, ',')) => return self.scan_single(column, Token::Comma),
-        Some(&(column, '(')) => return self.scan_single(column, Token::Lparen),
-        Some(&(column, ')')) => return self.scan_single(column, Token::Rparen),
-        Some(&(column, '+')) => return self.scan_single(column, Token::Plus),
-        Some(&(column, '-')) => return self.scan_single(column, Token::Minus),
-        Some(&(column, '*')) => return self.scan_single(column, Token::Times),
-        Some(&(column, '/')) => return self.scan_single(column, Token::Div),
-        Some(&(column, '.')) => return self.scan_single(column, Token::Period),
-        Some(&(column, '=')) => return self.scan_single(column, Token::Eql),
-        Some(&(column, '#')) => return self.scan_single(column, Token::Neq),
-        Some(&(column, _first_char)) => {
-          return self.scan_word(column);
-        }
-        None => {
-          self.current = None;
-          return None;
-        }
+  fn next<'a>(&mut self) -> Option<ScanResult> {   
+    let peek = self.chars.peek();
+    match peek {
+      Some(&(_column, c)) if (c == ' ' || c == '\t') => {
+        self.skip_whitespaces()
+      }
+      Some(&(column, '\n')) => {
+        self.chars.next();
+        self.error_at(column, ScanErrorType::UnexpectedNewLine)
+      }
+      Some(&(column, c)) if !c.is_ascii() => {
+        self.chars.next();
+        self.error_at(column, ScanErrorType::InvalidChar(c))
+      }
+      
+      Some(&(column, c)) if c.is_numeric() => {
+        self.scan_integer(column)
+      }
+      Some(&(column, ':')) => {
+        self.scan_sigil(column, ':')
+      }
+      Some(&(column, '>')) => {
+        self.scan_sigil(column, '>')
+      }
+      Some(&(column, '<')) => {
+        self.scan_sigil(column, '<')
+      }
+      Some(&(column, ';')) => self.scan_single(column, Token::Semicolon),
+      Some(&(column, ',')) => self.scan_single(column, Token::Comma),
+      Some(&(column, '(')) => self.scan_single(column, Token::Lparen),
+      Some(&(column, ')')) => self.scan_single(column, Token::Rparen),
+      Some(&(column, '+')) => self.scan_single(column, Token::Plus),
+      Some(&(column, '-')) => self.scan_single(column, Token::Minus),
+      Some(&(column, '*')) => self.scan_single(column, Token::Times),
+      Some(&(column, '/')) => self.scan_single(column, Token::Div),
+      Some(&(column, '.')) => self.scan_single(column, Token::Period),
+      Some(&(column, '=')) => self.scan_single(column, Token::Eql),
+      Some(&(column, '#')) => self.scan_single(column, Token::Neq),
+      Some(&(column, _first_char)) => {
+        self.scan_word(column)
+      }
+      None => {
+        self.current = None;
+        None
       }
     }
+    
   }
 }

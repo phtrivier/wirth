@@ -79,7 +79,7 @@ impl Assembler {
 
     Assembler {
       instructions: vec![],
-      symbols: symbols,
+      symbols,
       instruction_indexes: HashMap::new(),
       line_index: 0,
     }
@@ -92,16 +92,16 @@ impl Assembler {
     for (_line_index, line) in program.lines().enumerate() {
       let l = line.trim_start().trim_end_matches(';').trim_end();
 
-      if l.is_empty() || l.starts_with("*") || l.starts_with("#") {
+      if l.is_empty() || l.starts_with('*') || l.starts_with('#') {
         continue;
       } else {
         let mut tokens = line.split_ascii_whitespace();
         if let Some(symbol) = tokens.next() {
-          if symbol.starts_with("@") {
+          if symbol.starts_with('@') {
             self.instruction_indexes.insert(symbol.to_string(), instruction_index as i32);
           }
         }
-        instruction_index = instruction_index + 1;
+        instruction_index += 1;
       }
     }
 
@@ -117,16 +117,16 @@ impl Assembler {
         });
       }
     }
-    return Ok(AssembleResult::Program);
+    Ok(AssembleResult::Program)
   }
 
   #[allow(dead_code)]
   pub fn parse_line(&mut self, line_index: u32, line: &str) -> Result<ParseResult, ParseError> {
     let l = line.trim_start().trim_end_matches(';').trim_end();
 
-    if l.is_empty() || l.starts_with("*") {
+    if l.is_empty() || l.starts_with('*') {
       return Ok(ParseResult::Comment);
-    } else if l.starts_with("#") {
+    } else if l.starts_with('#') {
       return self.parse_symbol_def(line_index, l);
     }
 
@@ -134,7 +134,7 @@ impl Assembler {
       self.instructions.push(instruction);
       return Ok(ParseResult::Instruction);
     }
-    return Err(ParseError::SyntaxError { line_index: line_index });
+    Err(ParseError::SyntaxError { line_index })
   }
 
   fn parse_symbol_def(&mut self, line_index: u32, line: &str) -> Result<ParseResult, ParseError> {
@@ -148,14 +148,14 @@ impl Assembler {
         }
       }
     }
-    return Err(ParseError::SyntaxError { line_index: line_index });
+    Err(ParseError::SyntaxError { line_index })
   }
 
   pub fn parse_instruction(&mut self, line: &str) -> Result<Instruction, ParseError> {
     let mut tokens = line.split_ascii_whitespace();
     let instruction_index = self.instructions.len() as u32;
     if let Some(symbol) = tokens.next() {
-      if symbol.starts_with("@") {
+      if symbol.starts_with('@') {
         if let Some(op) = tokens.next() {
           if let Some(params) = tokens.next() {
             return self.parse_op_params(instruction_index, op, params);
@@ -168,7 +168,7 @@ impl Assembler {
         }
       }
     }
-    return self.syntax_error();
+    self.syntax_error()
   }
 
   fn parse_op_params(&mut self, instruction_index: u32, op: &str, params: &str) -> Result<Instruction, ParseError> {
@@ -212,47 +212,47 @@ impl Assembler {
       }
     }
 
-    return self.syntax_error();
+    self.syntax_error()
   }
 
   fn parse_a_im(&self, s: &str) -> Option<(usize, i32)> {
-    let mut split = s.split(",");
+    let mut split = s.split(',');
     if let (Some(left), Some(right)) = (split.next(), split.next()) {
       if let (Ok(a), Ok(im)) = (self.parse_register(left), self.parse_im(right)) {
         return Some((a, im));
       }
     }
-    return None;
+    None
   }
 
   fn parse_a_b_c(&self, s: &str) -> Option<(usize, usize, usize)> {
-    let mut split = s.split(",");
+    let mut split = s.split(',');
     if let (Some(left), Some(middle), Some(right)) = (split.next(), split.next(), split.next()) {
       if let (Ok(a), Ok(b), Ok(c)) = (self.parse_register(left), self.parse_register(middle), self.parse_register(right)) {
         return Some((a, b, c));
       }
     }
-    return None;
+    None
   }
 
   fn parse_a_b_im(&self, s: &str) -> Option<(usize, usize, i32)> {
-    let mut split = s.split(",");
+    let mut split = s.split(',');
     if let (Some(left), Some(middle), Some(right)) = (split.next(), split.next(), split.next()) {
       if let (Ok(a), Ok(b), Ok(im)) = (self.parse_register(left), self.parse_register(middle), self.parse_im(right)) {
         return Some((a, b, im));
       }
     }
-    return None;
+    None
   }
 
   fn parse_a_c(&self, s: &str) -> Option<(usize, usize)> {
-    let mut split = s.split(",");
+    let mut split = s.split(',');
     if let (Some(left), Some(right)) = (split.next(), split.next()) {
       if let (Ok(a), Ok(c)) = (self.parse_register(left), self.parse_register(right)) {
         return Some((a, c));
       }
     }
-    return None;
+    None
   }
 
 
@@ -266,14 +266,14 @@ impl Assembler {
         }
       }
     }
-    return Err(ParseError::SyntaxError { line_index: self.line_index });
+    Err(ParseError::SyntaxError { line_index: self.line_index })
   }
 
   fn parse_im(&self, s: &str) -> Result<i32, std::num::ParseIntError> {
     if let Some(&symbol) = self.symbols.get(s) {
       return Ok(symbol as i32);
     }
-    return s.parse::<i32>();
+    s.parse::<i32>()
   }
 
   fn parse_branch_offset(&self, instruction_index: u32, s: &str) -> Result<i32, std::num::ParseIntError> {
@@ -289,15 +289,15 @@ impl Assembler {
     if let Some(&symbol) = self.symbols.get(s) {
       return Ok(symbol as i32);
     }
-    return s.parse::<i32>();
+    s.parse::<i32>()
   }
 
   fn syntax_error(&self) -> Result<Instruction, ParseError> {
-    return Err(ParseError::SyntaxError { line_index: self.line_index });
+    Err(ParseError::SyntaxError { line_index: self.line_index })
   }
 
   fn parse_register_opcode(&self, s: &str) -> Option<OpCode> {
-    return match s {
+    match s {
       "MOV" => Some(OpCode::MOV), // R.a = n
       "LSL" => Some(OpCode::LSL), // R.a = R.b <- n (shift left)
       "ASR" => Some(OpCode::ASR), // R.a = R.b -> n (shift right with sign extension)
@@ -312,11 +312,11 @@ impl Assembler {
       "DIV" => Some(OpCode::DIV),
       "MOD" => Some(OpCode::MOD),
       _ => None,
-    };
+    }
   }
 
   fn parse_condition_link(&self, s: &str) -> Option<(BranchCondition, bool)> {
-    return match s {
+    match s {
       // versions with no link. BNV is not parsed because it would not male any sense, really ?
       "BMI" => Some((BranchCondition::MI, false)),
       "BEQ" => Some((BranchCondition::EQ, false)),
@@ -338,6 +338,6 @@ impl Assembler {
       "BGEL" => Some((BranchCondition::GE, true)),
       "BGTL" => Some((BranchCondition::GT, true)),
       _ => None,
-    };
+    }
   }
 }

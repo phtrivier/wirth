@@ -81,17 +81,17 @@ mod tests {
     c.regs[2] = 4;
     // R.a := R.b rot R.c
     exec(&mut c, Register { o: ROR, a: 0, b: 1, c: 2 });
-    assert_eq!((0b1000_0001_0010_0011_0100_0101_0110_0111 as u32) as i32, c.regs[0]);
+    assert_eq!(0b1000_0001_0010_0011_0100_0101_0110_0111_u32 as i32, c.regs[0]);
 
     c.regs[2] = -4;
     exec(&mut c, Register { o: ROR, a: 0, b: 1, c: 2 });
-    assert_eq!((0b0010_0011_0100_0101_0110_0111_1000_0001 as u32) as i32, c.regs[0]);
+    assert_eq!(0b0010_0011_0100_0101_0110_0111_1000_0001_u32 as i32, c.regs[0]);
 
     exec(&mut c, RegisterIm { o: ROR, a: 0, b: 1, im: 4 });
-    assert_eq!((0b1000_0001_0010_0011_0100_0101_0110_0111 as u32) as i32, c.regs[0]);
+    assert_eq!(0b1000_0001_0010_0011_0100_0101_0110_0111_u32 as i32, c.regs[0]);
 
     exec(&mut c, RegisterIm { o: ROR, a: 0, b: 1, im: -4 });
-    assert_eq!((0b0010_0011_0100_0101_0110_0111_1000_0001 as u32) as i32, c.regs[0]);
+    assert_eq!(0b0010_0011_0100_0101_0110_0111_1000_0001_u32 as i32, c.regs[0]);
   }
   #[test]
   fn test_logical_register() {

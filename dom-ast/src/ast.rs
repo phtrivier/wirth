@@ -18,51 +18,43 @@ pub struct Path {
 
 impl Path {
   pub fn root() -> Path {
-    return Path {
+    Path {
       dirs: VecDeque::new()
-    };
+    }
   }
 
   pub fn child(&mut self) -> &mut Path {
     self.dirs.push_back(PathDir::Child);
-    return self;
+    self
   }
 
   pub fn sibling(&mut self) -> &mut Path {
     self.dirs.push_back(PathDir::Sibling);
-    return self;
+    self
   }
 
   pub fn follow<'a>(&'a mut self, ast: &'a Ast) -> Option<&'a NodeInfo> {
     match self.dirs.pop_front() {
-      None => return info(&ast),
+      None => info(ast),
       Some(PathDir::Child) => 
         match child(ast) {
-          Some(child) => {
-            return self.follow(child);
-          }
-          None => {
-            return None;
-          }
+          Some(child) => self.follow(child),
+          None => None
         }
       Some(PathDir::Sibling) => 
         match sibling(ast) {
-          Some(sibling) => {
-            return self.follow(sibling);
-          }
-          None => {
-            return None
-          }
+          Some(sibling) => self.follow(sibling),
+          None => None
         }
     }
   }
 }
 
-pub fn empty<'a>() -> Ast {
-  return Rc::new(Tree::Nil);
+pub fn empty() -> Ast {
+  Rc::new(Tree::Nil)
 }
 
-pub fn info<'a>(ast: &'a Ast) -> Option<&'a NodeInfo> {
+pub fn info(ast: &Ast) -> Option<&NodeInfo> {
   match ast.as_ref() {
     Tree::Node(TreeNode{
       info,
@@ -72,7 +64,7 @@ pub fn info<'a>(ast: &'a Ast) -> Option<&'a NodeInfo> {
   }
 }
 
-pub fn sibling<'a>(ast: &'a Ast) -> Option<&'a Ast> {
+pub fn sibling(ast: &Ast) -> Option<&Ast> {
   match ast.as_ref() {
     Tree::Node(TreeNode{
       sibling,
@@ -83,7 +75,7 @@ pub fn sibling<'a>(ast: &'a Ast) -> Option<&'a Ast> {
 }
 
 
-pub fn child<'a>(ast: &'a Ast) -> Option<&'a Ast> {
+pub fn child(ast: &Ast) -> Option<&Ast> {
   match ast.as_ref() {
     Tree::Node(TreeNode{
       child,
@@ -94,37 +86,34 @@ pub fn child<'a>(ast: &'a Ast) -> Option<&'a Ast> {
 }
 
 
-pub fn leaf<'a>(node_info: NodeInfo) -> Ast {
-  return Rc::new(Tree::Node(TreeNode{
+pub fn leaf(node_info: NodeInfo) -> Ast {
+  Rc::new(Tree::Node(TreeNode{
     info: node_info,
     child: empty(),
     sibling: empty()
-  }));
+  }))
 }
 
-pub fn node<'a>(node_info: NodeInfo, child: Ast, sibling: Ast) -> Ast {
-  return Rc::new(Tree::Node(TreeNode{
+pub fn node(node_info: NodeInfo, child: Ast, sibling: Ast) -> Ast {
+  Rc::new(Tree::Node(TreeNode{
     info: node_info,
-    child: child,
-    sibling: sibling
-  }));
+    child,
+    sibling
+  }))
 }
 
 pub fn is_empty(ast: &Ast) -> bool {
-  match ast.as_ref() {
-    Tree::Nil => true,
-    _ => false
-  }
+  matches!(ast.as_ref(), Tree::Nil)
 }
 
-pub fn print(ast: &Ast) -> () {
+pub fn print(ast: &Ast) {
   print_indentation("", ast);
-  print!("\n");
+  println!();
 }
 
 
 
-fn print_indentation(prefix: &str, ast: &Ast) -> () {
+fn print_indentation(prefix: &str, ast: &Ast) {
   print!("{}", prefix);
   match ast.as_ref() {
     Tree::Nil => {
@@ -132,9 +121,9 @@ fn print_indentation(prefix: &str, ast: &Ast) -> () {
     }
     Tree::Node(node) => {
       print!("{:?}", node.info);
-      print!("\n");
+      println!();
       print_indentation((String::from(prefix) + " ").as_str(), &node.child);
-      print!("\n");
+      println!();
       print_indentation((String::from(prefix)).as_str(), &node.sibling);
     }
   }

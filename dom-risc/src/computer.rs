@@ -58,7 +58,7 @@ impl Computer {
             }
             // Set PC to the address of next instruction ; unless a branch instruction
             // is run, this will be the next instruction in memory.
-            self.pc = self.pc + 1;
+            self.pc += 1;
 
             if debug {
                 println!("Setting PC to next value {:?}", self.pc);
@@ -79,7 +79,7 @@ impl Computer {
                 }
                 break;
             }
-            cycles  = cycles  + 1;
+            cycles += 1;
         }
     }
 
@@ -189,7 +189,7 @@ impl Computer {
     }
 
     pub fn matches_cond(&self, cond: BranchCondition) -> bool {
-        return match cond {
+        match cond {
             BranchCondition::MI => self.neg_test,
             BranchCondition::EQ => self.z_test,
             BranchCondition::LT => self.neg_test,
