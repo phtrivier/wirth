@@ -17,9 +17,9 @@ fn main() {
     let opt = Opt::from_args();
     let filename = opt.input.into_os_string().into_string().expect("Filename is malformed.");
 
-    let mut content = std::fs::read_to_string(&filename).unwrap_or_else(|_| panic!("Unable to open file {:?}", filename));
+    let content = std::fs::read_to_string(&filename).unwrap_or_else(|_| panic!("Unable to open file {:?}", filename));
 
-    match compiler::compile(&mut content) {
+    match compiler::compile(&content) {
         Ok(instructions) => {
             let encoded = Instruction::serialize_all(instructions);
             std::fs::write("out.o", &encoded[..]).expect("Unable to write output to file");

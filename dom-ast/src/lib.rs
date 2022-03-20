@@ -1,7 +1,7 @@
 #![feature(assert_matches)]
-pub mod token;
 mod line_scanner;
 mod line_scanner_tests;
+pub mod token;
 
 pub mod scanner;
 mod scanner_tests;

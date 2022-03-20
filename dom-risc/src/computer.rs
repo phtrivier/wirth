@@ -16,7 +16,6 @@ pub struct Computer {
     // Condition codes
     pub z_test: bool,
     pub neg_test: bool,
-
 }
 
 impl Computer {
@@ -43,11 +42,11 @@ impl Computer {
 
         loop {
             if debug {
-                println!("----------------- PC = {} --------------", {self.pc});
+                println!("----------------- PC = {} --------------", { self.pc });
             }
 
             // Read current instruction
-            let ir : i32 = self.mem[self.pc];
+            let ir: i32 = self.mem[self.pc];
             // NOTE(pht): we panic if instruction is invalid, this could
             // be done by returning an error, etc...
 
@@ -90,7 +89,6 @@ impl Computer {
             Instruction::Memory { u, a, b, offset } => self.execute_memory(u, a, b, offset),
             Instruction::Branch { cond, c, link } => self.execute_branch(cond, c, link),
             Instruction::BranchOff { cond, offset, link } => self.execute_branch_offset(cond, offset, link),
-            
         }
     }
 
@@ -193,18 +191,24 @@ impl Computer {
             BranchCondition::MI => self.neg_test,
             BranchCondition::EQ => self.z_test,
             BranchCondition::LT => self.neg_test,
-            BranchCondition::LE => (self.neg_test || self.z_test), 
+            BranchCondition::LE => (self.neg_test || self.z_test),
             BranchCondition::AW => true,
             BranchCondition::PL => !self.neg_test,
             BranchCondition::NE => !self.z_test,
             BranchCondition::GE => !self.neg_test,
             BranchCondition::GT => !(self.neg_test || self.z_test),
-            BranchCondition::NV => false
+            BranchCondition::NV => false,
         }
     }
 
     pub fn update_flags(&mut self, a: usize) {
         self.z_test = self.regs[a] == 0;
         self.neg_test = self.regs[a] < 0;
+    }
+}
+
+impl Default for Computer {
+    fn default() -> Self {
+        Self::new()
     }
 }

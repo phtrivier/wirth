@@ -5,19 +5,19 @@ use risc::computer::Computer;
 
 #[derive(Debug)]
 pub struct Simulator {
-    computer: Computer
+    computer: Computer,
 }
 
 #[derive(Debug)]
 pub enum ExecutionError {
-    MaxCycleReached
+    MaxCycleReached,
 }
 
 #[derive(Debug, Copy, Clone)]
 pub struct Execution {
     pub program_address: usize,
     pub stack_base: usize,
-    pub max_cycles: u32
+    pub max_cycles: u32,
 }
 
 impl Simulator {
@@ -25,18 +25,14 @@ impl Simulator {
         let instructions = assembler::assemble(s)?;
         let mut computer = Computer::new();
         computer.load_instructions(instructions);
-        Ok(Simulator{
-            computer
-        })
+        Ok(Simulator { computer })
     }
 
     pub fn from_oberon(s: &str) -> Result<Simulator, ParseError> {
         let instructions = compiler::compile(s)?;
         let mut computer = Computer::new();
         computer.load_instructions(instructions);
-        Ok(Simulator{
-            computer
-        })
+        Ok(Simulator { computer })
     }
 
     pub fn registers(&self) -> &[i32] {
@@ -47,10 +43,9 @@ impl Simulator {
         if start > risc::computer::MEMORY_SIZE {
             &[]
         } else {
-            let upper_bound = std::cmp::min(risc::computer::MEMORY_SIZE, start+count);
+            let upper_bound = std::cmp::min(risc::computer::MEMORY_SIZE, start + count);
             &self.computer.mem[start..upper_bound]
         }
-
     }
 
     pub fn execute(&mut self, execution: Execution) -> Result<(), ExecutionError> {

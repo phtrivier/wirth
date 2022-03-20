@@ -70,7 +70,7 @@ impl Instruction {
 
     fn encode_register(op: OpCode, a: usize, b: usize, c: usize) -> u32 {
         //  0000(4) a(4) b(4) [op](4) 000000000000(12) c (4)
-        0b0000_0000_0000_0000_00_00_00_00_00_00_0000 | c as u32 | (op as u32) << (4 + 12) | (b as u32) << (4 + 12 + 4) | (a as u32) << (4 + 4 + 12 + 4)
+        c as u32 | (op as u32) << (4 + 12) | (b as u32) << (4 + 12 + 4) | (a as u32) << (4 + 4 + 12 + 4)
     }
 
     const F1_IM_EXTENSION_MASK: u32 = 0b0000_0000_0000_0000_11_11_11_11_11_11_11_11;
@@ -96,11 +96,7 @@ impl Instruction {
             uv = 0b1010;
         }
 
-        0b0000_0000_0000_0000_0000_0000_0000_0000
-            | ((offset as u32) & 0b0000_0000_0000_1111_1111_1111_1111_1111)
-            | (b as u32) << (20)
-            | (a as u32) << (4 + 20)
-            | (uv as u32) << (32 - 4)
+        ((offset as u32) & 0b0000_0000_0000_1111_1111_1111_1111_1111) | (b as u32) << (20) | (a as u32) << (4 + 20) | (uv as u32) << (32 - 4)
     }
 
     fn encode_branch(cond: BranchCondition, c: usize, link: bool) -> u32 {
@@ -109,7 +105,7 @@ impl Instruction {
             uv = 0b1101;
         }
 
-        0b0000_0000_0000_0000_0000_0000_0000_0000 | (c as u32) | (cond as u32) << (20 + 4) | (uv as u32) << (32 - 4)
+        (c as u32) | (cond as u32) << (20 + 4) | (uv as u32) << (32 - 4)
     }
 
     fn encode_branch_offset(cond: BranchCondition, offset: i32, link: bool) -> u32 {
@@ -118,7 +114,7 @@ impl Instruction {
             uv = 0b1111;
         }
 
-        0b0000_0000_0000_0000_0000_0000_0000_0000 | ((offset as u32) & 0b0000_0000_1111_1111_1111_1111_1111_1111) | (cond as u32) << 24 | (uv as u32) << (32 - 4)
+        ((offset as u32) & 0b0000_0000_1111_1111_1111_1111_1111_1111) | (cond as u32) << 24 | (uv as u32) << (32 - 4)
     }
 
     pub fn parse(i: u32) -> Result<Instruction, InstructionParseError> {
@@ -235,26 +231,15 @@ impl Instruction {
     }
 
     pub fn serialize_all(instructions: Vec<Instruction>) -> Vec<u8> {
-        let instruction_bits: Vec<u32> = instructions
-            .iter()
-            .map(|instruction| {
-                Instruction::encode(instruction)
-            })
-            .collect();
+        let instruction_bits: Vec<u32> = instructions.iter().map(|instruction| Instruction::encode(instruction)).collect();
         // FIXME(pht) the type of the serialize function can not be infered, it seems
         bincode::serialize(&instruction_bits).unwrap()
     }
 
     pub fn deserialize_all(bytes: &[u8]) -> Vec<Instruction> {
         let instructions_bits: Vec<u32> = bincode::deserialize_from(bytes).unwrap();
-        return instructions_bits
-            .iter()
-            .map(|i: &u32| {
-                Instruction::parse(*i).unwrap()
-            })
-            .collect();
+        return instructions_bits.iter().map(|i: &u32| Instruction::parse(*i).unwrap()).collect();
     }
-
 }
 
 #[cfg(test)]
@@ -386,5 +371,4 @@ mod tests {
         let deserialized = Instruction::deserialize_all(&serialized[..]);
         assert_eq!(Instruction::encode(&instruction), Instruction::encode(&(deserialized[0])));
     }
-
 }

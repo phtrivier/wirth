@@ -1,5 +1,5 @@
-use simulator::Simulator;
 use simulator::Execution;
+use simulator::Simulator;
 
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -19,11 +19,11 @@ struct Opt {
     compile: bool,
 
     /// Maximum number of cycles to run before failing execution
-    #[structopt(short="m", name="max-cyles", default_value = "9999")]
+    #[structopt(short = "m", name = "max-cyles", default_value = "9999")]
     execution_max_cycles: u32,
 
     /// Stack base address when simulating process
-    #[structopt(short="s", name="stack-base", long, default_value = "1000")]
+    #[structopt(short = "s", name = "stack-base", long, default_value = "1000")]
     execution_stack_base: usize,
 
     /// Memory position to dump instruction from
@@ -41,7 +41,6 @@ struct Opt {
     /// Number of memory position to dump data
     #[structopt(long, default_value = "15")]
     memory_dump_count: usize,
-
     // / Debug mode
     // #[structopt(short, long)]
     // debug: bool,
@@ -64,7 +63,6 @@ fn dump_mem(s: &Simulator, from: usize, count: usize) {
 
 #[cfg(not(tarpaulin_include))]
 fn main() {
-
     let opt = Opt::from_args();
 
     let filename = opt.input.into_os_string().into_string().expect("Filename is malformed.");
@@ -88,11 +86,13 @@ fn main() {
     println!(">>>>>>");
     println!("Executing program...");
 
-    let success = simulator.execute(Execution{
-        program_address: 0,
-        max_cycles: opt.execution_max_cycles,
-        stack_base: opt.execution_stack_base,
-    }).is_ok();
+    let success = simulator
+        .execute(Execution {
+            program_address: 0,
+            max_cycles: opt.execution_max_cycles,
+            stack_base: opt.execution_stack_base,
+        })
+        .is_ok();
 
     println!("<<<<<<");
     println!("After execution:");
@@ -107,8 +107,6 @@ fn main() {
         println!("Program run successfully.");
     } else {
         println!("Warning: execution stopped after {:?} instructions", opt.execution_max_cycles);
-        std::process::exit(1);    
+        std::process::exit(1);
     }
-
-
 }

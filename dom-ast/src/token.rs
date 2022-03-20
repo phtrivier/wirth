@@ -1,4 +1,3 @@
-
 use std::rc::Rc;
 
 #[allow(dead_code)]
@@ -47,7 +46,6 @@ pub enum Token {
     // True,
     // Repeat,
     // Until,
-    
     Int(u32),
     Ident(String),
 }
@@ -55,27 +53,27 @@ pub enum Token {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct ScanContext {
-  pub line: u32,
-  pub column: u32
+    pub line: u32,
+    pub column: u32,
 }
 
 // <@scanner/scan
 #[derive(Clone, PartialEq, Debug)]
 pub struct Scan {
-  pub context: ScanContext,
-  pub token: Token,
+    pub context: ScanContext,
+    pub token: Token,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum ScanErrorType {
-  InvalidChar(char), // char is not ascii
-  UnexpectedNewLine,
+    InvalidChar(char), // char is not ascii
+    UnexpectedNewLine,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct ScanError {
-  pub context: ScanContext,
-  pub error_type: ScanErrorType
+    pub context: ScanContext,
+    pub error_type: ScanErrorType,
 }
 
 pub type ScanResult = Result<Rc<Scan>, ScanError>;

@@ -1,6 +1,6 @@
+use risc::instructions::BranchCondition::*;
 use risc::instructions::Instruction::*;
 use risc::instructions::OpCode::*;
-use risc::instructions::BranchCondition::*;
 
 use assembler::assemble;
 
@@ -24,16 +24,21 @@ fn assemble_full_program() {
 
     assert_eq!(8, instructions.len());
 
-    assert_eq!([
-      RegisterIm{ o: MOV, a: 0, b: 0, im: 3},  //
-      RegisterIm{ o: MOV, a: 1, b: 0, im: 0},   //
-      RegisterIm{ o: ADD, a: 1, b: 1, im: 2},   //
-      RegisterIm{ o: SUB, a: 0, b: 0, im: 1},   //
-      BranchOff{cond: EQ, link: false, offset: 2},   //
-      BranchOff{cond: AW, link: false, offset: -4},  //
-      RegisterIm{ o: MOV, a: 2, b: 0, im: 0},      //
-      Branch{cond: AW, link: false, c: 2}, //
-    ], &instructions[..]);
-
-
+    assert_eq!(
+        [
+            RegisterIm { o: MOV, a: 0, b: 0, im: 3 },       //
+            RegisterIm { o: MOV, a: 1, b: 0, im: 0 },       //
+            RegisterIm { o: ADD, a: 1, b: 1, im: 2 },       //
+            RegisterIm { o: SUB, a: 0, b: 0, im: 1 },       //
+            BranchOff { cond: EQ, link: false, offset: 2 }, //
+            BranchOff {
+                cond: AW,
+                link: false,
+                offset: -4
+            }, //
+            RegisterIm { o: MOV, a: 2, b: 0, im: 0 },       //
+            Branch { cond: AW, link: false, c: 2 },         //
+        ],
+        &instructions[..]
+    );
 }
