@@ -1,18 +1,5 @@
 # Goal: Conditionnals
 
-## Scanner
-  - [ ] IF
-  - [ ] THEN
-  - [ ] Else
-
-## Parser
-  - [ ] If Statement
-  - [ ] Comparison of simple expressions
-  - [ ] Typechecking ?
-
-## Codegen
-  - [ ] Branch appropriately based on expressions...
-
 # Goal: Loops
 
 # Goal: Procedures

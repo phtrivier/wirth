@@ -1,6 +1,9 @@
 use risc::instructions::OpCode::*;
 use risc::instructions::*;
 
+#[cfg(test)]
+use pretty_assertions::assert_eq;
+
 #[test]
 fn compile_false_condition_test() {
     let content = String::from(
@@ -63,7 +66,7 @@ fn compile_else_condition_test() {
     let content = String::from(
         "
   MODULE Test;
-      VAR x: INTEGER;
+      VAR x,y: INTEGER;
       BEGIN
         IF 0 = 1 THEN
           x:= 1

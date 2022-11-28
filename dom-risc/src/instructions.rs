@@ -231,7 +231,7 @@ impl Instruction {
     }
 
     pub fn serialize_all(instructions: Vec<Instruction>) -> Vec<u8> {
-        let instruction_bits: Vec<u32> = instructions.iter().map(|instruction| Instruction::encode(instruction)).collect();
+        let instruction_bits: Vec<u32> = instructions.iter().map(Instruction::encode).collect();
         // FIXME(pht) the type of the serialize function can not be infered, it seems
         bincode::serialize(&instruction_bits).unwrap()
     }

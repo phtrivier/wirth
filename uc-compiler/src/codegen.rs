@@ -72,36 +72,44 @@ impl Codegen {
 
                         let fixup_index = self.instructions.len() - 1;
 
+                        let then_branch = sibling(tree).unwrap();
                         // This generates the code for the "then" part of the if
-                        self.generate_code(sibling(tree).unwrap());
-
-                        // This wants to go to the last expression of the if / then else. 
-                        // There is no else at the moment, so it can just move on to the next expression
-                        self.instructions.push(Instruction::BranchOff {
-                            cond: BranchCondition::AW,
-                            link: false,
-                            offset: 1, // NOTE(pht) in case there is an else block, this offset will have to change
-                        });
+                        self.generate_code(then_branch);
 
                         // This fixes up the jump to the else part of the tree
                         let destination_index = self.instructions.len();
 
-                        let fixup = (destination_index - fixup_index - 1) as i32;
+                        let fixup = (destination_index - fixup_index) as i32;
 
                         self.instructions[fixup_index] = Instruction::BranchOff {
                             cond: BranchCondition::NE,
                             link: false,
-                            offset: fixup, // Offset is not fixed up
+                            offset: fixup,
                         };
 
-                        // What is still missing here is an unconditionnal jump
-                        // to the "END" part, to allow sandwhiching:
-                        // TEST
-                        // Jump to ELSE if false
-                        // Inst for IF
-                        // Jump to END
-                        // Inst for ELSE
-                        // END
+                        // This wants to go to the last expression of the if / then else.
+                        // There is no else at the moment, so it can just move on to the next expression
+                        self.instructions.push(Instruction::BranchOff {
+                            cond: BranchCondition::AW,
+                            link: false,
+                            offset: 0, // NOTE(pht) in case there is an else block, this offset will have to change
+                        });
+
+                        let aw_index = self.instructions.len() - 1;
+
+                        // Generate the code for the "else" part
+                        let else_branch = sibling(then_branch).unwrap();
+                        self.generate_code(else_branch);
+
+                        let aw_destination_index = self.instructions.len();
+
+                        let aw_fixup = (aw_destination_index - aw_index) as i32;
+
+                        self.instructions[aw_index] = Instruction::BranchOff {
+                            cond: BranchCondition::AW,
+                            link: false,
+                            offset: aw_fixup,
+                        };
                     }
 
                     NodeInfo::Then => {
@@ -201,6 +209,9 @@ mod tests {
     use ast::parser;
     use ast::scanner::*;
     use ast::scope::Scope;
+
+    #[cfg(test)]
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn generate_no_instruction_for_empty_tree() {
@@ -371,7 +382,7 @@ mod tests {
                     b: 14,
                     offset: 0
                 },
-                // Branch to the very end of the if/else branch ; in this case, it would be the next 
+                // Branch to the very end of the if/else branch ; in this case, it would be the next
                 // location since there is no "ELSE"
                 Instruction::BranchOff {
                     cond: BranchCondition::AW,
@@ -404,12 +415,13 @@ mod tests {
                 Instruction::RegisterIm { o: MOV, a: 1, b: 0, im: 1 },
                 // Compare 0 and 1
                 Instruction::Register { o: SUB, a: 0, b: 0, c: 1 },
-                // Branch if not equals to fixed-up location
+                // Branch if not equals to the location of the 'else' part
                 Instruction::BranchOff {
                     cond: BranchCondition::NE,
                     offset: 3,
                     link: false
                 },
+                // (Then part)
                 // Load 1
                 Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 1 },
                 // Assign 1 to x
@@ -419,13 +431,13 @@ mod tests {
                     b: 14,
                     offset: 0
                 },
-                // Branch to the very end of the if/else branch ; in this case, it would be the next 
-                // location since there is no "ELSE"
+                // Branch to the avoid the 'else' part
                 Instruction::BranchOff {
                     cond: BranchCondition::AW,
-                    offset: 2,
+                    offset: 3,
                     link: false
                 },
+                // (Else part)
                 // Load 2
                 Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 2 },
                 // Assign 2 to x

@@ -79,7 +79,8 @@ fn else_statement_is_executed_if_condition_is_false() {
       IF 0 = 1 THEN 
         x:= 1 
       ELSE
-        x:= 2
+        x:= 2;
+        y:= 3;
       END
   END Test.",
     );
@@ -90,8 +91,71 @@ fn else_statement_is_executed_if_condition_is_false() {
         max_cycles: 20,
     };
     s.execute(execution).unwrap();
-    assert_eq!(s.memory(execution.stack_base, 2), [0, 2]);
+    assert_eq!(s.memory(execution.stack_base, 3), [0, 2, 3]);
 }
+
+#[test]
+fn more_nested_else_if() {
+    let content = String::from(
+        "
+  MODULE Test;
+      VAR x: INTEGER;
+    BEGIN
+      IF 0 = 1 THEN
+        x:= 1
+      ELSE
+        IF 0 = 0 THEN
+           x := 2;
+           IF 1 = 1 THEN
+             y := 1
+           ELSE
+             x := 3
+           END
+        ELSE
+           x := 4;
+        END
+      END
+  END Test.",
+    );
+    let mut s = Simulator::from_oberon(&content).unwrap();
+    let execution = Execution {
+        program_address: 0,
+        stack_base: 100,
+        max_cycles: 20,
+    };
+    s.execute(execution).unwrap();
+    assert_eq!(s.memory(execution.stack_base, 3), [0, 3, 1]);
+}
+
+#[test]
+fn nested_else_statement_is_executed_if_condition_is_false() {
+    let content = String::from(
+        "
+  MODULE Test;
+      VAR x: INTEGER;
+    BEGIN
+      IF 0 = 1 THEN
+        x:= 1
+      ELSE
+        IF 0 = 2 THEN
+           x := 2;
+           y := 3;
+        ELSE
+           x := 4;
+        END
+      END
+  END Test.",
+    );
+    let mut s = Simulator::from_oberon(&content).unwrap();
+    let execution = Execution {
+        program_address: 0,
+        stack_base: 100,
+        max_cycles: 20,
+    };
+    s.execute(execution).unwrap();
+    assert_eq!(s.memory(execution.stack_base, 2), [0, 4]);
+}
+
 
 /*
 #[test]

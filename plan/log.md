@@ -1,3 +1,15 @@
+# Mon 2022-11-28 21:00-22:00
+
+Implemented the else part.
+
+> Sequence ; Selection ; Iteration.
+
+I CAN DO PROGRAMMING !!!
+
+# 2022-03-20 
+
+Implemented most of the logical handling of if / then
+
 # Mon 2021-05-17 18:00-20:00
 
 Scanned, parsed and generated code for a basic IF expression that does some computation.
