@@ -1,10 +1,21 @@
+# Mon 2022-12-05
+
+Kinda loosing hope about nested logical statements. 
+I tried to accumulate a list of indicies of instructions to fixups, but
+I can not find the proper place to pop from this list. 
+Let's not forget it's just code.
+
+# Fri 2022-12-02
+
+Tried again to make the if / then / else work. Still not working.
+
 # Mon 2022-11-28 21:00-22:00
 
 Implemented the else part.
 
 > Sequence ; Selection ; Iteration.
 
-I CAN DO PROGRAMMING !!!
+I CAN DO PROGRAMMING !!! (Except, well, nested if / then / else don't work at all.)
 
 # 2022-03-20 
 

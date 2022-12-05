@@ -6,11 +6,12 @@ use risc::instructions::*;
 pub struct Codegen {
     pub instructions: Vec<Instruction>,
     rh: usize,
+    pub forward_fixups:Vec<Vec<usize>>
 }
 
 impl Codegen {
     pub fn new() -> Codegen {
-        Codegen { instructions: vec![], rh: 0 }
+        Codegen { instructions: vec![], rh: 0, forward_fixups: vec![] }
     }
 
     // NOTE(pht) follow the CODE from the codegen at page 51/52, and
@@ -59,7 +60,17 @@ impl Codegen {
                         });
                     }
 
+                    // NOTE(pht) this does not work for fixing the forward links of nested if.
                     NodeInfo::IfStatement => {
+
+                        // NOTE(pht) intuitively, this would be the place to add
+                        // a new "forward fixups scope".
+                        // Otherwise, I might not have a vec! at all to add to.
+                        // But for some reason, it does not work...
+                        // ... and I'm wasting time here again.s
+                        println!("Endering if with fixups {:?}, will add empty vec", self.forward_fixups);
+                        self.forward_fixups.push(vec![]);
+
                         // This generate the code for the "test" part of the if
                         self.generate_code(child(tree).unwrap());
 
@@ -73,6 +84,8 @@ impl Codegen {
                         let fixup_index = self.instructions.len() - 1;
 
                         let then_branch = sibling(tree).unwrap();
+
+                        println!("Will generate then_branch");
                         // This generates the code for the "then" part of the if
                         self.generate_code(then_branch);
 
@@ -88,7 +101,6 @@ impl Codegen {
                         };
 
                         // This wants to go to the last expression of the if / then else.
-                        // There is no else at the moment, so it can just move on to the next expression
                         self.instructions.push(Instruction::BranchOff {
                             cond: BranchCondition::AW,
                             link: false,
@@ -97,19 +109,41 @@ impl Codegen {
 
                         let aw_index = self.instructions.len() - 1;
 
+                        // Add the index to fix as the last value
+                        println!("Will add index {:?} to be fixed up", aw_index);
+                        self.forward_fixups.last_mut().unwrap().push(aw_index);
+
                         // Generate the code for the "else" part
+                        println!("Will generate else branch");
                         let else_branch = sibling(then_branch).unwrap();
                         self.generate_code(else_branch);
 
                         let aw_destination_index = self.instructions.len();
 
-                        let aw_fixup = (aw_destination_index - aw_index) as i32;
+                        // TODO(pht) Fix all the indices in the list ?
+                        println!("Would do a fixup links for instructions at indicies {:?} to destination index {:?}", self.forward_fixups, aw_destination_index);
 
-                        self.instructions[aw_index] = Instruction::BranchOff {
-                            cond: BranchCondition::AW,
-                            link: false,
-                            offset: aw_fixup,
-                        };
+                        for forward_fixup_index in self.forward_fixups.last().unwrap().iter() {
+                            let aw_index: usize = *forward_fixup_index as usize;
+                            let aw_fixup = (aw_destination_index - forward_fixup_index) as i32;
+
+                            println!("Forward fixup index {:?}", forward_fixup_index);
+                            println!("AW destination index {:?}", aw_destination_index);
+                            println!("aw_fixup_offset {:?}", aw_fixup);
+
+                            self.instructions[aw_index] = Instruction::BranchOff {
+                                cond: BranchCondition::AW,
+                                link: false,
+                                offset: aw_fixup,
+                            };
+                        }
+
+                        // NOTE(pht) here is what I don't undestand : if I pop elements from
+                        // the forward_fixups here, they are poped too early, and the whole
+                        // fixups fails.
+                        //
+                        // But of course I have to pop from the list somewhere !
+                        // self.forward_fixups.pop().unwrap();
                     }
 
                     NodeInfo::Then => {
@@ -450,4 +484,88 @@ mod tests {
             ]
         )
     }
+
+    #[test]
+    fn generate_instructions_for_nested_else() {
+        let scope = Scope::new();
+        scope.add("x");
+        let mut scanner = Scanner::new("IF 0 = 1 THEN IF 0 = 1 THEN x:= 1 ELSE x:= 2 END ELSE x:= 3 END END");
+        // Necessary because parse_xxx is not the first thing to compile yet
+        parser::scan_next(&mut scanner).unwrap();
+        parser::scan_next(&mut scanner).unwrap();
+        let assignement = parser::parse_if_statement(&mut scanner, &scope).unwrap();
+
+        let mut codegen = Codegen::new();
+        codegen.generate_code(&assignement);
+
+
+        assert_eq!(
+            codegen.instructions,
+            vec![
+                // IF 0 = 1
+                // Load 0
+                Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 0 },
+                Instruction::RegisterIm { o: MOV, a: 1, b: 0, im: 1 },
+                Instruction::Register { o: SUB, a: 0, b: 0, c: 1 },
+                Instruction::BranchOff {
+                    cond: BranchCondition::NE,
+                    offset: 10,
+                    link: false
+                },
+                // THEN
+                //   IF 0 = 1
+                Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 0 },
+                Instruction::RegisterIm { o: MOV, a: 1, b: 0, im: 1 },
+                Instruction::Register { o: SUB, a: 0, b: 0, c: 1 },
+                // Branch if not equals to the location of the 'else' part
+                Instruction::BranchOff {
+                    cond: BranchCondition::NE,
+                    offset: 3,
+                    link: false
+                },
+                //  THEN
+                //    x := 1
+                Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 1 },
+                Instruction::Memory {
+                    u: MemoryMode::Store,
+                    a: 0,
+                    b: 14,
+                    offset: 0
+                },
+                Instruction::BranchOff {
+                    cond: BranchCondition::AW,
+                    offset: 6,
+                    link: false
+                },
+                //  ELSE
+                //    x: = 2
+                Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 2 },
+                Instruction::Memory {
+                    u: MemoryMode::Store,
+                    a: 0,
+                    b: 14,
+                    offset: 0
+                },
+                Instruction::BranchOff {
+                    cond: BranchCondition::AW,
+                    offset: 3,
+                    link: false
+                },
+                //  END
+                // ELSE
+                //  x:= 3
+                // END
+                Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 3 },
+                Instruction::Memory {
+                    u: MemoryMode::Store,
+                    a: 0,
+                    b: 14,
+                    offset: 0
+                }
+
+            ]
+        );
+        assert!(true);
+    }
+
 }
