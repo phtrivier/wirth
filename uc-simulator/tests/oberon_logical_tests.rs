@@ -134,18 +134,15 @@ fn more_nested_else_if_but_the_other_way_around() {
   MODULE Test;
       VAR x: INTEGER;
     BEGIN
-      IF 0 = 0 THEN
-        x:= 1
+      IF 1 = 1 THEN
+        x := 1
       ELSE
+        x := 5;
+
         IF 0 = 0 THEN
-           x := 2;
-           IF 0 = 0 THEN
-             x := 3
-           ELSE
-             x := 4
-           END
+           x := 2
         ELSE
-           x := 5
+           x := 3
         END
       END
   END Test.",
@@ -154,10 +151,10 @@ fn more_nested_else_if_but_the_other_way_around() {
     let execution = Execution {
         program_address: 0,
         stack_base: 100,
-        max_cycles: 20,
+        max_cycles: 50,
     };
     s.execute(execution).unwrap();
-    assert_eq!(s.memory(execution.stack_base, 2), [0, 5]);
+    assert_eq!(s.memory(execution.stack_base, 2), [0, 1]);
 }
 
 #[test]

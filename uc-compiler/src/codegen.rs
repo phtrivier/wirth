@@ -143,10 +143,14 @@ impl Codegen {
                         // fixups fails.
                         //
                         // But of course I have to pop from the list somewhere !
-                        // self.forward_fixups.pop().unwrap();
+                        self.forward_fixups.pop().unwrap();
                     }
 
                     NodeInfo::Then => {
+                        self.generate_code(child(tree).unwrap());
+                    }
+
+                    NodeInfo::Else => {
                         self.generate_code(child(tree).unwrap());
                     }
 
@@ -489,7 +493,16 @@ mod tests {
     fn generate_instructions_for_nested_else() {
         let scope = Scope::new();
         scope.add("x");
-        let mut scanner = Scanner::new("IF 0 = 1 THEN IF 0 = 1 THEN x:= 1 ELSE x:= 2 END ELSE x:= 3 END END");
+        let mut scanner = Scanner::new("
+        IF 0 = 1 THEN
+            IF 0 = 1 THEN
+                x:= 1
+            ELSE
+                x:= 2
+            END
+        ELSE
+            x:= 3
+        END");
         // Necessary because parse_xxx is not the first thing to compile yet
         parser::scan_next(&mut scanner).unwrap();
         parser::scan_next(&mut scanner).unwrap();
@@ -566,6 +579,32 @@ mod tests {
             ]
         );
         assert!(true);
+    }
+
+    #[test]
+    fn generate_instructions_for_nested_if_else() {
+        let scope = Scope::new();
+        scope.add("x");
+        let mut scanner = Scanner::new("
+            IF 1 = 1 THEN
+                x:= 1
+            ELSE
+                IF 0 = 1 THEN
+                  x:= 2
+                ELSE
+                  x:= 3
+                END
+            END");
+        // Necessary because parse_xxx is not the first thing to compile yet
+        parser::scan_next(&mut scanner).unwrap();
+        parser::scan_next(&mut scanner).unwrap();
+        let assignement = parser::parse_if_statement(&mut scanner, &scope).unwrap();
+
+        let mut codegen = Codegen::new();
+        codegen.generate_code(&assignement);
+
+        println!("{:#?}", codegen.instructions);
+        // assert!(false);
     }
 
 }

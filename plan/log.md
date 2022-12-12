@@ -1,3 +1,17 @@
+# Mon 2022-12-12
+
+Still not much progress on the nested if side. 
+I tried simplifying the tree to make the "Else" branch explicit.
+What is now obvious is that I don't know at which moment I want to do the fixups ; 
+
+It seems like I want to wait unil "all the ifs" are handled ; but when is that ? 
+In Statement sequence ?
+   
+I tried different version where the the fixups are done at the end of either child or sibling of statement sequence.
+But it consistently fails because I get an empty stack :/
+
+Or maybe I want to add a single vec in the statement sequence ? 
+
 # Mon 2022-12-05
 
 Kinda loosing hope about nested logical statements. 

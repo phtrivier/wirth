@@ -133,4 +133,23 @@ mod tests {
         let path = root.sibling().sibling().child().child();
         assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Assignement);
     }
+
+    #[test]
+    fn can_parse_nested_if_then_else_expression() {
+        let mut scope = scope(vec!["x"]);
+        let root_tree = parse_statement(&mut scope, "
+          IF 0 = 0 THEN
+             IF 1 = 0 THEN
+               x:= 1
+             ELSE
+               x:=2
+             END
+          ELSE
+             x:= 3
+          END").unwrap();
+
+        ast::print(&root_tree);
+
+        // assert!(false);
+    }
 }
