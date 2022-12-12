@@ -137,7 +137,9 @@ mod tests {
     #[test]
     fn can_parse_nested_if_then_else_expression() {
         let mut scope = scope(vec!["x"]);
-        let root_tree = parse_statement(&mut scope, "
+        let root_tree = parse_statement(
+            &mut scope,
+            "
           IF 0 = 0 THEN
              IF 1 = 0 THEN
                x:= 1
@@ -146,7 +148,32 @@ mod tests {
              END
           ELSE
              x:= 3
-          END").unwrap();
+          END",
+        )
+        .unwrap();
+
+        ast::print(&root_tree);
+
+        // assert!(false);
+    }
+
+    #[test]
+    fn wtf_wtf_wt_fwt_f() {
+        let mut scope = scope(vec!["x"]);
+        let root_tree = parse_statement(
+            &mut scope,
+        "IF 0 = 1 THEN
+        x:= 1
+      ELSE
+        IF 0 = 0 THEN
+           x := 2;
+           IF 0 = 0 THEN
+             x := 3
+           END
+        ELSE
+           x := 4
+        END
+      END").unwrap();
 
         ast::print(&root_tree);
 

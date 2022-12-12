@@ -106,9 +106,7 @@ fn more_nested_else_if() {
       ELSE
         IF 0 = 0 THEN
            x := 2;
-           IF 1 = 1 THEN
-             y := 1
-           ELSE
+           IF 0 = 0 THEN
              x := 3
            END
         ELSE
@@ -124,7 +122,8 @@ fn more_nested_else_if() {
         max_cycles: 20,
     };
     s.execute(execution).unwrap();
-    assert_eq!(s.memory(execution.stack_base, 3), [0, 2, 1]);
+    // So, Either I'm completely crazy and it's normal that the code returns a 2
+    assert_eq!(s.memory(execution.stack_base, 3), [0, 3, 0]);
 }
 
 #[test]
@@ -185,7 +184,6 @@ fn nested_else_statement_is_executed_if_condition_is_false() {
     s.execute(execution).unwrap();
     assert_eq!(s.memory(execution.stack_base, 2), [0, 4]);
 }
-
 
 /*
 #[test]

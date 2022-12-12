@@ -1,6 +1,9 @@
 # Mon 2022-12-12
 
 Still not much progress on the nested if side. 
+
+This will require either spending a lot of time on it, or some lateral thinking. 
+
 I tried simplifying the tree to make the "Else" branch explicit.
 What is now obvious is that I don't know at which moment I want to do the fixups ; 
 
@@ -11,6 +14,26 @@ I tried different version where the the fixups are done at the end of either chi
 But it consistently fails because I get an empty stack :/
 
 Or maybe I want to add a single vec in the statement sequence ? 
+
+Or maybe I find a way to give up entirely on the nested if / then else, and 
+add _more_ AW branches that just jump to each other. 
+
+This seems to be the idea behind: 
+
+http://craftinginterpreters.com/jumping-back-and-forth.html
+
+Alternatively, I can just scrap the whole project, do rm -rf, and just implement
+the toy compiler in "crafting interpreter".
+
+Or I completely scrap it and instead learn how to use llvm as a backend ? 
+
+Which would at least give me the satisfaction of having something executing in a _real_ computer ?
+
+Maybe I need to stop trying to please Jon Blow & Casey Muratori ?
+They won't be there the day I die.
+
+Alternatively, I might have to entertain the idea that maybe the code generation works fine, 
+but the code _execution_ fails in the triply nested if / then / else ? 
 
 # Mon 2022-12-05
 
