@@ -39,6 +39,7 @@ pub enum NodeInfo {
     Expression(ExpressionOp),
     IfStatement,
     Then,
+    Else
 }
 
 #[derive(Debug)]

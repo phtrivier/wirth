@@ -321,7 +321,7 @@ pub fn parse_if_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     let current = match current.as_ref() {
         Scan { token: Token::Else, .. } => {
             scan_next(scanner)?;
-            else_statement_sequence = parse_statement_sequence(scanner, scope)?;
+            else_statement_sequence = ast::node(NodeInfo::Else, parse_statement_sequence(scanner, scope)?, ast::empty());
             current_token(scanner)?
         }
         _ => {

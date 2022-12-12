@@ -125,9 +125,12 @@ mod tests {
         assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::StatementSequence);
 
         let path = root.sibling().sibling();
-        assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::StatementSequence);
+        assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Else);
 
         let path = root.sibling().sibling().child();
+        assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::StatementSequence);
+
+        let path = root.sibling().sibling().child().child();
         assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Assignement);
     }
 }
