@@ -103,6 +103,8 @@ impl LineScanner<'_> {
             "then" => self.token_at(column, Token::Then),
             "else" => self.token_at(column, Token::Else),
             "elsif" => self.token_at(column, Token::Elsif),
+            "while" => self.token_at(column, Token::While),
+            "do" => self.token_at(column, Token::Do),
             _ => self.token_at(column, Token::Ident(ident)),
         }
     }

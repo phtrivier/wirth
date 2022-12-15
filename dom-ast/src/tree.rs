@@ -40,6 +40,8 @@ pub enum NodeInfo {
     IfStatement,
     Then,
     Else,
+    WhileStatement,
+    Do
 }
 
 #[derive(Debug)]

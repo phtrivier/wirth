@@ -177,18 +177,12 @@ impl Computer {
     }
 
     fn execute_branch_offset(&mut self, cond: BranchCondition, offset: i32, link: bool) {
-        println!("Testing if branch condition {:?} is met", cond);
         if self.matches_cond(cond) {
-            println!("Condition was met");
             if link {
                 self.regs[15] = self.pc as i32;
             }
 
-            let new_pc = (self.pc as i32 + offset as i32) as usize;
-            println!("Will set pc to new value {:?}", new_pc);
-            self.pc = new_pc;
-        } else {
-            println!("Condition was not met");
+            self.pc = (self.pc as i32 + offset as i32) as usize;
         }
     }
 

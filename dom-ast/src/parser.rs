@@ -285,6 +285,11 @@ pub fn parse_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
         return parse_if_statement(scanner, scope);
     }
 
+    if let Scan { token: Token::While, .. } = current.as_ref() {
+        scan_next(scanner)?;
+        return parse_while_statement(scanner, scope);
+    }
+
     Err(ParseError::UnexpectedToken(current))
 }
 
@@ -341,6 +346,36 @@ pub fn parse_if_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
 
     Err(ParseError::UnexpectedToken(current))
 }
+
+pub fn parse_while_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
+    println!("parse_while_statement {:?}", current_token(scanner));
+    let test_expression = parse_expression(scanner, scope)?;
+
+    let do_statement_sequence;
+    let current = current_token(scanner)?;
+    let current = match current.as_ref() {
+        Scan { token: Token::Do, .. } => {
+            scan_next(scanner)?;
+            do_statement_sequence = parse_statement_sequence(scanner, scope)?;
+            current_token(scanner)?
+        }
+        _ => {
+            return Err(ParseError::UnexpectedToken(current));
+        }
+    };
+
+    if let Scan { token: Token::End, .. } = current.as_ref() {
+        scan_next(scanner)?;
+        return Ok(ast::node(
+            NodeInfo::WhileStatement,
+            test_expression,
+            ast::node(NodeInfo::Do, do_statement_sequence, ast::empty()),
+        ));
+    }
+
+    Err(ParseError::UnexpectedToken(current))
+}
+
 
 pub fn parse_expression(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     let first_expression = parse_simple_expression(scanner, scope)?;

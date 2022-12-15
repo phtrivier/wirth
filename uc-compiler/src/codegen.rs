@@ -125,6 +125,46 @@ impl Codegen {
 
                     }
 
+                    NodeInfo::WhileStatement => {
+
+                        let test_index = self.instructions.len();
+
+                        // This generate the code for the "test" part of the if
+                        self.generate_code(child(tree).unwrap());
+
+                        // This has to branch either to the end, or not branch at all
+                        self.instructions.push(Instruction::BranchOff {
+                            cond: BranchCondition::NE,
+                            link: false,
+                            offset: 0, // Offset will be fixedup later
+                        });
+                        let do_index = self.instructions.len() - 1;
+
+                        // This generates the code for the "do" part of the while
+                        let do_branch = sibling(tree).unwrap();
+                        self.generate_code(do_branch);
+
+                        // Fixup do index
+                        let do_offset = ((self.instructions.len() as i32) - (do_index as i32)) as i32;
+                        self.instructions[do_index] = Instruction::BranchOff {
+                            cond: BranchCondition::NE,
+                            link: false,
+                            offset: do_offset,
+                        };
+
+                        // Go back to the top
+                        let back_to_test_offset = ((self.instructions.len() as i32) - (test_index as i32)) as i32;
+                        self.instructions.push(Instruction::BranchOff {
+                            cond: BranchCondition::AW,
+                            link: false,
+                            offset: -back_to_test_offset,
+                        });
+                    }
+
+                    NodeInfo::Do => {
+                        self.generate_code(child(tree).unwrap());
+                    }
+
                     NodeInfo::Ident(symbol) => {
                         self.instructions.push(Instruction::Memory {
                             u: MemoryMode::Load,
@@ -722,4 +762,71 @@ mod tests {
             ]
         );
     }
+
+    /*
+    #[test]
+    fn generate_instructions_for_if_with_condition_on_variables() {
+        let scope = Scope::new();
+        scope.add("x");
+        let mut scanner = Scanner::new("IF x = 0 THEN x := 1 END");
+        // Necessary because parse_xxx is not the first thing to compile yet
+        parser::scan_next(&mut scanner).unwrap();
+        parser::scan_next(&mut scanner).unwrap();
+        let assignement = parser::parse_if_statement(&mut scanner, &scope).unwrap();
+
+        let mut codegen = Codegen::new();
+        codegen.generate_code(&assignement);
+
+        println!("{:#?}", codegen.instructions);
+        assert!(false);
+    }
+    */
+
+
+    #[test]
+    fn generate_instructions_for_while_loop() {
+        let scope = Scope::new();
+        scope.add("x");
+        let mut scanner = Scanner::new(
+            "
+            WHILE x = 0 DO
+                x := 1
+            END
+            ",
+        );
+        // Necessary because parse_xxx is not the first thing to compile yet
+        parser::scan_next(&mut scanner).unwrap();
+        parser::scan_next(&mut scanner).unwrap();
+        let assignement = parser::parse_while_statement(&mut scanner, &scope).unwrap();
+
+        let mut codegen = Codegen::new();
+        codegen.generate_code(&assignement);
+
+        assert_eq!(
+            codegen.instructions,
+            [
+                Instruction::Memory { a: 0, b: 14, offset: 0, u: MemoryMode::Load },
+                Instruction::RegisterIm { a: 1, b: 0, o: MOV, im: 0 },
+                Instruction::Register { a: 0, b: 0, o: SUB, c: 1 },
+                Instruction::BranchOff {
+                    cond: BranchCondition::NE,
+                    offset: 3,
+                    link: false,
+                },
+                Instruction::RegisterIm { a: 0, b: 0, o: MOV, im: 1 },
+                Instruction::Memory {
+                    a: 0,
+                    b: 14,
+                    offset: 0,
+                    u: MemoryMode::Store,
+                },
+                Instruction::BranchOff {
+                    cond: BranchCondition::AW,
+                    offset: -6, // NOTE(pht) the offset will probably have to be something else
+                    link: false,
+                },
+            ]);
+
+    }
+
 }
