@@ -1,5 +1,3 @@
-# Goal: Conditionnals
-
 # Goal: Loops
 
 # Goal: Procedures

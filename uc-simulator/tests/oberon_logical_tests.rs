@@ -122,7 +122,6 @@ fn more_nested_else_if() {
         max_cycles: 20,
     };
     s.execute(execution).unwrap();
-    // So, Either I'm completely crazy and it's normal that the code returns a 2
     assert_eq!(s.memory(execution.stack_base, 3), [0, 3, 0]);
 }
 
@@ -168,9 +167,19 @@ fn nested_else_statement_is_executed_if_condition_is_false() {
       ELSE
         IF 0 = 2 THEN
            x := 2;
-           y := 3
+           IF 0 = 0 THEN
+             y := 3
+           END
         ELSE
-           x := 4
+           IF 0 = 1 THEN
+             x := 4
+           ELSE
+             y := 3;
+             IF 0 = 0 THEN
+               y:= 4
+             END;
+             x:=5
+           END
         END
       END
   END Test.",
@@ -179,10 +188,10 @@ fn nested_else_statement_is_executed_if_condition_is_false() {
     let execution = Execution {
         program_address: 0,
         stack_base: 100,
-        max_cycles: 20,
+        max_cycles: 50,
     };
     s.execute(execution).unwrap();
-    assert_eq!(s.memory(execution.stack_base, 2), [0, 4]);
+    assert_eq!(s.memory(execution.stack_base, 3), [0, 5, 4]);
 }
 
 /*

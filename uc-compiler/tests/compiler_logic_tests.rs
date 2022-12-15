@@ -39,12 +39,6 @@ fn compile_false_condition_test() {
                 b: 14,
                 offset: 1
             },
-            // End of the if then else, continue to next instruction
-            Instruction::BranchOff {
-                cond: BranchCondition::AW,
-                offset: 1,
-                link: false
-            },
             // Footer to exit
             Instruction::RegisterIm {
                 o: OpCode::MOV,

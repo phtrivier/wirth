@@ -1,3 +1,18 @@
+# Thu 2022-12-15
+
+So, this was hard, but we made it through if/then/else. 
+
+The trick was that I generated an AW instruction even if there was no Else, which broke the thing.
+Nicely, the fact that I broke the tree into an Else statement seems to make the codegen code
+easy. 
+
+Just need to test that additionnal statements after the else are really followed...
+... and YES IT DOES !!!
+
+So, now, I can do "sequence", and "selection".
+I need to add "iteration" -- because I don't have GOTO, nor recursive functions, so I need WHILE, 
+and I'll be done with "something that can compute" !
+
 # Mon 2022-12-12
 
 Still not much progress on the nested if side. 

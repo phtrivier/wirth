@@ -64,16 +64,7 @@ impl Codegen {
                         });
                     }
 
-                    // NOTE(pht) this does not work for fixing the forward links of nested if.
                     NodeInfo::IfStatement => {
-                        // NOTE(pht) intuitively, this would be the place to add
-                        // a new "forward fixups scope".
-                        // Otherwise, I might not have a vec! at all to add to.
-                        // But for some reason, it does not work...
-                        // ... and I'm wasting time here again.s
-                        // println!("Endering if with fixups {:?}, will add empty vec", self.forward_fixups);
-                        // self.forward_fixups.push(vec![]);
-
                         // This generate the code for the "test" part of the if
                         self.generate_code(child(tree).unwrap());
 
@@ -88,7 +79,6 @@ impl Codegen {
 
                         let then_branch = sibling(tree).unwrap();
 
-                        println!("Will generate then_branch");
                         // This generates the code for the "then" part of the if
                         self.generate_code(then_branch);
 
@@ -103,6 +93,16 @@ impl Codegen {
                             offset: fixup,
                         };
 
+                        // Generate the code for the "else" part, if applicable
+                        let else_branch = sibling(then_branch).unwrap();
+                        self.generate_code(else_branch);
+                    }
+
+                    NodeInfo::Then => {
+                        self.generate_code(child(tree).unwrap());
+                    }
+
+                    NodeInfo::Else => {
                         // This wants to go to the last expression of the if / then else.
                         self.instructions.push(Instruction::BranchOff {
                             cond: BranchCondition::AW,
@@ -112,14 +112,8 @@ impl Codegen {
 
                         let aw_index = self.instructions.len() - 1;
 
-                        // Add the index to fix as the last value
-                        println!("Will add index {:?} to be fixed up", aw_index);
-                        // self.forward_fixups.last_mut().unwrap().push(aw_index);
+                        self.generate_code(child(tree).unwrap());
 
-                        // Generate the code for the "else" part
-                        println!("Will generate else branch");
-                        let else_branch = sibling(then_branch).unwrap();
-                        self.generate_code(else_branch);
 
                         let aw_destination_index = self.instructions.len();
                         let aw_fixup = (aw_destination_index - aw_index) as i32;
@@ -129,37 +123,6 @@ impl Codegen {
                             offset: aw_fixup,
                         };
 
-                        /*
-                        for forward_fixup_index in self.forward_fixups.last().unwrap().iter() {
-                            let aw_index: usize = *forward_fixup_index as usize;
-                            let aw_fixup = (aw_destination_index - forward_fixup_index) as i32;
-
-                            println!("Forward fixup index {:?}", forward_fixup_index);
-                            println!("AW destination index {:?}", aw_destination_index);
-                            println!("aw_fixup_offset {:?}", aw_fixup);
-
-                            self.instructions[aw_index] = Instruction::BranchOff {
-                                cond: BranchCondition::AW,
-                                link: false,
-                                offset: aw_fixup,
-                            };
-                        }
-                        */
-
-                        // NOTE(pht) here is what I don't undestand : if I pop elements from
-                        // the forward_fixups here, they are poped too early, and the whole
-                        // fixups fails.
-                        //
-                        // But of course I have to pop from the list somewhere !
-                        // self.forward_fixups.pop().unwrap();
-                    }
-
-                    NodeInfo::Then => {
-                        self.generate_code(child(tree).unwrap());
-                    }
-
-                    NodeInfo::Else => {
-                        self.generate_code(child(tree).unwrap());
                     }
 
                     NodeInfo::Ident(symbol) => {
@@ -428,13 +391,6 @@ mod tests {
                     b: 14,
                     offset: 0
                 },
-                // Branch to the very end of the if/else branch ; in this case, it would be the next
-                // location since there is no "ELSE"
-                Instruction::BranchOff {
-                    cond: BranchCondition::AW,
-                    offset: 1,
-                    link: false
-                }
             ]
         )
     }
@@ -604,7 +560,6 @@ mod tests {
                   x:= 3
                 END
             END",
-
         );
         // Necessary because parse_xxx is not the first thing to compile yet
         parser::scan_next(&mut scanner).unwrap();
@@ -676,7 +631,7 @@ mod tests {
         scope.add("x");
         let mut scanner = Scanner::new(
             "
-IF 0 = 1 THEN
+      IF 0 = 1 THEN
         x:= 1
       ELSE
         IF 0 = 0 THEN
@@ -689,7 +644,6 @@ IF 0 = 1 THEN
         END
       END
          ",
-
         );
         // Necessary because parse_xxx is not the first thing to compile yet
         parser::scan_next(&mut scanner).unwrap();
@@ -705,143 +659,67 @@ IF 0 = 1 THEN
         assert_eq!(
             codegen.instructions,
             [
-    RegisterIm {
-        a: 0,
-        b: 0,
-        o: MOV,
-        im: 0,
-    },
-    RegisterIm {
-        a: 1,
-        b: 0,
-        o: MOV,
-        im: 1,
-    },
-    Register {
-        a: 0,
-        b: 0,
-        o: SUB,
-        c: 1,
-    },
-    BranchOff {
-        cond: NE,
-        offset: 3,
-        link: false,
-    },
-    RegisterIm {
-        a: 0,
-        b: 0,
-        o: MOV,
-        im: 1,
-    },
-    Memory {
-        a: 0,
-        b: 14,
-        offset: 0,
-        u: Store,
-    },
-    BranchOff {
-        cond: AW,
-        offset: 17,
-        link: false,
-    },
-    RegisterIm {
-        a: 0,
-        b: 0,
-        o: MOV,
-        im: 0,
-    },
-    RegisterIm {
-        a: 1,
-        b: 0,
-        o: MOV,
-        im: 0,
-    },
-    Register {
-        a: 0,
-        b: 0,
-        o: SUB,
-        c: 1,
-    },
-    BranchOff {
-        cond: NE,
-        offset: 10,
-        link: false,
-    },
-    RegisterIm {
-        a: 0,
-        b: 0,
-        o: MOV,
-        im: 2,
-    },
-    Memory {
-        a: 0,
-        b: 14,
-        offset: 0,
-        u: Store,
-    },
-    RegisterIm {
-        a: 0,
-        b: 0,
-        o: MOV,
-        im: 0,
-    },
-    RegisterIm {
-        a: 1,
-        b: 0,
-        o: MOV,
-        im: 0,
-    },
-    Register {
-        a: 0,
-        b: 0,
-        o: SUB,
-        c: 1,
-    },
-    BranchOff {
-        cond: NE,
-        offset: 3,
-        link: false,
-    },
-    RegisterIm {
-        a: 0,
-        b: 0,
-        o: MOV,
-        im: 3,
-    },
-    Memory {
-        a: 0,
-        b: 14,
-        offset: 0,
-        u: Store,
-    },
-    BranchOff {
-        cond: AW,
-        offset: 1,
-        link: false,
-    },
-    BranchOff {
-        cond: AW,
-        offset: 3,
-        link: false,
-    },
-    RegisterIm {
-        a: 0,
-        b: 0,
-        o: MOV,
-        im: 4,
-    },
-    Memory {
-        a: 0,
-        b: 14,
-        offset: 0,
-        u: Store,
-    },
-]
-
+                // IF 0 = 1
+                Instruction::RegisterIm { a: 0, b: 0, o: MOV, im: 0 },
+                Instruction::RegisterIm { a: 1, b: 0, o: MOV, im: 1 },
+                Instruction::Register { a: 0, b: 0, o: SUB, c: 1 },
+                Instruction::BranchOff {
+                    cond: BranchCondition::NE,
+                    offset: 3,
+                    link: false,
+                },
+                // THEN
+                //
+                Instruction::RegisterIm { a: 0, b: 0, o: MOV, im: 1 },
+                Instruction::Memory {
+                    a: 0,
+                    b: 14,
+                    offset: 0,
+                    u: MemoryMode::Store,
+                },
+                Instruction::BranchOff {
+                    cond: BranchCondition::AW,
+                    offset: 16,
+                    link: false,
+                },
+                Instruction::RegisterIm { a: 0, b: 0, o: MOV, im: 0 },
+                Instruction::RegisterIm { a: 1, b: 0, o: MOV, im: 0 },
+                Instruction::Register { a: 0, b: 0, o: SUB, c: 1 },
+                Instruction::BranchOff {
+                    cond: BranchCondition::NE,
+                    offset: 9,
+                    link: false,
+                },
+                Instruction::RegisterIm { a: 0, b: 0, o: MOV, im: 2 },
+                Instruction::Memory { a: 0, b: 14, offset: 0, u: MemoryMode::Store },
+                Instruction::RegisterIm { a: 0, b: 0, o: MOV, im: 0 },
+                Instruction::RegisterIm { a: 1, b: 0, o: MOV, im: 0 },
+                Instruction::Register { a: 0, b: 0, o: SUB, c: 1 },
+                Instruction::BranchOff {
+                    cond: BranchCondition::NE,
+                    offset: 3,
+                    link: false,
+                },
+                Instruction::RegisterIm { a: 0, b: 0, o: MOV, im: 3 },
+                Instruction::Memory {
+                    a: 0,
+                    b: 14,
+                    offset: 0,
+                    u: MemoryMode::Store,
+                },
+                Instruction::BranchOff {
+                    cond: BranchCondition::AW,
+                    offset: 3,
+                    link: false,
+                },
+                Instruction::RegisterIm { a: 0, b: 0, o: MOV, im: 4 },
+                Instruction::Memory {
+                    a: 0,
+                    b: 14,
+                    offset: 0,
+                    u: MemoryMode::Store,
+                },
+            ]
         );
-
-        assert!(false);
     }
-
 }

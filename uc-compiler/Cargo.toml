@@ -9,7 +9,6 @@ edition = "2018"
 [dependencies]
 ast = { path = "../dom-ast"}
 risc = { path = "../dom-risc"}
-parser = { path = "../uc-parser"}
 
 [dev-dependencies]
 pretty_assertions = "1.3.0"

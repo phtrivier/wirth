@@ -81,3 +81,5 @@
   - [X] ADD and SUB and MUL and DIV
 
 # Goal: Parse a module with var declarations
+
+# Goal: Conditionnals
