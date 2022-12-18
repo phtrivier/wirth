@@ -105,6 +105,8 @@ impl LineScanner<'_> {
             "elsif" => self.token_at(column, Token::Elsif),
             "while" => self.token_at(column, Token::While),
             "do" => self.token_at(column, Token::Do),
+            "array" => self.token_at(column, Token::Array),
+            "of" => self.token_at(column, Token::Of),
             _ => self.token_at(column, Token::Ident(ident)),
         }
     }
@@ -198,6 +200,8 @@ impl Iterator for LineScanner<'_> {
             Some(&(column, '.')) => self.scan_single(column, Token::Period),
             Some(&(column, '=')) => self.scan_single(column, Token::Eql),
             Some(&(column, '#')) => self.scan_single(column, Token::Neq),
+            Some(&(column, '[')) => self.scan_single(column, Token::Lbrak),
+            Some(&(column, ']')) => self.scan_single(column, Token::Rbrak),
             Some(&(column, _first_char)) => self.scan_word(column),
             None => {
                 self.current = None;

@@ -1,12 +1,12 @@
-use ast::ast::{child, sibling, Ast};
-use ast::tree::{NodeInfo, SimpleExpressionOp, TermOp, Tree, TreeNode};
+use ast::ast::{child, info, sibling, Ast};
+use ast::tree::{ExpressionOp, NodeInfo, SimpleExpressionOp, TermOp, Tree, TreeNode};
 use risc::instructions::OpCode::*;
 use risc::instructions::*;
 
 pub struct Codegen {
     pub instructions: Vec<Instruction>,
     rh: usize,
-    pub forward_fixups: Vec<Vec<usize>>,
+    pub last_expression_operator: Option<ExpressionOp>,
 }
 
 impl Codegen {
@@ -14,7 +14,7 @@ impl Codegen {
         Codegen {
             instructions: vec![],
             rh: 0,
-            forward_fixups: vec![],
+            last_expression_operator: None,
         }
     }
 
@@ -49,13 +49,15 @@ impl Codegen {
                         //
                     }
 
-                    NodeInfo::Expression(_operator) => {
+                    NodeInfo::Expression(operator) => {
                         self.generate_code(child(tree).unwrap());
                         self.generate_code(sibling(tree).unwrap());
                         // The "decr by 2" seems a bit too simple for what I do :D
                         self.rh -= 2;
 
-                        // TODO(pht) take the operator into account ?
+                        println!("Generating expression with operator {:?}", operator);
+                        self.last_expression_operator = Some(*operator);
+
                         self.instructions.push(Instruction::Register {
                             o: OpCode::SUB,
                             a: self.rh,
@@ -65,12 +67,16 @@ impl Codegen {
                     }
 
                     NodeInfo::IfStatement => {
+                        println!("Generating if statement");
+
                         // This generate the code for the "test" part of the if
                         self.generate_code(child(tree).unwrap());
 
                         // This has to branch either to the end, or not branch at all
+                        let condition = self.last_expression_condition();
+
                         self.instructions.push(Instruction::BranchOff {
-                            cond: BranchCondition::NE,
+                            cond: condition,
                             link: false,
                             offset: 0, // Offset will be fixedup later
                         });
@@ -88,7 +94,7 @@ impl Codegen {
                         let fixup = (destination_index - fixup_index) as i32;
 
                         self.instructions[fixup_index] = Instruction::BranchOff {
-                            cond: BranchCondition::NE,
+                            cond: condition,
                             link: false,
                             offset: fixup,
                         };
@@ -114,7 +120,6 @@ impl Codegen {
 
                         self.generate_code(child(tree).unwrap());
 
-
                         let aw_destination_index = self.instructions.len();
                         let aw_fixup = (aw_destination_index - aw_index) as i32;
                         self.instructions[aw_index] = Instruction::BranchOff {
@@ -122,19 +127,17 @@ impl Codegen {
                             link: false,
                             offset: aw_fixup,
                         };
-
                     }
 
                     NodeInfo::WhileStatement => {
-
                         let test_index = self.instructions.len();
 
                         // This generate the code for the "test" part of the if
                         self.generate_code(child(tree).unwrap());
 
-                        // This has to branch either to the end, or not branch at all
+                        let condition = self.last_expression_condition();
                         self.instructions.push(Instruction::BranchOff {
-                            cond: BranchCondition::NE,
+                            cond: condition,
                             link: false,
                             offset: 0, // Offset will be fixedup later
                         });
@@ -147,7 +150,7 @@ impl Codegen {
                         // Fixup do index
                         let do_offset = ((self.instructions.len() as i32) - (do_index as i32)) as i32;
                         self.instructions[do_index] = Instruction::BranchOff {
-                            cond: BranchCondition::NE,
+                            cond: condition,
                             link: false,
                             offset: do_offset,
                         };
@@ -157,7 +160,7 @@ impl Codegen {
                         self.instructions.push(Instruction::BranchOff {
                             cond: BranchCondition::AW,
                             link: false,
-                            offset: -back_to_test_offset,
+                            offset: -(back_to_test_offset + 1),
                         });
                     }
 
@@ -165,14 +168,88 @@ impl Codegen {
                         self.generate_code(child(tree).unwrap());
                     }
 
-                    NodeInfo::Ident(symbol) => {
-                        self.instructions.push(Instruction::Memory {
-                            u: MemoryMode::Load,
-                            a: self.rh,
-                            b: 14,
-                            offset: symbol.adr as u32,
-                        });
-                        self.rh += 1;
+                    NodeInfo::Ident(ident_symbol) => {
+                        println!("Generating code for ident symbol {:?}", ident_symbol);
+
+                        let selector = child(tree).unwrap();
+
+                        let mut ident_offset = ident_symbol.adr as u32;
+                        match info(selector) {
+                            None => {
+                                self.instructions.push(Instruction::Memory {
+                                    u: MemoryMode::Load,
+                                    a: self.rh,
+                                    b: 14,
+                                    offset: ident_offset,
+                                });
+
+                                self.rh += 1;
+                            }
+
+                            Some(NodeInfo::Constant(selector_index)) => {
+                                ident_offset += selector_index;
+
+                                // R[A] <- M[SP + ident_offset]
+                                self.instructions.push(Instruction::Memory {
+                                    u: MemoryMode::Load,
+                                    a: self.rh,
+                                    b: 14,
+                                    offset: ident_offset,
+                                });
+
+                                self.rh += 1;
+                            }
+
+                            Some(NodeInfo::Ident(selector_symbol)) => {
+                                let selector_offset = selector_symbol.adr as u32;
+
+                                // General form is
+                                // R[A] <- M[R[B] + ident_offset]
+                                //
+                                // We want to write:
+                                // self.instructions.push(Instruction::Memory {
+                                //     u: MemoryMode::Load,
+                                //     a: self.rh,
+                                //     b: X,
+                                //     offset: Y
+                                // });
+                                //
+                                // So, that, in the end:
+                                // R[X] != RH
+                                // M[R[X] + Y] = M[SP + ident_offset + M[SP + selector_offset]]
+
+                                // It would be easy to load the content of M[SP + selector_offset] in a new register:
+                                self.instructions.push(Instruction::Memory {
+                                    u: MemoryMode::Load,
+                                    a: self.rh + 1,
+                                    b: 14,
+                                    offset: selector_offset,
+                                });
+
+                                // Know, we need to add the stack pointer at least once ?
+                                self.instructions.push(Instruction::Register {
+                                    o: ADD,
+                                    a: self.rh + 1,
+                                    b: self.rh + 1,
+                                    c: 14,
+                                });
+
+                                // Finally, we can load the value into the previous register
+                                self.instructions.push(Instruction::Memory {
+                                    u: MemoryMode::Load,
+                                    a: self.rh,
+                                    b: self.rh + 1,
+                                    offset: ident_offset,
+                                });
+
+                                // And we prepare next value
+                                self.rh += 1;
+                            }
+
+                            _ => {
+                                todo!("unsupported type of assignment");
+                            }
+                        }
                     }
 
                     // TODO(pht) Constant should be allowed to be negative...
@@ -188,23 +265,87 @@ impl Codegen {
 
                     NodeInfo::Assignement => {
                         if let Tree::Node(TreeNode {
-                            info: NodeInfo::Ident(symbol),
-                            child: _child,
-                            sibling: _sibling,
+                            info: NodeInfo::Ident(lhs_symbol),
+                            child: selector,
+                            ..
                         }) = node.child.as_ref()
                         {
+                            // Generate code for value to be assigned
                             self.generate_code(&node.sibling);
 
                             // NOTE(pht): it is not absolutely clear if the rh = rh - 1
                             // has to be done before or after the STW ; but it only
                             // makes sense for me to do it before.
                             self.rh -= 1;
-                            self.instructions.push(Instruction::Memory {
-                                u: MemoryMode::Store,
-                                a: self.rh,
-                                b: 14,
-                                offset: symbol.adr as u32,
-                            });
+
+                            let mut offset = lhs_symbol.adr as u32;
+                            match info(selector) {
+                                None => {
+                                    self.instructions.push(Instruction::Memory {
+                                        u: MemoryMode::Store,
+                                        a: self.rh,
+                                        b: 14,
+                                        offset,
+                                    });
+                                }
+
+                                Some(NodeInfo::Constant(selector_index)) => {
+                                    // NOTE(pht) this only works for constant selector
+                                    offset += selector_index;
+
+                                    self.instructions.push(Instruction::Memory {
+                                        u: MemoryMode::Store,
+                                        a: self.rh,
+                                        b: 14,
+                                        offset,
+                                    });
+                                }
+
+                                // First part
+                                // Handle _storing_ at the current value of indent
+                                // This is the a[i] := 1 part
+                                Some(NodeInfo::Ident(selector_symbol)) => {
+                                    // So, what does not work is that the value of the index
+                                    // is ignored ; somehow there is nothing that properly loads the value of rh in the thingy :/
+
+                                    self.rh += 1;
+
+                                    // Load the index value into a new register
+                                    self.instructions.push(Instruction::Memory {
+                                        a: self.rh,
+                                        b: 14,
+                                        offset: selector_symbol.adr as u32,
+                                        u: MemoryMode::Load,
+                                    });
+
+                                    // Add the location of the base pointer
+                                    // self.rh <- self.rh + offset
+                                    self.instructions.push(Instruction::Register {
+                                        o: ADD,
+                                        a: self.rh,
+                                        b: self.rh,
+                                        c: 14,
+                                    });
+
+                                    // Store the value of the "previous" register at the new location
+                                    self.instructions.push(Instruction::Memory {
+                                        u: MemoryMode::Store,
+                                        a: self.rh - 1,
+                                        b: self.rh,
+                                        offset,
+                                    });
+
+                                    // Then store are the right location
+
+                                    self.rh -= 1;
+                                }
+
+                                // You'll have to generate the code for it
+                                // The offset cannot stay a constant...
+                                _ => {
+                                    todo!("Assignement with selector is only implemented for constants and identifiers")
+                                }
+                            }
                         }
                     }
 
@@ -246,6 +387,17 @@ impl Codegen {
                     }
                 }
             }
+        }
+    }
+
+    fn last_expression_condition(&mut self) -> BranchCondition {
+        match self.last_expression_operator.unwrap() {
+            ExpressionOp::Eql => BranchCondition::NE,
+            ExpressionOp::Neq => BranchCondition::EQ,
+            ExpressionOp::Lss => BranchCondition::GE,
+            ExpressionOp::Leq => BranchCondition::GT,
+            ExpressionOp::Gtr => BranchCondition::LE,
+            ExpressionOp::Geq => BranchCondition::LT,
         }
     }
 }
@@ -294,13 +446,13 @@ mod tests {
 
     #[test]
     fn generate_load_instruction_for_assignment() {
-        let mut scope = Scope::new();
+        let scope = Scope::new();
         scope.add("x");
         scope.add("y");
         let mut scanner = Scanner::new("y:=42");
         // Necessary because parse_statement_sequence is not the first thing to compile yet
         parser::scan_next(&mut scanner).unwrap();
-        let assignement = parser::parse_statement_sequence(&mut scanner, &mut scope).unwrap();
+        let assignement = parser::parse_statement_sequence(&mut scanner, &scope).unwrap();
 
         let mut codegen = Codegen::new();
         codegen.generate_code(&assignement);
@@ -320,14 +472,92 @@ mod tests {
     }
 
     #[test]
+    fn generate_load_instruction_for_array_assignment_at_constant() {
+        let scope = Scope::new();
+        scope.add("a");
+        let mut scanner = Scanner::new("a[2]:=42");
+        // Necessary because parse_statement_sequence is not the first thing to compile yet
+        parser::scan_next(&mut scanner).unwrap();
+        let assignement = parser::parse_statement_sequence(&mut scanner, &scope).unwrap();
+
+        let mut codegen = Codegen::new();
+        codegen.generate_code(&assignement);
+
+        assert_eq!(
+            codegen.instructions,
+            vec![
+                Instruction::RegisterIm { o: MOV, a: 0, b: 0, im: 42 },
+                Instruction::Memory {
+                    u: MemoryMode::Store,
+                    a: 0,
+                    b: 14,
+                    offset: 2
+                }
+            ]
+        )
+    }
+
+    #[test]
+    fn generate_load_instruction_for_array_assignment_at_variable() {
+        let scope = Scope::new();
+        scope.add("i"); // At address 0
+        scope.add("a"); // At address 1
+        let mut scanner = Scanner::new("i:=3;a[i]:=42");
+        // Necessary because parse_statement_sequence is not the first thing to compile yet
+        parser::scan_next(&mut scanner).unwrap();
+        let assignement = parser::parse_statement_sequence(&mut scanner, &scope).unwrap();
+
+        let mut codegen = Codegen::new();
+        codegen.generate_code(&assignement);
+
+        assert_eq!(
+            codegen.instructions,
+            vec![
+                // -------------------
+                // i:=3 (address 0)
+                // -------------------
+                // Put 3 in R0
+                Instruction::RegisterIm { a: 0, b: 0, o: MOV, im: 3 },
+                // Move content of R0 to address 0
+                Instruction::Memory {
+                    a: 0,
+                    b: 14,
+                    offset: 0,
+                    u: MemoryMode::Store,
+                },
+                // -------------------
+                // a[i]:=42
+                // -------------------
+                // PUT 42 in R0
+                Instruction::RegisterIm { a: 0, b: 0, o: MOV, im: 42 },
+                // Put the content of i (address 0) in R1
+                Instruction::Memory {
+                    a: 1,
+                    b: 14,
+                    offset: 0,
+                    u: MemoryMode::Load,
+                },
+                Instruction::Register { a: 1, b: 1, o: ADD, c: 14 },
+                // Put the content of R0 in address R1 + offset
+                Instruction::Memory {
+                    a: 0,
+                    b: 1,
+                    offset: 1,
+                    u: MemoryMode::Store,
+                },
+            ]
+        )
+    }
+
+    #[test]
     fn generate_load_instruction_for_multiple_assignments() {
-        let mut scope = Scope::new();
+        let scope = Scope::new();
         scope.add("x");
         scope.add("y");
         let mut scanner = Scanner::new("y:=42;x:=y");
         // Necessary because parse_statement_sequence is not the first thing to compile yet
         parser::scan_next(&mut scanner).unwrap();
-        let assignement = parser::parse_statement_sequence(&mut scanner, &mut scope).unwrap();
+        let assignement = parser::parse_statement_sequence(&mut scanner, &scope).unwrap();
 
         let mut codegen = Codegen::new();
         codegen.generate_code(&assignement);
@@ -360,13 +590,13 @@ mod tests {
 
     #[test]
     fn generate_instructions_for_multiplication() {
-        let mut scope = Scope::new();
+        let scope = Scope::new();
         scope.add("x");
         scope.add("y");
         let mut scanner = Scanner::new("x*y");
         // Necessary because parse_xxx is not the first thing to compile yet
         parser::scan_next(&mut scanner).unwrap();
-        let assignement = parser::parse_term(&mut scanner, &mut scope).unwrap();
+        let assignement = parser::parse_term(&mut scanner, &scope).unwrap();
 
         let mut codegen = Codegen::new();
         codegen.generate_code(&assignement);
@@ -582,7 +812,6 @@ mod tests {
                 }
             ]
         );
-        assert!(true);
     }
 
     #[test]
@@ -609,8 +838,6 @@ mod tests {
         let mut codegen = Codegen::new();
         codegen.generate_code(&assignement);
 
-        // TODO(pht) some of the offset in this code seem to be are wrong ; or maybe some AW instructions must be added.
-        // Try to find the culprit and fix it.
         assert_eq!(
             codegen.instructions,
             [
@@ -672,7 +899,7 @@ mod tests {
         let mut scanner = Scanner::new(
             "
       IF 0 = 1 THEN
-        x:= 1
+        x := 1
       ELSE
         IF 0 = 0 THEN
            x := 2;
@@ -731,7 +958,12 @@ mod tests {
                     link: false,
                 },
                 Instruction::RegisterIm { a: 0, b: 0, o: MOV, im: 2 },
-                Instruction::Memory { a: 0, b: 14, offset: 0, u: MemoryMode::Store },
+                Instruction::Memory {
+                    a: 0,
+                    b: 14,
+                    offset: 0,
+                    u: MemoryMode::Store
+                },
                 Instruction::RegisterIm { a: 0, b: 0, o: MOV, im: 0 },
                 Instruction::RegisterIm { a: 1, b: 0, o: MOV, im: 0 },
                 Instruction::Register { a: 0, b: 0, o: SUB, c: 1 },
@@ -782,7 +1014,6 @@ mod tests {
     }
     */
 
-
     #[test]
     fn generate_instructions_for_while_loop() {
         let scope = Scope::new();
@@ -805,7 +1036,12 @@ mod tests {
         assert_eq!(
             codegen.instructions,
             [
-                Instruction::Memory { a: 0, b: 14, offset: 0, u: MemoryMode::Load },
+                Instruction::Memory {
+                    a: 0,
+                    b: 14,
+                    offset: 0,
+                    u: MemoryMode::Load
+                },
                 Instruction::RegisterIm { a: 1, b: 0, o: MOV, im: 0 },
                 Instruction::Register { a: 0, b: 0, o: SUB, c: 1 },
                 Instruction::BranchOff {
@@ -822,11 +1058,10 @@ mod tests {
                 },
                 Instruction::BranchOff {
                     cond: BranchCondition::AW,
-                    offset: -6, // NOTE(pht) the offset will probably have to be something else
+                    offset: -7,
                     link: false,
                 },
-            ]);
-
+            ]
+        );
     }
-
 }

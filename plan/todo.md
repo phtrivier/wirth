@@ -1,16 +1,31 @@
-# Goal: Loops
+# Modernize simulator gui
 
-# Goal: Procedures
+Use slint 
+Add Step by step execution of the program ? Display the values 
 
-# Goal: Record types
+# Compiler Error handling
 
-# Goal: Array types
+- [ ] Nicely display the parsing / scanning erors instead of panicking
 
-# Goal: Optimization
+# Boolean expressions
+
+# Procedures
+
+(Nested scopes, etc...)
+
+# Record types
+
+# Separate compilation
+
+# Stuff leftout
+
+- elsif, finally ? 
+
+# Optimization
 
 Rewrite the tree to avoid unnecessary computations, optimize things, etc...
 
-# Goal: Improve code coverage
+# Improve code coverage
 ## Libraries
   - [ ] Just add more tests, maybe it's just acceptance tests missing...
 ## binaries
@@ -19,10 +34,6 @@ Rewrite the tree to avoid unnecessary computations, optimize things, etc...
   - [ ] Add integration test that reads simulated arguments and actually calls the lib.
   - [ ] Then simply exclude the "main" function from tarpaulin because it becomes irrelevant
 
-# Goal: Druid simulator gui
 
-Use druid (or something more modern than raylib ?)
-Add Step by step execution of the program ? Display the values 
-
-# Goal: Literate Programming editor
+# Goal: Literate Programming editor (or really ?)
 

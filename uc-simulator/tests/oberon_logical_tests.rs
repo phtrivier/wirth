@@ -74,7 +74,6 @@ fn variable_statement_is_executed_if_condition_is_true() {
     assert_eq!(s.memory(execution.stack_base, 2), [0, 4]);
 }
 
-
 #[test]
 fn all_statements_are_executed_if_condition_is_true() {
     let content = String::from(

@@ -45,8 +45,8 @@ pub enum BranchCondition {
 pub enum Instruction {
     Register { a: usize, b: usize, o: OpCode, c: usize },
     RegisterIm { a: usize, b: usize, o: OpCode, im: i32 },        // 'v' modified is implied by im > 0 or im < 0, I suppose ?
-    Memory { a: usize, b: usize, offset: u32, u: MemoryMode },    // weirdly, memory offsets are positive
-    Branch { cond: BranchCondition, c: usize, link: bool },       // I don't understand u/v enough to give them better names, yet
+    Memory { a: usize, b: usize, offset: u32, u: MemoryMode }, // memory offsets are positive, since they're mostly here to compute displacements from a known location - eg, a[i] if a is an array
+    Branch { cond: BranchCondition, c: usize, link: bool },    // I don't understand u/v enough to give them better names, yet
     BranchOff { cond: BranchCondition, offset: i32, link: bool }, // I don't understand u/v enough to give them better names, yet
 }
 

@@ -82,4 +82,14 @@
 
 # Goal: Parse a module with var declarations
 
-# Goal: Conditionnals
+# Goal: Conditionnals branching
+
+(Except elsif, which is just really too messy.)
+
+# Goal: Loops
+
+(And handle expressions other than =, so...)
+
+# Goal: Array types
+
+(Needed to make the equivalent of the list of primes ?)

@@ -49,7 +49,7 @@ impl Simulator {
     }
 
     pub fn execute(&mut self, execution: Execution) -> Result<(), ExecutionError> {
-        let debug = true;       //
+        let debug = true; //
 
         self.computer.regs[14] = execution.stack_base as i32;
 

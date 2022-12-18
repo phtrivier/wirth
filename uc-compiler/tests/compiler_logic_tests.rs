@@ -62,7 +62,7 @@ fn compile_else_condition_test() {
   MODULE Test;
       VAR x,y: INTEGER;
       BEGIN
-        IF 0 = 1 THEN
+        IF 0 < 1 THEN
           x:= 1
         ELSE
           x:= 2
@@ -80,7 +80,7 @@ fn compile_else_condition_test() {
             // Compare
             Instruction::Register { o: SUB, a: 0, b: 0, c: 1 },
             Instruction::BranchOff {
-                cond: BranchCondition::NE,
+                cond: BranchCondition::GE,
                 offset: 3,
                 link: false
             },
@@ -120,5 +120,3 @@ fn compile_else_condition_test() {
         ]
     )
 }
-
-// TODO(pht) compile other parts

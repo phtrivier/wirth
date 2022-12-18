@@ -1,3 +1,30 @@
+# Sun 2023-05-07
+
+Got my brain together, wrote some prose, and got the assignment working.
+I suppose I have everything to write the list of primes example ?
+In all cases, the "list of squares" is trivial !
+
+# Sat 2023-05-06
+
+Yea, almost 5 month laters, I finally start working on arrays index by variants.
+The assignment parts work surprinsingly well (`a[i] := x`).
+
+But the other sign of the assigneent does not work ! (`x != a[i]`) 
+
+# Fri 2022-12-23
+
+Basic arrays (with only constant indexing.)
+
+# Sun 2022-12-18
+
+Got basic conditionals working to make more intereseting loops. 
+
+However there is a subtle bug when the body of the loop contains assignements to multiple variables ; it seems like the loop is only really run once...
+
+I'm starting to feel like I would need a... disasembler to print the instructions nicely !!
+
+(How, and, obviously, it was an off-by-one error in the offset of the AW instruction. Which is kinda sucky, but, hey, it works, now ?)
+
 # Thu 2022-12-15
 
 So, this was hard, but we made it through if/then/else. 

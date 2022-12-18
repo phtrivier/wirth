@@ -39,7 +39,6 @@ mod tests {
 
         error = parse_statement(&mut scope, "WHILE 0 = 1 DO x:= 1; x:= 2").unwrap_err();
         assert_matches!(error, ParseError::PrematureEof);
-
     }
 
     #[test]
@@ -59,5 +58,4 @@ mod tests {
         let path = root.sibling().child();
         assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::StatementSequence);
     }
-
 }

@@ -96,6 +96,7 @@ impl Computer {
         match o {
             OpCode::MOV => {
                 self.regs[a] = value;
+                println!("R[{}] <- {}", a, value);
             }
             OpCode::LSL => {
                 self.regs[a] = self.regs[b] << value;
@@ -123,7 +124,10 @@ impl Computer {
                 self.regs[a] = self.regs[b] ^ value;
             }
             OpCode::ADD => {
-                self.regs[a] = self.regs[b] + value;
+                let old_b = self.regs[b];
+                let new_a = old_b + value;
+                self.regs[a] = new_a;
+                println!("R[{}] <- R[{}] ({}) + {} = {}", a, b, old_b, value, new_a);
             }
             OpCode::SUB => {
                 self.regs[a] = self.regs[b] - value;
@@ -151,7 +155,10 @@ impl Computer {
                 if adr > MEMORY_SIZE as i32 {
                     panic!("Attempt to load memory from address {}, bigger than computer memory.", adr)
                 }
-                self.regs[a] = self.mem[adr as usize];
+
+                let value = self.mem[adr as usize];
+                println!("R[{}] <- M[R{} + {}] = M[{} + {}] = {}", a, b, offset, self.regs[b], offset, value);
+                self.regs[a] = value;
                 self.update_flags(a);
             }
             MemoryMode::Store => {
@@ -162,6 +169,9 @@ impl Computer {
                 if adr > MEMORY_SIZE as i32 {
                     panic!("Attempt to store data at address {}, bigger than computer memory.", adr)
                 }
+
+                println!("M[R[{}] + {}] = M[{} + {}] = M[{}] <- R[{}] = {}", b, offset, self.regs[b], offset, adr, a, self.regs[a]);
+
                 self.mem[adr as usize] = self.regs[a];
             }
         }
@@ -177,6 +187,9 @@ impl Computer {
     }
 
     fn execute_branch_offset(&mut self, cond: BranchCondition, offset: i32, link: bool) {
+        println!("Testing if condition {:?} matches", cond);
+        println!("Self.neg_test {:?}?", self.neg_test);
+        println!("Self.z_test {:?}?", self.z_test);
         if self.matches_cond(cond) {
             if link {
                 self.regs[15] = self.pc as i32;

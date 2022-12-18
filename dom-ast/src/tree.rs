@@ -13,14 +13,21 @@ pub enum SimpleExpressionOp {
     Minus,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ExpressionOp {
     Eql,
+    Neq,
+    Lss,
+    Leq,
+    Gtr,
+    Geq,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Type {
+pub enum VarType {
     Integer,
+    Array(u32), // NOTE(pht) : this does not allow representing nested arrays, or arrays of record yet.
+                // We'll have to store the type definitions somewhere that can be accessible at runtime to allow that :/
 }
 
 #[derive(Debug, PartialEq)]
@@ -29,11 +36,11 @@ pub enum NodeInfo {
     Declarations,
     Declaration,
     Var,
-    Type(Type),
+    Type(VarType),
     StatementSequence,
     Assignement,
     Constant(u32),
-    Ident(Rc<Symbol>),
+    Ident(Rc<Symbol>), //
     Term(TermOp),
     SimpleExpression(SimpleExpressionOp),
     Expression(ExpressionOp),
@@ -41,7 +48,7 @@ pub enum NodeInfo {
     Then,
     Else,
     WhileStatement,
-    Do
+    Do,
 }
 
 #[derive(Debug)]

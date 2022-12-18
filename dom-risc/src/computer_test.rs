@@ -219,13 +219,13 @@ mod tests {
 
     #[test]
     fn test_successive_branch_offset_instructions() {
-            let mut c = Computer::new();
-            c.regs[0] = 0;
-            c.pc = 0;
-            c.neg_test = true;
-            exec(&mut c, BranchOff { cond: NE, offset: 1, link: false });
-            exec(&mut c, BranchOff { cond: AW, offset: 1, link: false });
-            assert_eq!(c.pc, 2);
+        let mut c = Computer::new();
+        c.regs[0] = 0;
+        c.pc = 0;
+        c.neg_test = true;
+        exec(&mut c, BranchOff { cond: NE, offset: 1, link: false });
+        exec(&mut c, BranchOff { cond: AW, offset: 1, link: false });
+        assert_eq!(c.pc, 2);
     }
 
     // NOTE(pht) previous test gives me enough confidence that exhaustively

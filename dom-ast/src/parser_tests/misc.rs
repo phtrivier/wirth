@@ -7,7 +7,6 @@ mod tests {
     use crate::parser::*;
     use crate::scanner::*;
     use crate::scope::*;
-    use crate::token::*;
     use crate::tree::*;
 
     fn scope(symbols: Vec<&str>) -> Scope {
@@ -102,6 +101,32 @@ mod tests {
         assert_matches!(ast::info(&tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "x");
     }
 
+    #[test]
+    fn can_parse_factor_with_constant_selector() {
+        let mut scope = scope(vec!["x"]);
+
+        let tree = parse_factor(&mut scope, "x[0]").unwrap();
+        assert_matches!(ast::info(&tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "x");
+
+        let mut root = ast::Path::root();
+
+        let path = root.child();
+        assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Constant(index) if *index == 0);
+    }
+
+    #[test]
+    fn can_parse_factor_with_variable_selector() {
+        let mut scope = scope(vec!["x", "i"]);
+
+        let tree = parse_factor(&mut scope, "x[i]").unwrap();
+        assert_matches!(ast::info(&tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "x");
+
+        let mut root = ast::Path::root();
+
+        let path = root.child();
+        assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "i");
+    }
+
     fn parse_term<'a>(scope: &'a Scope, content: &str) -> ParseResult {
         let mut scanner = Scanner::new(content);
         parser::scan_next(&mut scanner)?;
@@ -193,127 +218,5 @@ mod tests {
 
         let path = root.sibling();
         assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Constant(42));
-    }
-
-    fn finish_parsing(_scanner: &mut Scanner, _scope: &Scope) -> ParseResult {
-        Ok(ast::empty())
-    }
-
-    fn parse_var_declarations<'a>(scope: &'a mut Scope, content: &str) -> ParseResult {
-        let mut scanner = Scanner::new(content);
-        // Advance to the "VAR"
-        parser::scan_next(&mut scanner)?;
-        // Consume the "VAR"
-        parser::scan_next(&mut scanner)?;
-        parser::parse_var_declarations(&mut scanner, scope, &mut finish_parsing)
-    }
-
-    #[test]
-    fn fails_on_var_redeclaration() {
-        let mut scope = Scope::new();
-        scope.add("x");
-        let tree = parse_var_declarations(&mut scope, "VAR x: INTEGER;");
-        assert_matches!(tree, Err(ParseError::SymbolAlreadyDeclared(ident, ScanContext{ line: 0, column: 4})) if ident == "x");
-    }
-
-    #[test]
-    fn can_parse_single_var_declaration() {
-        let mut scope = Scope::new();
-        let tree = parse_var_declarations(&mut scope, "VAR x: INTEGER;").unwrap();
-        assert_matches!(ast::info(&tree).unwrap(), NodeInfo::Declarations);
-
-        let child_tree = ast::child(&tree).unwrap();
-        let mut root = ast::Path::root();
-        assert_matches!(root.follow(child_tree).unwrap(), NodeInfo::Declaration);
-
-        let mut path = root.child();
-        assert_matches!(path.follow(child_tree).unwrap(), NodeInfo::Var);
-
-        path = root.child().child();
-        assert_matches!(path.follow(child_tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "x");
-
-        path = root.child().sibling();
-        assert_matches!(path.follow(child_tree).unwrap(), NodeInfo::Type(Type::Integer));
-
-        assert_matches!(scope.lookup("x").unwrap().as_ref(), Symbol{name, ..} if name == "x");
-    }
-
-    #[test]
-    fn can_parse_multiple_var_declaration() {
-        let mut scope = Scope::new();
-        let root_tree = parse_var_declarations(&mut scope, "VAR x,y: INTEGER;").unwrap();
-
-        assert_matches!(ast::info(&root_tree).unwrap(), NodeInfo::Declarations);
-
-        let tree = ast::child(&root_tree).unwrap();
-        let mut root = ast::Path::root();
-        assert_matches!(root.follow(tree).unwrap(), NodeInfo::Declaration);
-
-        let mut path = root.child();
-        assert_matches!(path.follow(tree).unwrap(), NodeInfo::Var);
-
-        path = root.child().child();
-        assert_matches!(path.follow(tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "x");
-
-        path = root.child().sibling();
-        assert_matches!(path.follow(tree).unwrap(), NodeInfo::Type(Type::Integer));
-
-        path = root.sibling();
-        assert_matches!(path.follow(tree).unwrap(), NodeInfo::Declaration);
-
-        path = root.sibling().child();
-        assert_matches!(path.follow(tree).unwrap(), NodeInfo::Var);
-
-        path = root.sibling().child().child();
-        assert_matches!(path.follow(tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "y");
-
-        path = root.sibling().child().sibling();
-        assert_matches!(path.follow(tree).unwrap(), NodeInfo::Type(Type::Integer));
-    }
-
-    #[test]
-    fn can_parse_multiple_var_declarations() {
-        let mut scope = Scope::new();
-
-        let root_tree = parse_var_declarations(&mut scope, "VAR x,y: INTEGER; z: INTEGER;").unwrap();
-        assert_matches!(ast::info(&root_tree).unwrap(), NodeInfo::Declarations);
-
-        let tree = ast::child(&root_tree).unwrap();
-
-        let mut root = ast::Path::root();
-        assert_matches!(root.follow(tree).unwrap(), NodeInfo::Declaration);
-
-        let mut path = root.sibling();
-        assert_matches!(path.follow(tree).unwrap(), NodeInfo::Declaration);
-
-        path = root.sibling().sibling();
-        assert_matches!(path.follow(tree).unwrap(), NodeInfo::Declaration);
-
-        path = root.sibling().sibling().child();
-        assert_matches!(path.follow(tree).unwrap(), NodeInfo::Var);
-
-        path = root.sibling().sibling().child().child();
-        assert_matches!(path.follow(tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "z");
-    }
-
-    #[test]
-    fn can_parse_empty_declarations() {
-        let mut scope = Scope::new();
-        let mut scanner = Scanner::new("");
-
-        let root_tree = parser::parse_declarations(&mut scanner, &mut scope, &mut finish_parsing).unwrap();
-        assert_matches!(ast::info(&root_tree).unwrap(), NodeInfo::Declarations);
-
-        assert!(ast::is_empty(ast::child(&root_tree).unwrap()));
-    }
-
-    #[test]
-    fn can_parse_declarations() {
-        let mut scope = Scope::new();
-        let mut scanner = Scanner::new("VAR x,y: INTEGER;");
-        parser::scan_next(&mut scanner).unwrap();
-        let root_tree = parser::parse_declarations(&mut scanner, &mut scope, &mut finish_parsing).unwrap();
-        assert_matches!(ast::info(&root_tree).unwrap(), NodeInfo::Declarations);
-        assert!(!ast::is_empty(ast::child(&root_tree).unwrap()));
     }
 }
