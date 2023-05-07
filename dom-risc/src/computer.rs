@@ -130,7 +130,10 @@ impl Computer {
                 println!("R[{}] <- R[{}] ({}) + {} = {}", a, b, old_b, value, new_a);
             }
             OpCode::SUB => {
+                let old_b = self.regs[b];
+                let new_a = old_b - value;
                 self.regs[a] = self.regs[b] - value;
+                println!("R[{}] <- R[{}] ({}) - {} = {}", a, b, old_b, value, new_a);
             }
             OpCode::MUL => {
                 self.regs[a] = self.regs[b] * value;

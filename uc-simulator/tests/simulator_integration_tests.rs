@@ -82,9 +82,9 @@ fn primes() {
     };
     s.execute(execution).unwrap();
 
-    let base = 30;
+    let dump_from = 30;
     let expected = [2, 3, 5, 7, 11, 13, 17, 19, 23];
-    assert_eq!(s.memory(base + 1, expected.len()), expected);
+    assert_eq!(s.memory(dump_from + 1, expected.len()), expected);
 }
 
 #[test]

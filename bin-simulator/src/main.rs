@@ -19,7 +19,7 @@ struct Opt {
     compile: bool,
 
     /// Maximum number of cycles to run before failing execution
-    #[structopt(short = "m", name = "max-cyles", default_value = "9999")]
+    #[structopt(short = "m", name = "max-cyles", default_value = "99999")]
     execution_max_cycles: u32,
 
     /// Stack base address when simulating process

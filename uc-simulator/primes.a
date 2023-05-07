@@ -1,6 +1,21 @@
 * Compute the first N primes
+*
+* Input (hardcoded)
+
 #L      300  ; Number of primes to find
+
+* Output
+*
+* The program will put all primes at an arbitrary location.
+*
+* To run it, do:
+*
+*    cargo run --bin simulator uc-simulator/primes.a --memory-dump-from 30
+*
+*
+
 #PRIME   30  ; Location for primes (TODO(pht) make sure it's lower than the size of the program)
+
 * Registers: 
 *  R1 : J (iterator from 0 to L)
 *  R2 : N (currently tested integer)
@@ -10,6 +25,7 @@
 *  R6 : R (N % PRIME[K])
 *  R7 : J-L (used for branching)
 *  R8 : Q - MEM[PRIME + K] (used to stop computation early)
+
 @START  MOV R1,1            ; J <- 1
         MOV R2,3            ; N <- 3
         MOV R3,1            ; K <- 1
