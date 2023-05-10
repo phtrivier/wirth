@@ -1,8 +1,7 @@
-use raylib::prelude::*;
-
 use simulator::Execution;
 
-const INTERLINE: f32 = 20.0;
+use gtk::prelude::*;
+use relm4::prelude::*;
 
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -39,6 +38,159 @@ struct Opt {
     // debug: bool,
 }
 
+struct AppModel {
+    counter: u8,
+}
+
+#[derive(Debug)]
+enum AppMsg {
+    Increment,
+    Decrement,
+}
+
+
+#[relm4::component]
+impl SimpleComponent for AppModel {
+
+    type Init = u8;
+
+    type Input = AppMsg;
+    type Output = ();
+
+    view! {
+        gtk::Window {
+            set_title: Some("Wirth Simulator"),
+            set_default_width: 1280,
+            set_default_height: 720,
+
+            gtk::Box {
+                set_orientation: gtk::Orientation::Horizontal,
+                set_spacing: 8,
+                set_margin_all: 5,
+                set_homogeneous: true,
+
+                // Code column
+                gtk::Box {
+                    set_orientation: gtk::Orientation::Vertical,
+
+                    gtk::Frame {
+                        set_label: Some("Code"),
+                        set_vexpand: true,
+                        gtk::Box {
+                            gtk::Label {
+                                set_label: "TODO"
+                            }
+                        }
+
+                    },
+
+                    gtk::ActionBar {
+                        pack_start = &gtk::Box {
+                            set_spacing: 8,
+                            set_orientation: gtk::Orientation::Horizontal,
+
+                            gtk::Button {
+                                set_label: "Step",
+                                connect_clicked[sender] => move |_| {
+                                    println!("TODO: Step")
+                                },
+                            },
+
+                            gtk::Button {
+                                set_label: "Run",
+                                connect_clicked[sender] => move |_| {
+                                    println!("TODO: Run")
+                                }
+                            }
+                        }
+                    }
+                },
+
+                // Registers column
+                gtk::Box {
+                    set_orientation: gtk::Orientation::Vertical,
+
+                    gtk::Frame {
+                        set_label: Some("Registers"),
+                        set_vexpand: true,
+                        gtk::Box {
+                            gtk::Label {
+                                set_label: "TODO"
+                            }
+                        }
+
+                    }
+                },
+
+                // Memory column
+                gtk::Box {
+                    set_orientation: gtk::Orientation::Vertical,
+
+                    gtk::Frame {
+                        set_label: Some("Memory"),
+                        set_vexpand: true,
+                        gtk::Box {
+                            gtk::Label {
+                                set_label: "TODO"
+                            }
+                        }
+
+                    }
+                }
+
+
+                /*
+                gtk::Button {
+                    set_label: "Increment",
+                    connect_clicked[sender] => move |_| {
+                        sender.input(AppMsg::Increment);
+                    }
+                },
+
+                gtk::Button::with_label("Decrement") {
+                    connect_clicked[sender] => move |_| {
+                        sender.input(AppMsg::Decrement);
+                    }
+                },
+
+                gtk::Label {
+                    #[watch]
+                    set_label: &format!("Counter: {}", model.counter),
+                    set_margin_all: 5,
+                }
+                */
+            }
+        }
+    }
+
+    // Initialize the UI.
+    fn init(
+        counter: Self::Init,
+        root: &Self::Root,
+        sender: ComponentSender<Self>,
+    ) -> ComponentParts<Self> {
+        let model = AppModel { counter };
+
+        // Insert the macro code generation here
+        let widgets = view_output!();
+
+        ComponentParts { model, widgets }
+    }
+
+    fn update(&mut self, msg: Self::Input, _sender: ComponentSender<Self>) {
+        match msg {
+            AppMsg::Increment => {
+                self.counter = self.counter.wrapping_add(1);
+            }
+            AppMsg::Decrement => {
+                self.counter = self.counter.wrapping_sub(1);
+            }
+        }
+    }
+}
+
+
+
 #[cfg(not(tarpaulin_include))]
 fn main() {
     let opt = Opt::from_args();
@@ -52,9 +204,13 @@ fn main() {
         simulator::Simulator::from_assembler(&content).unwrap()
     };
 
+    let app = RelmApp::new("wirth.simulator.gui");
+    app.run::<AppModel>(0);
+
+    /*
     let (mut rl, thread) = raylib::init().resizable().size(640 * 2, 480 * 2).title("Wirth Simulator").build();
 
-    // https://en.wikipedia.org/wiki/Wikipedia:Zenburn
+    // // https://en.wikipedia.org/wiki/Wikipedia:Zenburn
     let background = Color::from_hex("3F3F3F").unwrap();
     let foreground = Color::from_hex("DCDCCC").unwrap();
 
@@ -99,4 +255,5 @@ fn main() {
             d.draw_text_ex(&font, &text, Vector2::new(700.0, y), size, 1.0, foreground);
         }
     }
+*/
 }

@@ -207,7 +207,7 @@ impl Computer {
             BranchCondition::MI => self.neg_test,
             BranchCondition::EQ => self.z_test,
             BranchCondition::LT => self.neg_test,
-            BranchCondition::LE => (self.neg_test || self.z_test),
+            BranchCondition::LE => self.neg_test || self.z_test,
             BranchCondition::AW => true,
             BranchCondition::PL => !self.neg_test,
             BranchCondition::NE => !self.z_test,

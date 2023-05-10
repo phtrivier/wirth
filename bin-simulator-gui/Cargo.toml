@@ -10,10 +10,9 @@ edition = "2018"
 name = "simulator-gui"
 path = "src/main.rs"
 
-
 [dependencies]
+relm4 = "0.5.0"
+relm4-components = "0.5.0"
 structopt = "0.3"
-raylib = { git = "https://github.com/deltaphc/raylib-rs", branch = "master" }
 simulator = { path = "../uc-simulator"}
-# NOTE(pht) I'm not sure if something can/should be factored in simulator...
 risc = { path = "../dom-risc"}
