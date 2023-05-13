@@ -1,3 +1,22 @@
+# Sat 2023-05-13
+
+Played with egui, and happilly surprised ! In my case, immediate gui is pretty
+adapted. (Although I would have like to be able to do a fancy version that runs
+commands with a bit of a delay, but that woul involve too much synchro already.)
+
+Not sure what the next step, is, though...
+
+# Wed 2023-05-10
+
+Played with relm4 to see how hard a GUI would be. 
+The framework seems powerfull, and native, system-like looking guis are nice ;
+but it seems overkill for what I have in mind.
+
+# Tue 2023-05-09
+
+Played with slint-rs to generate a UI. A bit too complex, espacially given that their
+doc is incomplete.
+
 # Sun 2023-05-07
 
 Got my brain together, wrote some prose, and got the assignment working.

@@ -93,3 +93,7 @@
 # Goal: Array types
 
 (Needed to make the equivalent of the list of primes ?)
+
+# Modernize simulator gui
+
+Ended up using egui rather than more modern stuff. Enough for the simulator gui. 
