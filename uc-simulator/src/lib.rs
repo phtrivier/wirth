@@ -15,7 +15,6 @@ pub enum ExecutionError {
 
 #[derive(Debug, Copy, Clone)]
 pub struct Execution {
-    pub program_address: usize,
     pub stack_base: usize,
     pub max_cycles: u32,
 }
@@ -51,7 +50,7 @@ impl Simulator {
     pub fn execute(&mut self, execution: Execution) -> Result<(), ExecutionError> {
         let debug = true; //
 
-        self.computer.regs[14] = execution.stack_base as i32;
+        self.start(execution.stack_base as i32);
 
         self.computer.execute(execution.max_cycles, debug);
 
@@ -60,5 +59,18 @@ impl Simulator {
         } else {
             Err(ExecutionError::MaxCycleReached)
         }
+    }
+
+    pub fn start(&mut self, stack_base: i32) {
+        self.computer.regs[14] = stack_base;
+    }
+
+    pub fn execute_next(&mut self) {
+        let debug = true;
+        self.computer.execute_next(debug);
+    }
+
+    pub fn pc(&self) -> usize {
+        self.computer.pc
     }
 }

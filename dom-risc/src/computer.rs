@@ -41,6 +41,18 @@ impl Computer {
         let mut cycles = 0;
 
         loop {
+            self.execute_next(debug);
+            if cycles > max_cycles {
+                if debug {
+                    println!("Reached max cycles count {}, aborting.", max_cycles);
+                }
+                break;
+            }
+            cycles += 1;
+        }
+    }
+
+    pub fn execute_next(&mut self, debug: bool) {
             if debug {
                 println!("----------------- PC = {} --------------", { self.pc });
             }
@@ -69,17 +81,7 @@ impl Computer {
                 if debug {
                     println!("Program finished succesfully.")
                 }
-                break;
             }
-
-            if cycles > max_cycles {
-                if debug {
-                    println!("Reached max cycles count {}, aborting.", max_cycles);
-                }
-                break;
-            }
-            cycles += 1;
-        }
     }
 
     pub fn execute_instruction(&mut self, i: Instruction, _debug: bool) {

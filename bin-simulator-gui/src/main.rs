@@ -58,15 +58,20 @@ fn main() {
     } else {
         simulator::Simulator::from_assembler(&content).unwrap()
     };
+    sim.start(opt.execution_stack_base as i32);
+
+    let memory_dump_from = opt.memory_dump_from;
 
     eframe::run_native(
         "Wirth simulator",
         options,
-        Box::new(|_cc| -> Box<dyn App> {
-
-            Box::<SimulatorGui>::new(SimulatorGui {
-                simulator: RefCell::new(sim)
-            })
+        Box::new(move |_cc| -> Box<dyn App> {
+            let gui = SimulatorGui {
+                simulator: RefCell::new(sim),
+                memory_dump_from,
+                memory_dump_count: 100
+            };
+            Box::<SimulatorGui>::new(gui)
 
         })
     ).unwrap();
