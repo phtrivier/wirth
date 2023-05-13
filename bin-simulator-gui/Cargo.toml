@@ -13,7 +13,8 @@ path = "src/main.rs"
 
 [dependencies]
 structopt = "0.3"
-raylib = { git = "https://github.com/deltaphc/raylib-rs", branch = "master" }
+egui = "0.21.0"
+eframe = "0.21.0"
 simulator = { path = "../uc-simulator"}
 # NOTE(pht) I'm not sure if something can/should be factored in simulator...
 risc = { path = "../dom-risc"}
