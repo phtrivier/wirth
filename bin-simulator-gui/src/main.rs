@@ -1,4 +1,3 @@
-use egui;
 use std::cell::RefCell;
 
 use bin_simulator_gui::SimulatorGui;
@@ -20,8 +19,8 @@ struct Opt {
     compile: bool,
 
     /// Maximum number of cycles to run before failing execution
-    #[structopt(short = "m", name = "max-cyles", default_value = "9999")]
-    execution_max_cycles: u32,
+    // #[structopt(short = "m", name = "max-cyles", default_value = "9999")]
+    // execution_max_cycles: u32,
 
     /// Stack base address when simulating process
     #[structopt(short = "s", name = "stack-base", long, default_value = "1000")]
@@ -38,7 +37,6 @@ struct Opt {
     // #[structopt(short, long)]
     // debug: bool,
 }
-
 
 #[cfg(not(tarpaulin_include))]
 fn main() {
@@ -69,13 +67,12 @@ fn main() {
             let gui = SimulatorGui {
                 simulator: RefCell::new(sim),
                 memory_dump_from,
-                memory_dump_count: 100
+                memory_dump_count: 100,
             };
             Box::<SimulatorGui>::new(gui)
-
-        })
-    ).unwrap();
-
+        }),
+    )
+    .unwrap();
 
     // let (mut rl, thread) = raylib::init().resizable().size(640 * 2, 480 * 2).title("Wirth Simulator").build();
 
@@ -125,8 +122,5 @@ fn main() {
     //     }
     // }
 
-    use bin_simulator_gui::{W, H};
-
-
-
+    use bin_simulator_gui::{H, W};
 }

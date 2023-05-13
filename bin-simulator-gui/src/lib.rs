@@ -1,7 +1,6 @@
-use eframe;
 use egui::{self, Color32, FontId, RichText};
-use simulator::{Execution, ExecutionError, Simulator};
-use std::{cell::RefCell, thread, time};
+use simulator::{Execution, Simulator};
+use std::cell::RefCell;
 
 pub struct SimulatorGui {
     pub simulator: RefCell<simulator::Simulator>,
@@ -16,7 +15,7 @@ impl eframe::App for SimulatorGui {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let mut simulator = self.simulator.borrow_mut();
 
-        egui::CentralPanel::default().show(&ctx, |ui| {
+        egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal_centered(|ui| {
                 program_column(ui, &simulator);
 
@@ -46,7 +45,7 @@ fn program_column(ui: &mut egui::Ui, simulator: &Simulator) {
                     let mut i = 0;
                     while i < 100 {
                         code_memory_row(grid, i, mem[i], simulator.pc());
-                        i = i + 1;
+                        i += 1;
                     }
                 });
             });
@@ -65,7 +64,7 @@ fn memory_column(ui: &mut egui::Ui, simulator: &Simulator, model: &SimulatorGui)
                 let mut i = 0;
                 while i < 100 {
                     main_memory_row(grid, model.memory_dump_from + i, mem[i]);
-                    i = i + 1;
+                    i += 1;
                 }
             });
         });
@@ -82,7 +81,7 @@ fn register_column(ui: &mut egui::Ui, simulator: &mut Simulator) {
             let mut i = 0;
             while i < 15 {
                 register_row(grid, i, registers[i]);
-                i = i + 1;
+                i += 1;
             }
         });
 
