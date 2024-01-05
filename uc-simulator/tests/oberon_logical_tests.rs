@@ -16,7 +16,6 @@ fn statement_is_not_executed_if_condition_is_false() {
     );
     let mut s = Simulator::from_oberon(&content).unwrap();
     let execution = Execution {
-        program_address: 0,
         stack_base: 100,
         max_cycles: 20,
     };
@@ -37,11 +36,7 @@ fn statement_is_executed_if_condition_is_true() {
   END Test.",
     );
     let mut s = Simulator::from_oberon(&content).unwrap();
-    let execution = Execution {
-        program_address: 0,
-        stack_base: 100,
-        max_cycles: 20,
-    };
+    let execution = Execution { stack_base: 100, max_cycles: 20 };
     s.execute(execution).unwrap();
     assert_eq!(s.memory(execution.stack_base, 2), [0, 1]);
 }
@@ -65,11 +60,7 @@ fn variable_statement_is_executed_if_condition_is_true() {
   END Test.",
     );
     let mut s = Simulator::from_oberon(&content).unwrap();
-    let execution = Execution {
-        program_address: 0,
-        stack_base: 100,
-        max_cycles: 20,
-    };
+    let execution = Execution { stack_base: 100, max_cycles: 20 };
     s.execute(execution).unwrap();
     assert_eq!(s.memory(execution.stack_base, 2), [0, 4]);
 }
@@ -88,11 +79,7 @@ fn all_statements_are_executed_if_condition_is_true() {
   END Test.",
     );
     let mut s = Simulator::from_oberon(&content).unwrap();
-    let execution = Execution {
-        program_address: 0,
-        stack_base: 100,
-        max_cycles: 20,
-    };
+    let execution = Execution { stack_base: 100, max_cycles: 20 };
     s.execute(execution).unwrap();
     assert_eq!(s.memory(execution.stack_base, 3), [0, 1, 2]);
 }
@@ -113,11 +100,7 @@ fn else_statement_is_executed_if_condition_is_false() {
   END Test.",
     );
     let mut s = Simulator::from_oberon(&content).unwrap();
-    let execution = Execution {
-        program_address: 0,
-        stack_base: 100,
-        max_cycles: 20,
-    };
+    let execution = Execution { stack_base: 100, max_cycles: 20 };
     s.execute(execution).unwrap();
     assert_eq!(s.memory(execution.stack_base, 3), [0, 2, 3]);
 }
@@ -144,11 +127,7 @@ fn more_nested_else_if() {
   END Test.",
     );
     let mut s = Simulator::from_oberon(&content).unwrap();
-    let execution = Execution {
-        program_address: 0,
-        stack_base: 100,
-        max_cycles: 20,
-    };
+    let execution = Execution { stack_base: 100, max_cycles: 20 };
     s.execute(execution).unwrap();
     assert_eq!(s.memory(execution.stack_base, 3), [0, 3, 0]);
 }
@@ -174,11 +153,7 @@ fn more_nested_else_if_but_the_other_way_around() {
   END Test.",
     );
     let mut s = Simulator::from_oberon(&content).unwrap();
-    let execution = Execution {
-        program_address: 0,
-        stack_base: 100,
-        max_cycles: 50,
-    };
+    let execution = Execution { stack_base: 100, max_cycles: 50 };
     s.execute(execution).unwrap();
     assert_eq!(s.memory(execution.stack_base, 2), [0, 1]);
 }
@@ -213,11 +188,7 @@ fn nested_else_statement_is_executed_if_condition_is_false() {
   END Test.",
     );
     let mut s = Simulator::from_oberon(&content).unwrap();
-    let execution = Execution {
-        program_address: 0,
-        stack_base: 100,
-        max_cycles: 50,
-    };
+    let execution = Execution { stack_base: 100, max_cycles: 50 };
     s.execute(execution).unwrap();
     assert_eq!(s.memory(execution.stack_base, 3), [0, 5, 4]);
 }

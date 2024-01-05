@@ -18,7 +18,6 @@ fn arrays_values_can_be_set_by_constant_index() {
     );
     let mut s = Simulator::from_oberon(&content).unwrap();
     let execution = Execution {
-        program_address: 0,
         stack_base: 100,
         max_cycles: 50,
     };
@@ -42,7 +41,6 @@ fn arrays_values_can_be_accessed_by_constant_index() {
     );
     let mut s = Simulator::from_oberon(&content).unwrap();
     let execution = Execution {
-        program_address: 0,
         stack_base: 100,
         max_cycles: 50,
     };
@@ -70,11 +68,7 @@ fn arrays_values_can_be_accessed_by_variable_index() {
   END Test.",
     );
     let mut s = Simulator::from_oberon(&content).unwrap();
-    let execution = Execution {
-        program_address: 0,
-        stack_base: 100,
-        max_cycles: 50,
-    };
+    let execution = Execution { stack_base: 100, max_cycles: 50 };
     s.execute(execution).unwrap();
     assert_eq!(s.memory(execution.stack_base, 6), [0, 6, 1, 5, 6, 7]);
 }

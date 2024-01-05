@@ -19,7 +19,6 @@ fn full_program_generate_list_of_5_squares() {
     );
     let mut s = Simulator::from_oberon(&content).unwrap();
     let execution = Execution {
-        program_address: 0,
         stack_base: 100,
         max_cycles: 100,
     };

@@ -88,7 +88,6 @@ fn main() {
 
     let success = simulator
         .execute(Execution {
-            program_address: 0,
             max_cycles: opt.execution_max_cycles,
             stack_base: opt.execution_stack_base,
         })

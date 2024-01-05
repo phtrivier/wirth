@@ -16,7 +16,6 @@ fn multiple_assignments_can_be_chained() {
     );
     let mut s = Simulator::from_oberon(&content).unwrap();
     let execution = Execution {
-        program_address: 0,
         stack_base: 100,
         max_cycles: 20,
     };

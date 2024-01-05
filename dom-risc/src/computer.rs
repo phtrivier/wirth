@@ -41,7 +41,10 @@ impl Computer {
         let mut cycles = 0;
 
         loop {
-            self.execute_next(debug);
+            let done = self.execute_next(debug);
+            if done {
+                break;
+            }
             if cycles > max_cycles {
                 if debug {
                     println!("Reached max cycles count {}, aborting.", max_cycles);
@@ -52,36 +55,38 @@ impl Computer {
         }
     }
 
-    pub fn execute_next(&mut self, debug: bool) {
+    pub fn execute_next(&mut self, debug: bool) -> bool {
+        if debug {
+            println!("----------------- PC = {} --------------", { self.pc });
+        }
+
+        // Read current instruction
+        let ir: i32 = self.mem[self.pc];
+        // NOTE(pht): we panic if instruction is invalid, this could
+        // be done by returning an error, etc...
+
+        let instruction = Instruction::parse(ir as u32).unwrap();
+
+        if debug {
+            println!("Instruction {:?}", instruction);
+        }
+        // Set PC to the address of next instruction ; unless a branch instruction
+        // is run, this will be the next instruction in memory.
+        self.pc += 1;
+
+        if debug {
+            println!("Setting PC to next value {:?}", self.pc);
+        }
+
+        self.execute_instruction(instruction, debug);
+
+        if self.pc == 0 {
             if debug {
-                println!("----------------- PC = {} --------------", { self.pc });
+                println!("Program finished succesfully.")
             }
-
-            // Read current instruction
-            let ir: i32 = self.mem[self.pc];
-            // NOTE(pht): we panic if instruction is invalid, this could
-            // be done by returning an error, etc...
-
-            let instruction = Instruction::parse(ir as u32).unwrap();
-
-            if debug {
-                println!("Instruction {:?}", instruction);
-            }
-            // Set PC to the address of next instruction ; unless a branch instruction
-            // is run, this will be the next instruction in memory.
-            self.pc += 1;
-
-            if debug {
-                println!("Setting PC to next value {:?}", self.pc);
-            }
-
-            self.execute_instruction(instruction, debug);
-
-            if self.pc == 0 {
-                if debug {
-                    println!("Program finished succesfully.")
-                }
-            }
+            return true;
+        }
+        return false
     }
 
     pub fn execute_instruction(&mut self, i: Instruction, _debug: bool) {

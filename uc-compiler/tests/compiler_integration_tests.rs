@@ -5,10 +5,11 @@ use risc::instructions::*;
 fn compile_assignement_program() {
     let content = String::from(
         "
+  (* This is a test module *)
   MODULE Test;
       VAR x,y: INTEGER;
       BEGIN
-        y:= 42;
+        y:= 42; (* Assign to an important variable *)
         x:=y
     END Test.
   ",

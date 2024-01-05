@@ -68,6 +68,7 @@ pub struct Scan {
 pub enum ScanErrorType {
     InvalidChar(char), // char is not ascii
     UnexpectedNewLine,
+    UnterminatedComment,
 }
 
 #[derive(Clone, PartialEq, Debug)]

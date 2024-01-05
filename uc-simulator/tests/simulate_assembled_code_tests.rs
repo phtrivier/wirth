@@ -4,7 +4,7 @@ use simulator::*;
 
 #[test]
 fn assembled_code() {
-        let program = "
+    let program = "
     * A program that incruments R1 until it's a certain value
     #FOO    3             ; Number of iterations remaining
     #BAR    2
@@ -20,8 +20,7 @@ fn assembled_code() {
     ";
 
     let mut s = Simulator::from_assembler(program).unwrap();
-        let execution = Execution {
-        program_address: 0,
+    let execution = Execution {
         stack_base: 100,
         max_cycles: 50,
     };

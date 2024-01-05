@@ -167,13 +167,31 @@ impl LineScanner<'_> {
             }
         }
     }
+
+    fn skip_comment(&mut self, column: usize) -> Option<ScanResult> {
+        loop {
+            let mut p = self.chars.peek();
+            if let None = p {
+                return self.error_at(column, ScanErrorType::UnterminatedComment);
+            }
+            if let Some(&(_column, '*')) = p {
+                self.forward();
+                p = self.chars.peek();
+                if let Some(&(_column, ')')) = p {
+                    self.forward();
+                    return self.next();
+                }
+            }
+            self.forward();
+        }
+    }
 }
 
 impl Iterator for LineScanner<'_> {
     type Item = ScanResult;
 
     fn next(&mut self) -> Option<ScanResult> {
-        let peek = self.chars.peek();
+        let mut peek = self.chars.peek();
         match peek {
             Some(&(_column, c)) if (c == ' ' || c == '\t') => self.skip_whitespaces(),
             Some(&(column, '\n')) => {
@@ -191,7 +209,16 @@ impl Iterator for LineScanner<'_> {
             Some(&(column, '<')) => self.scan_sigil(column, '<'),
             Some(&(column, ';')) => self.scan_single(column, Token::Semicolon),
             Some(&(column, ',')) => self.scan_single(column, Token::Comma),
-            Some(&(column, '(')) => self.scan_single(column, Token::Lparen),
+            Some(&(column, '(')) => {
+                self.forward();
+                peek = self.chars.peek();
+                println!("peek {:?}", peek);
+                if let Some(&(_column, '*')) = peek {
+                    self.skip_comment(column)
+                } else {
+                    self.token_at(column, Token::Lparen)
+                }
+            }
             Some(&(column, ')')) => self.scan_single(column, Token::Rparen),
             Some(&(column, '+')) => self.scan_single(column, Token::Plus),
             Some(&(column, '-')) => self.scan_single(column, Token::Minus),

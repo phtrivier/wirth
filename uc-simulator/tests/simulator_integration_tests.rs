@@ -34,7 +34,6 @@ fn invalid_memory_bounds() {
 fn incomplete_execution() {
     let mut s = from_assembler("MOV R0,0\nMOV R1,1\nMOV R2,2");
     let execution = Execution {
-        program_address: 0,
         stack_base: 0,
         max_cycles: 2,
     };
@@ -51,7 +50,6 @@ fn count_to_3() {
     let mut s = from_assembler_file("count_to_3.a");
 
     let execution = Execution {
-        program_address: 0,
         stack_base: 0,
         max_cycles: 50,
     };
@@ -64,7 +62,6 @@ fn count_to_3() {
 fn squares() {
     let mut s = from_assembler_file("squares.a");
     let execution = Execution {
-        program_address: 0,
         stack_base: 0,
         max_cycles: 150,
     };
@@ -76,7 +73,6 @@ fn squares() {
 fn primes() {
     let mut s = from_assembler_file("primes.a");
     let execution = Execution {
-        program_address: 0,
         stack_base: 0,
         max_cycles: 99999,
     };
@@ -99,7 +95,6 @@ fn oberon_assignments() {
     let content = String::from("MODULE Test; VAR x,y: INTEGER; BEGIN x:=42;y:=x END Test.");
     let mut s = Simulator::from_oberon(&content).unwrap();
     let execution = Execution {
-        program_address: 0,
         stack_base: 100,
         max_cycles: 5,
     };
@@ -112,7 +107,6 @@ fn oberon_arithmetic() {
     let content = String::from("MODULE Test; VAR x,y: INTEGER; BEGIN x:=40+2;y:=((x+4)*2)/4-(10/2) END Test.");
     let mut s = Simulator::from_oberon(&content).unwrap();
     let execution = Execution {
-        program_address: 0,
         stack_base: 100,
         max_cycles: 20,
     };

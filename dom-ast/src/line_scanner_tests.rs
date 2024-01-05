@@ -218,4 +218,17 @@ mod tests {
             ],
         );
     }
+
+    #[test]
+    fn test_ignores_comments() {
+        let mut scanner = LineScanner::new(0, "IF (* blah *) (");
+        assert_scans_all(&mut scanner, vec![(0, 0, Token::If), (0, 14, Token::Lparen)]);
+    }
+
+    #[test]
+    fn test_returns_error_on_unfinished_comments() {
+        let mut scanner = LineScanner::new(0, "(*");
+        assert_scans_error(&mut scanner, 0, 0, ScanErrorType::UnterminatedComment);
+        assert_done(&mut scanner);
+    }
 }

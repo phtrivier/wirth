@@ -17,7 +17,6 @@ fn while_statement_is_executed_until_condition_is_false() {
     );
     let mut s = Simulator::from_oberon(&content).unwrap();
     let execution = Execution {
-        program_address: 0,
         stack_base: 100,
         max_cycles: 50,
     };
@@ -42,7 +41,6 @@ fn while_statement_is_executed_until_condition_is_false_with_nested_body() {
     );
     let mut s = Simulator::from_oberon(&content).unwrap();
     let execution = Execution {
-        program_address: 0,
         stack_base: 100,
         max_cycles: 60,
     };
