@@ -31,6 +31,7 @@ impl eframe::App for SimulatorGui {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 fn program_column(ui: &mut egui::Ui, simulator: &Simulator) {
     ui.vertical(|ui| {
         ui.set_width(W * 0.33);
@@ -53,6 +54,7 @@ fn program_column(ui: &mut egui::Ui, simulator: &Simulator) {
     });
 }
 
+#[cfg(not(tarpaulin_include))]
 fn memory_column(ui: &mut egui::Ui, simulator: &Simulator, model: &SimulatorGui) {
     ui.vertical(|ui| {
         ui.set_width(W * 0.33);
@@ -71,6 +73,7 @@ fn memory_column(ui: &mut egui::Ui, simulator: &Simulator, model: &SimulatorGui)
     });
 }
 
+#[cfg(not(tarpaulin_include))]
 fn register_column(ui: &mut egui::Ui, simulator: &mut Simulator) {
     ui.vertical(|ui| {
         ui.set_width(W * 0.30);
@@ -113,18 +116,20 @@ fn register_column(ui: &mut egui::Ui, simulator: &mut Simulator) {
     });
 }
 
+#[cfg(not(tarpaulin_include))]
 fn title(ui: &mut egui::Ui, text: &str) {
     ui.label(RichText::new(text).font(FontId::proportional(16.0)));
     ui.add_space(8.0);
 }
 
+#[cfg(not(tarpaulin_include))]
 fn code_memory_row(grid: &mut egui::Ui, i: usize, mem: i32, pc: usize) {
     code_memory_text(grid, &format!("0x{:04}", i), i == pc);
     code_memory_text(grid, &format!("0b{:032b}", mem), i == pc);
     code_memory_text(grid, &format!("0x{:04x}", mem), i == pc);
     grid.end_row();
 }
-
+#[cfg(not(tarpaulin_include))]
 fn main_memory_row(grid: &mut egui::Ui, i: usize, mem: i32) {
     mono_text(grid, &format!("0x{:04}", i));
     mono_text(grid, &format!("0b{:032b}", mem));
@@ -132,7 +137,7 @@ fn main_memory_row(grid: &mut egui::Ui, i: usize, mem: i32) {
     mono_text(grid, &format!("{}", mem));
     grid.end_row();
 }
-
+#[cfg(not(tarpaulin_include))]
 fn register_row(grid: &mut egui::Ui, i: usize, register: i32) {
     mono_text(grid, &format!("R{:02}", i));
     mono_text(grid, &format!("0b{:032b}", register));
@@ -140,7 +145,7 @@ fn register_row(grid: &mut egui::Ui, i: usize, register: i32) {
     mono_text(grid, &format!("{}", register));
     grid.end_row();
 }
-
+#[cfg(not(tarpaulin_include))]
 fn code_memory_text(ui: &mut egui::Ui, text: &str, current: bool) {
     if current {
         ui.label(RichText::new(text).background_color(Color32::DARK_BLUE).color(Color32::WHITE).font(FontId::monospace(13.0)));
@@ -148,7 +153,7 @@ fn code_memory_text(ui: &mut egui::Ui, text: &str, current: bool) {
         ui.label(RichText::new(text).font(FontId::monospace(13.0)));
     }
 }
-
+#[cfg(not(tarpaulin_include))]
 fn mono_text(ui: &mut egui::Ui, text: &str) {
     ui.label(RichText::new(text).font(FontId::monospace(13.0)));
 }
