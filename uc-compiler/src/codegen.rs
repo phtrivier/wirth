@@ -148,7 +148,7 @@ impl Codegen {
                         self.generate_code(do_branch);
 
                         // Fixup do index
-                        let do_offset = ((self.instructions.len() as i32) - (do_index as i32)) as i32;
+                        let do_offset = (self.instructions.len() as i32) - (do_index as i32);
                         self.instructions[do_index] = Instruction::BranchOff {
                             cond: condition,
                             link: false,
@@ -156,7 +156,7 @@ impl Codegen {
                         };
 
                         // Go back to the top
-                        let back_to_test_offset = ((self.instructions.len() as i32) - (test_index as i32)) as i32;
+                        let back_to_test_offset = (self.instructions.len() as i32) - (test_index as i32);
                         self.instructions.push(Instruction::BranchOff {
                             cond: BranchCondition::AW,
                             link: false,

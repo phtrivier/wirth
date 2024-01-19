@@ -112,7 +112,7 @@ impl Assembler {
             // TODO(pht) add more info into the ParseErrors to help diagnostic
             if let Err(ParseError::SyntaxError { line_index: error_line_index }) = parsed {
                 return Err(AssembleError::SyntaxError {
-                    line_index: error_line_index as u32,
+                    line_index: error_line_index,
                     line: line.to_string(),
                 });
             }

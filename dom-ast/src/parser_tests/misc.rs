@@ -16,7 +16,7 @@ mod tests {
         }
         scope
     }
-    fn parse_statement<'a>(scope: &'a Scope, content: &str) -> ParseResult {
+    fn parse_statement(scope: &Scope, content: &str) -> ParseResult {
         let mut scanner = Scanner::new(content);
         parser::scan_next(&mut scanner)?;
         parser::parse_statement(&mut scanner, scope)
@@ -61,7 +61,7 @@ mod tests {
         assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Constant(42));
     }
 
-    fn parse_statement_sequence<'a>(scope: &'a Scope, content: &str) -> ParseResult {
+    fn parse_statement_sequence(scope: &Scope, content: &str) -> ParseResult {
         let mut scanner = Scanner::new(content);
         parser::scan_next(&mut scanner)?;
         parser::parse_statement_sequence(&mut scanner, scope)
@@ -85,7 +85,7 @@ mod tests {
         assert_matches!(path.follow(&root_tree).unwrap(), NodeInfo::Assignement);
     }
 
-    fn parse_factor<'a>(scope: &'a Scope, content: &str) -> ParseResult {
+    fn parse_factor(scope: &Scope, content: &str) -> ParseResult {
         let mut scanner = Scanner::new(content);
         parser::scan_next(&mut scanner)?;
         parser::parse_factor(&mut scanner, scope)
@@ -127,7 +127,7 @@ mod tests {
         assert_matches!(path.follow(&tree).unwrap(), NodeInfo::Ident(ident) if ident.name == "i");
     }
 
-    fn parse_term<'a>(scope: &'a Scope, content: &str) -> ParseResult {
+    fn parse_term(scope: &Scope, content: &str) -> ParseResult {
         let mut scanner = Scanner::new(content);
         parser::scan_next(&mut scanner)?;
         parser::parse_term(&mut scanner, scope)
@@ -172,7 +172,7 @@ mod tests {
     }
 
     // NOTE(pht) maybe those functions can be automagically created with macros ?
-    fn parse_simple_expression<'a>(scope: &'a Scope, content: &str) -> ParseResult {
+    fn parse_simple_expression(scope: &Scope, content: &str) -> ParseResult {
         let mut scanner = Scanner::new(content);
         parser::scan_next(&mut scanner)?;
         parser::parse_simple_expression(&mut scanner, scope)

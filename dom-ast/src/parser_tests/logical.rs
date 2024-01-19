@@ -19,7 +19,7 @@ mod tests {
         scope
     }
 
-    fn parse_statement<'a>(scope: &'a Scope, content: &str) -> ParseResult {
+    fn parse_statement(scope: &Scope, content: &str) -> ParseResult {
         let mut scanner = Scanner::new(content);
         parser::scan_next(&mut scanner)?;
         parser::parse_statement(&mut scanner, scope)

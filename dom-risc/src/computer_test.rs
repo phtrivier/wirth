@@ -21,17 +21,17 @@ mod tests {
         // R.a := R.c
         exec(&mut c, Register { o: MOV, a: 0, b: 1, c: 2 });
         assert_eq!(42, c.regs[0]);
-        assert_eq!(false, c.z_test);
-        assert_eq!(false, c.neg_test);
+        assert!(!c.z_test);
+        assert!(!c.neg_test);
         exec(&mut c, RegisterIm { o: MOV, a: 0, b: 1, im: -84 });
         assert_eq!(-84, c.regs[0]);
-        assert_eq!(false, c.z_test);
-        assert_eq!(true, c.neg_test);
+        assert!(!c.z_test);
+        assert!(c.neg_test);
 
         exec(&mut c, RegisterIm { o: MOV, a: 0, b: 1, im: 0 });
         assert_eq!(0, c.regs[0]);
-        assert_eq!(true, c.z_test);
-        assert_eq!(false, c.neg_test);
+        assert!(c.z_test);
+        assert!(!c.neg_test);
     }
 
     #[test]
@@ -169,8 +169,8 @@ mod tests {
             },
         );
         assert_eq!(c.regs[0], -42);
-        assert_eq!(true, c.neg_test);
-        assert_eq!(false, c.z_test);
+        assert!(c.neg_test);
+        assert!(!c.z_test);
 
         exec(
             &mut c,
@@ -235,48 +235,48 @@ mod tests {
         let mut c = Computer::new();
         c.regs[0] = -42;
         c.update_flags(0);
-        assert_eq!(true, c.neg_test);
-        assert_eq!(false, c.z_test);
-        assert_eq!(true, c.matches_cond(MI)); // -42 < 0 ?
-        assert_eq!(false, c.matches_cond(EQ)); // -42 == 0 ?
-        assert_eq!(true, c.matches_cond(LT)); // -42 < 0 (implicitely since we don't have carry and overflow)
-        assert_eq!(true, c.matches_cond(LE)); // -42 <= 0 ?
-        assert_eq!(true, c.matches_cond(AW)); // true ?
-        assert_eq!(false, c.matches_cond(PL)); // -42 > 0 ?
-        assert_eq!(true, c.matches_cond(NE)); // -42 != 0 ?
-        assert_eq!(false, c.matches_cond(GE)); // -42 > 0 ?
-        assert_eq!(false, c.matches_cond(GT)); // -42 >= 0 ?
-        assert_eq!(false, c.matches_cond(NV)); // false
+        assert!(c.neg_test);
+        assert!(!c.z_test);
+        assert!(c.matches_cond(MI)); // -42 < 0 ?
+        assert!(!c.matches_cond(EQ)); // -42 == 0 ?
+        assert!(c.matches_cond(LT)); // -42 < 0 (implicitely since we don't have carry and overflow)
+        assert!(c.matches_cond(LE)); // -42 <= 0 ?
+        assert!(c.matches_cond(AW)); // true ?
+        assert!(!c.matches_cond(PL)); // -42 > 0 ?
+        assert!(c.matches_cond(NE)); // -42 != 0 ?
+        assert!(!c.matches_cond(GE)); // -42 > 0 ?
+        assert!(!c.matches_cond(GT)); // -42 >= 0 ?
+        assert!(!c.matches_cond(NV)); // false
 
         c.regs[0] = 0;
         c.update_flags(0);
-        assert_eq!(false, c.neg_test);
-        assert_eq!(true, c.z_test);
-        assert_eq!(false, c.matches_cond(MI)); // 0 < 0 ?
-        assert_eq!(true, c.matches_cond(EQ)); // 0 == 0 ?
-        assert_eq!(false, c.matches_cond(LT)); // 0 < 0 (implicitely since we don't have carry and overflow)
-        assert_eq!(true, c.matches_cond(LE)); // 0 <= 0 ?
-        assert_eq!(true, c.matches_cond(AW)); // true ?
-        assert_eq!(true, c.matches_cond(PL)); // 0 > 0 ? (this is a special case)
-        assert_eq!(false, c.matches_cond(NE)); // 0 != 0 ?
-        assert_eq!(true, c.matches_cond(GE)); // 0 > 0 ? (special case)
-        assert_eq!(false, c.matches_cond(GT)); // 0 >= 0 ? (not sure how to interpret this one...)
-        assert_eq!(false, c.matches_cond(NV)); // false
+        assert!(!c.neg_test);
+        assert!(c.z_test);
+        assert!(!c.matches_cond(MI)); // 0 < 0 ?
+        assert!(c.matches_cond(EQ)); // 0 == 0 ?
+        assert!(!c.matches_cond(LT)); // 0 < 0 (implicitely since we don't have carry and overflow)
+        assert!(c.matches_cond(LE)); // 0 <= 0 ?
+        assert!(c.matches_cond(AW)); // true ?
+        assert!(c.matches_cond(PL)); // 0 > 0 ? (this is a special case)
+        assert!(!c.matches_cond(NE)); // 0 != 0 ?
+        assert!(c.matches_cond(GE)); // 0 > 0 ? (special case)
+        assert!(!c.matches_cond(GT)); // 0 >= 0 ? (not sure how to interpret this one...)
+        assert!(!c.matches_cond(NV)); // false
 
         c.regs[0] = 42;
         c.update_flags(0);
-        assert_eq!(false, c.neg_test);
-        assert_eq!(false, c.z_test);
-        assert_eq!(false, c.matches_cond(MI)); // 42 < 0 ?
-        assert_eq!(false, c.matches_cond(EQ)); // 42 == 0 ?
-        assert_eq!(false, c.matches_cond(LT)); // 42 < 0 (implicitely since we don't have carry and overflow)
-        assert_eq!(false, c.matches_cond(LE)); // 42 <= 0 ?
-        assert_eq!(true, c.matches_cond(AW)); // true ?
-        assert_eq!(true, c.matches_cond(PL)); // 42 > 0 ?
-        assert_eq!(true, c.matches_cond(NE)); // 42 != 0 ?
-        assert_eq!(true, c.matches_cond(GE)); // 42 > 0 ?
-        assert_eq!(true, c.matches_cond(GT)); // 42 >= 0 ?
-        assert_eq!(false, c.matches_cond(NV)); // false
+        assert!(!c.neg_test);
+        assert!(!c.z_test);
+        assert!(!c.matches_cond(MI)); // 42 < 0 ?
+        assert!(!c.matches_cond(EQ)); // 42 == 0 ?
+        assert!(!c.matches_cond(LT)); // 42 < 0 (implicitely since we don't have carry and overflow)
+        assert!(!c.matches_cond(LE)); // 42 <= 0 ?
+        assert!(c.matches_cond(AW)); // true ?
+        assert!(c.matches_cond(PL)); // 42 > 0 ?
+        assert!(c.matches_cond(NE)); // 42 != 0 ?
+        assert!(c.matches_cond(GE)); // 42 > 0 ?
+        assert!(c.matches_cond(GT)); // 42 >= 0 ?
+        assert!(!c.matches_cond(NV)); // false
     }
 
     #[test]

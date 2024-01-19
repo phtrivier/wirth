@@ -73,7 +73,7 @@ impl Instruction {
         c as u32 | (op as u32) << (4 + 12) | (b as u32) << (4 + 12 + 4) | (a as u32) << (4 + 4 + 12 + 4)
     }
 
-    const F1_IM_EXTENSION_MASK: u32 = 0b0000_0000_0000_0000_11_11_11_11_11_11_11_11;
+    const F1_IM_EXTENSION_MASK: u32 = 0b0000_0000_0000_0000_1111_1111_1111_1111;
 
     fn encode_register_im(op: OpCode, a: usize, b: usize, im: i32) -> u32 {
         let mut v = 0;
@@ -82,7 +82,7 @@ impl Instruction {
         }
 
         //  0100(4) a(4) b(4) [op](4) im(16)
-        0b0100_0000_0000_0000_00_00_00_00_00_00_00_00
+        0b0100_0000_0000_0000_0000_0000_0000_0000
             | ((im as u32) & Self::F1_IM_EXTENSION_MASK)
             | (op as u32) << (4 + 12)
             | (b as u32) << (4 + 12 + 4)
@@ -96,7 +96,7 @@ impl Instruction {
             uv = 0b1010;
         }
 
-        ((offset as u32) & 0b0000_0000_0000_1111_1111_1111_1111_1111) | (b as u32) << (20) | (a as u32) << (4 + 20) | (uv as u32) << (32 - 4)
+        (offset & 0b0000_0000_0000_1111_1111_1111_1111_1111) | (b as u32) << (20) | (a as u32) << (4 + 20) | (uv as u32) << (32 - 4)
     }
 
     fn encode_branch(cond: BranchCondition, c: usize, link: bool) -> u32 {
@@ -175,7 +175,7 @@ impl Instruction {
     fn parse_memory(i: u32) -> Result<Instruction, InstructionParseError> {
         let a = ((i / 0x1000000) % 0x10) as usize;
         let b = ((i / 0x100000) % 0x10) as usize;
-        let offset = (i & 0b0000_0000_0000_1111_1111_1111_1111_1111) as u32;
+        let offset = i & 0b0000_0000_0000_1111_1111_1111_1111_1111;
         let mut u = MemoryMode::Load;
         if i & 0b0010_0000_0000_0000_0000_0000_0000_0000 != 0 {
             u = MemoryMode::Store;
@@ -195,7 +195,7 @@ impl Instruction {
         let a = ((i / 0x1000000) % 0x10) as usize;
         let cond = Instruction::parse_cond(a)?;
 
-        let mut offset = (i as u32) & 0b0000_0000_1111_1111_1111_1111_1111_1111;
+        let mut offset = i & 0b0000_0000_1111_1111_1111_1111_1111_1111;
         if offset & 0b0000_0000_1000_0000_0000_0000_0000_0000 > 0 {
             offset |= 0b1111_1111_0000_0000_0000_0000_0000_0000;
         }
@@ -250,8 +250,8 @@ mod tests {
 
     #[test]
     fn test_register() {
-        assert_both(Instruction::Register { o: OpCode::MOV, a: 2, b: 5, c: 1 }, 0b0000_0010_0101_0000_00_00_00_00_00_00_0001);
-        assert_both(Instruction::Register { o: OpCode::AND, a: 3, b: 2, c: 4 }, 0b0000_0011_0010_0100_00_00_00_00_00_00_0100);
+        assert_both(Instruction::Register { o: OpCode::MOV, a: 2, b: 5, c: 1 }, 0b0000_0010_0101_0000_0000_0000_0000_0001);
+        assert_both(Instruction::Register { o: OpCode::AND, a: 3, b: 2, c: 4 }, 0b0000_0011_0010_0100_0000_0000_0000_0100);
     }
 
     #[test]
@@ -263,7 +263,7 @@ mod tests {
                 b: 5,
                 im: 4,
             },
-            0b0100_0010_0101_0001_00_00_00_00_00_00_01_00,
+            0b0100_0010_0101_0001_0000_0000_0000_0100,
         );
         assert_both(
             Instruction::RegisterIm {
@@ -272,7 +272,7 @@ mod tests {
                 b: 5,
                 im: -4,
             },
-            0b0101_0010_0101_0001_11_11_11_11_11_11_11_00,
+            0b0101_0010_0101_0001_1111_1111_1111_1100,
         );
     }
 

@@ -86,7 +86,7 @@ impl Computer {
             }
             return true;
         }
-        return false
+        false
     }
 
     pub fn execute_instruction(&mut self, i: Instruction, _debug: bool) {
@@ -205,7 +205,7 @@ impl Computer {
                 self.regs[15] = self.pc as i32;
             }
 
-            self.pc = (self.pc as i32 + offset as i32) as usize;
+            self.pc = (self.pc as i32 + offset) as usize;
         }
     }
 

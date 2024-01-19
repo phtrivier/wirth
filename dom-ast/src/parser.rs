@@ -151,7 +151,7 @@ pub fn parse_var_declarations(scanner: &mut Scanner, scope: &Scope, and_then: &m
 
 fn recur_parse_declaration(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     let current = current_token_or_none(scanner);
-    if current == None {
+    if current.is_none() {
         return Ok(ast::empty());
     }
 

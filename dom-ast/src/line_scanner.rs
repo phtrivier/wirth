@@ -30,7 +30,7 @@ impl LineScanner<'_> {
     fn context(&self, column_number: u32) -> ScanContext {
         ScanContext {
             line: self.line_number,
-            column: column_number as u32,
+            column: column_number,
         }
     }
 
@@ -171,7 +171,7 @@ impl LineScanner<'_> {
     fn skip_comment(&mut self, column: usize) -> Option<ScanResult> {
         loop {
             let mut p = self.chars.peek();
-            if let None = p {
+            if p.is_none() {
                 return self.error_at(column, ScanErrorType::UnterminatedComment);
             }
             if let Some(&(_column, '*')) = p {

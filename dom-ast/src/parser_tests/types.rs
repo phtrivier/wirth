@@ -20,7 +20,7 @@ mod tests {
         scope
     }
 
-    fn parse_var_declarations<'a>(scope: &'a mut Scope, content: &str) -> ParseResult {
+    fn parse_var_declarations(scope: &mut Scope, content: &str) -> ParseResult {
         let mut scanner = Scanner::new(content);
         // Advance to the "VAR"
         parser::scan_next(&mut scanner)?;
