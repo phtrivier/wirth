@@ -1,3 +1,4 @@
+use pretty_env_logger;
 use risc::instructions::Instruction;
 
 use std::path::PathBuf;
@@ -14,6 +15,9 @@ struct Opt {
 
 #[cfg(not(tarpaulin_include))]
 fn main() {
+
+    pretty_env_logger::init();
+
     let opt = Opt::from_args();
     let filename = opt.input.into_os_string().into_string().expect("Filename is malformed.");
 

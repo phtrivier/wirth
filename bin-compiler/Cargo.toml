@@ -15,3 +15,4 @@ structopt = "0.3"
 risc = { path = "../dom-risc" }
 ast = { path = "../dom-ast" }
 compiler = { path = "../uc-compiler" }
+pretty_env_logger.workspace = true

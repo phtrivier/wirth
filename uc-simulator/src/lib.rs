@@ -48,11 +48,9 @@ impl Simulator {
     }
 
     pub fn execute(&mut self, execution: Execution) -> Result<(), ExecutionError> {
-        let debug = true; //
-
         self.start(execution.stack_base as i32);
 
-        self.computer.execute(execution.max_cycles, debug);
+        self.computer.execute(execution.max_cycles);
 
         if self.computer.pc == 0 {
             Ok(())
@@ -66,8 +64,7 @@ impl Simulator {
     }
 
     pub fn execute_next(&mut self) {
-        let debug = true;
-        self.computer.execute_next(debug);
+        self.computer.execute_next();
     }
 
     pub fn pc(&self) -> usize {

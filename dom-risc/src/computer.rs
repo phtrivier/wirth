@@ -1,5 +1,6 @@
 // A RISC Computer.
 use crate::instructions::*;
+use log::debug;
 
 pub const MEMORY_SIZE: usize = 4096;
 
@@ -35,30 +36,26 @@ impl Computer {
         }
     }
 
-    pub fn execute(&mut self, max_cycles: u32, debug: bool) {
+    pub fn execute(&mut self, max_cycles: u32) {
         self.pc = 0;
 
         let mut cycles = 0;
 
         loop {
-            let done = self.execute_next(debug);
+            let done = self.execute_next();
             if done {
                 break;
             }
             if cycles > max_cycles {
-                if debug {
-                    println!("Reached max cycles count {}, aborting.", max_cycles);
-                }
+                debug!("Reached max cycles count {}, aborting.", max_cycles);
                 break;
             }
             cycles += 1;
         }
     }
 
-    pub fn execute_next(&mut self, debug: bool) -> bool {
-        if debug {
-            println!("----------------- PC = {} --------------", { self.pc });
-        }
+    pub fn execute_next(&mut self) -> bool {
+        debug!("----------------- PC = {} --------------", { self.pc });
 
         // Read current instruction
         let ir: i32 = self.mem[self.pc];
@@ -67,29 +64,23 @@ impl Computer {
 
         let instruction = Instruction::parse(ir as u32).unwrap();
 
-        if debug {
-            println!("Instruction {:?}", instruction);
-        }
+        debug!("Instruction {:?}", instruction);
         // Set PC to the address of next instruction ; unless a branch instruction
         // is run, this will be the next instruction in memory.
         self.pc += 1;
 
-        if debug {
-            println!("Setting PC to next value {:?}", self.pc);
-        }
+        debug!("Setting PC to next value {:?}", self.pc);
 
-        self.execute_instruction(instruction, debug);
+        self.execute_instruction(instruction);
 
         if self.pc == 0 {
-            if debug {
-                println!("Program finished succesfully.")
-            }
+            debug!("Program finished succesfully.");
             return true;
         }
         false
     }
 
-    pub fn execute_instruction(&mut self, i: Instruction, _debug: bool) {
+    pub fn execute_instruction(&mut self, i: Instruction) {
         match i {
             Instruction::Register { o, a, b, c } => self.execute_register(o, a, b, self.regs[c]),
             Instruction::RegisterIm { o, a, b, im } => self.execute_register(o, a, b, im),
@@ -103,7 +94,7 @@ impl Computer {
         match o {
             OpCode::MOV => {
                 self.regs[a] = value;
-                println!("R[{}] <- {}", a, value);
+                debug!("R[{}] <- {}", a, value);
             }
             OpCode::LSL => {
                 self.regs[a] = self.regs[b] << value;
@@ -134,13 +125,13 @@ impl Computer {
                 let old_b = self.regs[b];
                 let new_a = old_b + value;
                 self.regs[a] = new_a;
-                println!("R[{}] <- R[{}] ({}) + {} = {}", a, b, old_b, value, new_a);
+                debug!("R[{}] <- R[{}] ({}) + {} = {}", a, b, old_b, value, new_a);
             }
             OpCode::SUB => {
                 let old_b = self.regs[b];
                 let new_a = old_b - value;
                 self.regs[a] = self.regs[b] - value;
-                println!("R[{}] <- R[{}] ({}) - {} = {}", a, b, old_b, value, new_a);
+                debug!("R[{}] <- R[{}] ({}) - {} = {}", a, b, old_b, value, new_a);
             }
             OpCode::MUL => {
                 self.regs[a] = self.regs[b] * value;
@@ -167,7 +158,7 @@ impl Computer {
                 }
 
                 let value = self.mem[adr as usize];
-                println!("R[{}] <- M[R{} + {}] = M[{} + {}] = {}", a, b, offset, self.regs[b], offset, value);
+                debug!("R[{}] <- M[R{} + {}] = M[{} + {}] = {}", a, b, offset, self.regs[b], offset, value);
                 self.regs[a] = value;
                 self.update_flags(a);
             }
@@ -180,7 +171,7 @@ impl Computer {
                     panic!("Attempt to store data at address {}, bigger than computer memory.", adr)
                 }
 
-                println!("M[R[{}] + {}] = M[{} + {}] = M[{}] <- R[{}] = {}", b, offset, self.regs[b], offset, adr, a, self.regs[a]);
+                debug!("M[R[{}] + {}] = M[{} + {}] = M[{}] <- R[{}] = {}", b, offset, self.regs[b], offset, adr, a, self.regs[a]);
 
                 self.mem[adr as usize] = self.regs[a];
             }
@@ -197,9 +188,9 @@ impl Computer {
     }
 
     fn execute_branch_offset(&mut self, cond: BranchCondition, offset: i32, link: bool) {
-        println!("Testing if condition {:?} matches", cond);
-        println!("Self.neg_test {:?}?", self.neg_test);
-        println!("Self.z_test {:?}?", self.z_test);
+        debug!("Testing if condition {:?} matches", cond);
+        debug!("Self.neg_test {:?}?", self.neg_test);
+        debug!("Self.z_test {:?}?", self.z_test);
         if self.matches_cond(cond) {
             if link {
                 self.regs[15] = self.pc as i32;

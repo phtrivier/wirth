@@ -244,7 +244,10 @@ impl Instruction {
 
 #[cfg(test)]
 mod tests {
+
+    use log::debug;
     use std::assert_matches::assert_matches;
+    use test_log::test;
 
     use super::*;
 
@@ -333,16 +336,16 @@ mod tests {
             link: false,
         });
         assert_eq!(0b1110_1000_1111_1111_1111_1111_1111_1011, i);
-        println!("{}", i);
-        println!("{:032b}", i);
+        debug!("{}", i);
+        debug!("{:032b}", i);
 
         let inst = Instruction::parse(3909091323).unwrap();
         assert_matches!(inst, Instruction::BranchOff{cond: _cond, offset, link: _link} if offset == -5);
-        println!("{:?}", inst);
+        debug!("{:?}", inst);
 
         let i2 = Instruction::encode(&inst);
         assert_eq!(0b1110_1000_1111_1111_1111_1111_1111_1011, i2);
-        println!("{:032b}", i2);
+        debug!("{:032b}", i2);
 
         assert_eq!(i, i2);
     }

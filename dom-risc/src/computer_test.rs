@@ -8,7 +8,7 @@ mod tests {
     use crate::instructions::OpCode::*;
 
     fn exec(c: &mut Computer, i: Instruction) {
-        c.execute_instruction(i, false);
+        c.execute_instruction(i);
     }
 
     #[test]
@@ -302,8 +302,7 @@ mod tests {
         c.mem[2] = instruction_data as i32;
 
         let max_cycles = 5;
-        let debug = false;
-        c.execute(max_cycles, debug);
+        c.execute(max_cycles);
 
         assert_eq!(c.regs[0], 5);
         assert_eq!(c.regs[1], 10);
@@ -333,8 +332,7 @@ mod tests {
         c.load_instructions(instructions);
 
         let max_cycles = 50;
-        let debug = true;
-        c.execute(max_cycles, debug);
+        c.execute(max_cycles);
 
         assert_eq!(c.regs[0], 0);
         assert_eq!(c.regs[1], 6);

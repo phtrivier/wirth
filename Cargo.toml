@@ -1,3 +1,8 @@
 [workspace]
 members=["bin-assembler", "bin-compiler", "bin-simulator", "bin-simulator-gui", "dom-ast", "dom-risc", "uc-assembler", "uc-compiler", "uc-simulator", ]
 exclude=[]
+
+[workspace.dependencies]
+log="0.4.20"
+pretty_env_logger="0.5.0"
+test-log="0.2.14"

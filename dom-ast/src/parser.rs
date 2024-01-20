@@ -1,3 +1,4 @@
+use log::debug;
 use crate::ast;
 use crate::ast::Ast;
 use crate::scanner::*;
@@ -156,14 +157,14 @@ fn recur_parse_declaration(scanner: &mut Scanner, scope: &Scope) -> ParseResult 
     }
 
     let idents = parse_ident_list(scanner)?;
-    println!("List of idents to declare after first loop {:?}", idents);
+    debug!("List of idents to declare after first loop {:?}", idents);
 
     if idents.is_empty() {
         return Ok(ast::empty());
     }
 
     let mut current = current_token(scanner)?;
-    println!("After var declarations, current ? {:?}", current);
+    debug!("After var declarations, current ? {:?}", current);
 
     if let Scan { token: Token::Colon, .. } = current.as_ref() {
         scan_next(scanner)?;
@@ -178,11 +179,11 @@ fn recur_parse_declaration(scanner: &mut Scanner, scope: &Scope) -> ParseResult 
         context: _array_ident_context,
     } = current.as_ref()
     {
-        println!("Parsing array type declaration");
+        debug!("Parsing array type declaration");
         scan_next(scanner)?;
-        println!("Scanned next token");
+        debug!("Scanned next token");
         current = current_token(scanner)?;
-        println!("Found current token {:?}", current);
+        debug!("Found current token {:?}", current);
 
         if let Scan {
             token: Token::Int(array_capacity),
@@ -192,7 +193,7 @@ fn recur_parse_declaration(scanner: &mut Scanner, scope: &Scope) -> ParseResult 
             scan_next(scanner)?;
 
             let mut current = current_token(scanner)?;
-            println!("Found current token {:?}", current);
+            debug!("Found current token {:?}", current);
 
             if let Scan { token: Token::Of, .. } = current.as_ref() {
                 scan_next(scanner)?;
@@ -257,7 +258,7 @@ fn parse_ident_list(scanner: &mut Scanner) -> Result<IdentList, ParseError> {
     let mut current;
     loop {
         current = current_token(scanner)?;
-        println!("Scanning var declarations, current ? {:?}", current);
+        debug!("Scanning var declarations, current ? {:?}", current);
         if let Scan {
             token: Token::Ident(ident),
             context: ident_context,
@@ -295,11 +296,11 @@ pub fn var_declarations(idents: &mut dyn Iterator<Item = &(String, ScanContext)>
 }
 
 pub fn parse_statement_sequence(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
-    println!("parse_statement_sequence {:?}", current_token(scanner));
+    debug!("parse_statement_sequence {:?}", current_token(scanner));
 
     let first_statement = parse_statement(scanner, scope)?;
     let current = current_token_or_none(scanner);
-    println!("parse_statement current ? {:?}", current);
+    debug!("parse_statement current ? {:?}", current);
 
     let next_statement = match current {
         Some(scan) => {
@@ -317,7 +318,7 @@ pub fn parse_statement_sequence(scanner: &mut Scanner, scope: &Scope) -> ParseRe
 }
 
 pub fn parse_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
-    println!("parse_statement {:?}", current_token(scanner));
+    debug!("parse_statement {:?}", current_token(scanner));
     let mut current = current_token(scanner)?;
 
     if let Scan { token: Token::Ident(ident), .. } = current.as_ref() {
@@ -345,7 +346,7 @@ pub fn parse_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
 }
 
 fn parse_assignment(subject: Rc<Tree>, scanner: &mut Scanner, scope: &Scope) -> ParseResult {
-    println!("parse_assignment {:?}", current_token(scanner));
+    debug!("parse_assignment {:?}", current_token(scanner));
 
     let object = parse_expression(scanner, scope)?;
 
@@ -357,7 +358,7 @@ fn parse_assignment(subject: Rc<Tree>, scanner: &mut Scanner, scope: &Scope) -> 
 }
 
 pub fn parse_if_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
-    println!("parse_if_statement {:?}", current_token(scanner));
+    debug!("parse_if_statement {:?}", current_token(scanner));
     let test_expression = parse_expression(scanner, scope)?;
 
     let then_statement_sequence;
@@ -399,7 +400,7 @@ pub fn parse_if_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
 }
 
 pub fn parse_while_statement(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
-    println!("parse_while_statement {:?}", current_token(scanner));
+    debug!("parse_while_statement {:?}", current_token(scanner));
     let test_expression = parse_expression(scanner, scope)?;
 
     let do_statement_sequence;
@@ -453,11 +454,11 @@ pub fn parse_expression_relation(scanner: &mut Scanner, scope: &Scope, first_exp
 
 pub fn parse_simple_expression(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     let mut tree = parse_term(scanner, scope)?;
-    println!("parse_simple_expression ; parsed term {:?}", tree);
+    debug!("parse_simple_expression ; parsed term {:?}", tree);
 
     loop {
         let current = current_token_or_none(scanner);
-        println!("parse_simple_expression in loop, current ? {:?}", current);
+        debug!("parse_simple_expression in loop, current ? {:?}", current);
 
         if let Some(scan) = current.as_ref() {
             let operator: Option<SimpleExpressionOp> = match scan.as_ref() {
@@ -468,7 +469,7 @@ pub fn parse_simple_expression(scanner: &mut Scanner, scope: &Scope) -> ParseRes
 
             match operator {
                 Some(operator) => {
-                    println!("parse_simple_expression in loop, + found");
+                    debug!("parse_simple_expression in loop, + found");
                     scan_next(scanner)?;
                     let sibling = parse_term(scanner, scope)?;
                     let node = TreeNode {
@@ -493,7 +494,7 @@ pub fn parse_term(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
     let mut tree = parse_factor(scanner, scope)?;
     loop {
         let current = current_token_or_none(scanner);
-        println!("parse_term loop, current ? {:?}", current);
+        debug!("parse_term loop, current ? {:?}", current);
 
         match current {
             None => {
@@ -508,7 +509,7 @@ pub fn parse_term(scanner: &mut Scanner, scope: &Scope) -> ParseResult {
 
                 match operator {
                     Some(operator) => {
-                        println!("parse_simple_expression in loop, + found");
+                        debug!("parse_simple_expression in loop, + found");
                         scan_next(scanner)?;
                         let sibling = parse_factor(scanner, scope)?;
                         let node = TreeNode {
@@ -565,7 +566,7 @@ pub fn parse_ident_with_selector(scanner: &mut Scanner, scope: &Scope, ident: &s
     scan_next(scanner)?;
 
     let maybe_selector_start = current_token_or_none(scanner);
-    println!("maybe selector start {:?}", maybe_selector_start);
+    debug!("maybe selector start {:?}", maybe_selector_start);
 
     match maybe_selector_start {
         None => Ok(ast::leaf(NodeInfo::Ident(symbol))),
@@ -617,7 +618,7 @@ pub fn parse_ident_with_selector(scanner: &mut Scanner, scope: &Scope, ident: &s
 }
 
 pub fn scan_next(scanner: &mut Scanner) -> Result<(), ParseError> {
-    println!("Advancing scanner from token {:?}", scanner.current());
+    debug!("Advancing scanner from token {:?}", scanner.current());
     match scanner.next() {
         None => Ok(()),
         Some(scan_result) => match scan_result {
