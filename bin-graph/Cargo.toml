@@ -1,0 +1,20 @@
+[package]
+name = "bin-graph"
+version = "0.1.0"
+authors = ["Pierre-Henri Trivier <phtrivier@yahoo.fr>"]
+edition = "2018"
+
+[[bin]]
+name = "graph"
+path = "src/main.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+structopt = "0.3"
+risc = { path = "../dom-risc" }
+ast = { path = "../dom-ast" }
+compiler = { path = "../uc-compiler" }
+pretty_env_logger.workspace = true
+test-log.workspace = true
+log.workspace = true

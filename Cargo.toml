@@ -1,5 +1,5 @@
 [workspace]
-members=["bin-assembler", "bin-compiler", "bin-simulator", "bin-simulator-gui", "dom-ast", "dom-risc", "uc-assembler", "uc-compiler", "uc-simulator", ]
+members=["bin-assembler", "bin-compiler", "bin-simulator", "bin-simulator-gui", "bin-graph", "dom-ast", "dom-risc", "uc-assembler", "uc-compiler", "uc-simulator", ]
 exclude=[]
 
 [workspace.dependencies]

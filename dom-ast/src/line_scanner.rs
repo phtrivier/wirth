@@ -1,3 +1,4 @@
+use log::debug;
 use std::iter::Peekable;
 use std::str::CharIndices;
 
@@ -212,7 +213,7 @@ impl Iterator for LineScanner<'_> {
             Some(&(column, '(')) => {
                 self.forward();
                 peek = self.chars.peek();
-                println!("peek {:?}", peek);
+                debug!("peek {:?}", peek);
                 if let Some(&(_column, '*')) = peek {
                     self.skip_comment(column)
                 } else {

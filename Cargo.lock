@@ -399,6 +399,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "bin-graph"
+version = "0.1.0"
+dependencies = [
+ "ast",
+ "compiler",
+ "log",
+ "pretty_env_logger",
+ "risc",
+ "structopt",
+ "test-log",
+]
+
+[[package]]
 name = "bin-simulator"
 version = "0.1.0"
 dependencies = [
