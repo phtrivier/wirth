@@ -29,7 +29,6 @@ fn main() {
             debug!("Built ast {:?}", ast);
 
             println!("{:}", to_dot(&ast));
-
         }
         Err(err) => {
             println!("Parsing error: {:?}", err);

@@ -1,40 +1,48 @@
 #![allow(dead_code)]
 
 use crate::ast::Ast;
-use ::ast::{tree::{NodeInfo, TermOp, Tree}, ast::is_empty};
+use ::ast::{
+    ast::is_empty,
+    tree::{ExpressionOp, NodeInfo, TermOp, Tree, VarType},
+};
 use ast::ast;
 use log::debug;
 
 pub fn to_dot(ast: &Ast) -> String {
     let mut s = String::from("digraph G {\n");
 
-    let mut counter = 0;
-    push_strings(&mut s, &ast, &mut counter);
+    let mut grow = vec![]; // Yes, this is stupid
+    push_strings(&mut s, &ast, &mut grow);
 
     s.push_str("}\n");
+
+    debug!("{:?}", grow);
 
     s.to_string()
 }
 
-fn push_strings(s: &mut String, ast: &Ast, counter: &mut u32) -> () {
+fn push_strings(s: &mut String, ast: &Ast, grow: &mut Vec<u32>) -> () {
     match ast.as_ref() {
         Tree::Nil => {}
         Tree::Node(node) => {
-            let node_counter : u32 = 0 + *counter;
-            s.push_str(format!("node{counter}[label=\"").as_str());
+            let node_id = format!("{}", grow.len());
+            s.push_str(format!("node{node_id}[label=\"").as_str());
             s.push_str(node_label(&node.info).as_str());
             s.push_str("\"];\n");
 
-            *counter = *counter + 1;
-
             if !is_empty(&node.child) {
-                s.push_str(format!("node{}->node{};\n", node_counter, node_counter+1).as_str());
-                push_strings(s, &node.child, counter);
+                let l = grow.len() as u32;
+                grow.push(l as u32);
+                push_strings(s, &node.child, grow);
+                s.push_str(format!("node{}->node{};\n", node_id, l + 1).as_str());
             }
 
             if !is_empty(&node.sibling) {
-                s.push_str(format!("node{}->node{};\n", node_counter, node_counter+2).as_str());
-                push_strings(s, &node.sibling, counter);
+                let l = grow.len() as u32;
+                grow.push(grow.len() as u32);
+
+                push_strings(s, &node.sibling, grow);
+                s.push_str(format!("node{}->node{};\n", node_id, l + 1).as_str());
             }
         }
     }
@@ -50,8 +58,79 @@ fn node_label(node_info: &NodeInfo) -> String {
         NodeInfo::Term(TermOp::Times) => {
             format!("*")
         }
-        _ => {
-            format!("todo")
+        NodeInfo::Term(TermOp::Div) => {
+            format!("/")
+        }
+        NodeInfo::SimpleExpression(::ast::tree::SimpleExpressionOp::Plus) => {
+            format!("+")
+        }
+        NodeInfo::SimpleExpression(::ast::tree::SimpleExpressionOp::Minus) => {
+            format!("-")
+        }
+
+        NodeInfo::Module => {
+            format!("Module")
+        }
+        NodeInfo::Declaration => {
+            format!("Declaration")
+        }
+        NodeInfo::Declarations => {
+            format!("Declarations")
+        }
+        NodeInfo::Var => {
+            format!("Var")
+        }
+        NodeInfo::IfStatement => {
+            format!("If")
+        }
+
+        NodeInfo::Then => {
+            format!("Then")
+        }
+
+        NodeInfo::Else => {
+            format!("Else")
+        }
+        NodeInfo::WhileStatement => {
+            format!("While")
+        }
+        NodeInfo::Do => {
+            format!("Do")
+        }
+        NodeInfo::StatementSequence => {
+            format!("StatSeq")
+        }
+        NodeInfo::Type(VarType::Integer) => {
+            format!("Integer")
+        }
+        NodeInfo::Type(VarType::Array(n)) => {
+            format!("Array[{n}]")
+        }
+        NodeInfo::Assignement => {
+            format!(":=")
+        }
+
+        NodeInfo::Expression(ExpressionOp::Eql) => {
+            format!("=")
+        }
+        NodeInfo::Expression(ExpressionOp::Neq) => {
+            format!("!=")
+        }
+        NodeInfo::Expression(ExpressionOp::Lss) => {
+            format!("<")
+        }
+        NodeInfo::Expression(ExpressionOp::Leq) => {
+            format!("<=")
+        }
+        NodeInfo::Expression(ExpressionOp::Gtr) => {
+            format!(">")
+        }
+        NodeInfo::Expression(ExpressionOp::Geq) => {
+            format!(">=")
+        }
+
+        NodeInfo::Ident(ident) => {
+            format!("{}", ident.name)
         }
     }
 }
@@ -62,7 +141,10 @@ mod tests {
 
     use super::*;
 
-    use ::ast::{tree::{NodeInfo, TermOp, VarType, SimpleExpressionOp, ExpressionOp}, scope::Symbol};
+    use ::ast::{
+        scope::Symbol,
+        tree::{ExpressionOp, NodeInfo, SimpleExpressionOp, TermOp, VarType},
+    };
     use test_log::test;
 
     #[test]
@@ -73,40 +155,50 @@ mod tests {
 
     #[test]
     fn is_simple_graph() {
-        let child = ast::leaf(NodeInfo::Constant(42));
-        let sibling = ast::leaf(NodeInfo::Constant(10));
-        let node = ast::node(NodeInfo::Term(TermOp::Times), child, sibling);
+        // 2 * (42 * 10)
+        let x = ast::leaf(NodeInfo::Constant(42));
+        let y = ast::leaf(NodeInfo::Constant(10));
+        let xy = ast::node(NodeInfo::SimpleExpression(SimpleExpressionOp::Plus), x, y);
+        let z = ast::leaf(NodeInfo::Constant(2));
+        let zxy = ast::node(NodeInfo::Term(TermOp::Times), z, xy);
+
+        println!("{}", to_dot(&zxy));
+
         assert_eq!(
-            concat!("digraph G {\n",
-                    "node0[label=\"*\"];\n",
-                    "node0->node1;\n",
-                    "node1[label=\"42\"];\n",
-                    "node0->node2;\n",
-                    "node2[label=\"10\"];\n",
-                    "}\n"),
-            to_dot(&node)
+            "digraph G {
+node0[label=\"*\"];
+node1[label=\"2\"];
+node0->node1;
+node2[label=\"+\"];
+node3[label=\"42\"];
+node2->node3;
+node4[label=\"10\"];
+node2->node4;
+node0->node2;
+}
+",
+            to_dot(&zxy)
         );
-/*
-"digraph G {
-\nnode0[label=\"*\"];
-\nnode0->node1;
-\nnode0->node2;
-\nnode1[label=\"42\"];
-\nnode1->node2;
-\nnode1->node3;
-\nnode2[label=\"10\"];
-\nnode2->node3;
-\nnode2->node4;\n}"
-*/
     }
 
     #[test]
     fn can_format_node_infos() {
-/*
         assert_eq!("Module", node_label(&NodeInfo::Module));
+
         assert_eq!("Declarations", node_label(&NodeInfo::Declarations));
         assert_eq!("Declaration", node_label(&NodeInfo::Declaration));
         assert_eq!("Var", node_label(&NodeInfo::Var));
+
+        assert_eq!("*", node_label(&NodeInfo::Term(TermOp::Times)));
+        assert_eq!("/", node_label(&NodeInfo::Term(TermOp::Div)));
+
+        assert_eq!("+", node_label(&NodeInfo::SimpleExpression(SimpleExpressionOp::Plus)));
+        assert_eq!("-", node_label(&NodeInfo::SimpleExpression(SimpleExpressionOp::Minus)));
+        assert_eq!("If", node_label(&NodeInfo::IfStatement));
+        assert_eq!("Then", node_label(&NodeInfo::Then));
+        assert_eq!("Else", node_label(&NodeInfo::Else));
+        assert_eq!("While", node_label(&NodeInfo::WhileStatement));
+        assert_eq!("Do", node_label(&NodeInfo::Do));
 
         assert_eq!("Integer", node_label(&NodeInfo::Type(VarType::Integer)));
         assert_eq!("Array[10]", node_label(&NodeInfo::Type(VarType::Array(10))));
@@ -114,19 +206,6 @@ mod tests {
         assert_eq!("StatSeq", node_label(&NodeInfo::StatementSequence));
 
         assert_eq!(":=", node_label(&NodeInfo::Assignement));
-        assert_eq!("42", node_label(&NodeInfo::Constant(42)));
-        assert_eq!("x", node_label(&NodeInfo::Ident(Rc::new(Symbol{
-            name: "x".to_string(),
-            adr: 0,
-            size: 0
-        }))));
-
-
-        assert_eq!("*", node_label(&NodeInfo::Term(TermOp::Times)));
-        assert_eq!("/", node_label(&NodeInfo::Term(TermOp::Div)));
-
-        assert_eq!("+", node_label(&NodeInfo::SimpleExpression(SimpleExpressionOp::Plus)));
-        assert_eq!("-", node_label(&NodeInfo::SimpleExpression(SimpleExpressionOp::Minus)));
 
         assert_eq!("=", node_label(&NodeInfo::Expression(ExpressionOp::Eql)));
         assert_eq!("!=", node_label(&NodeInfo::Expression(ExpressionOp::Neq)));
@@ -135,12 +214,15 @@ mod tests {
         assert_eq!(">", node_label(&NodeInfo::Expression(ExpressionOp::Gtr)));
         assert_eq!(">=", node_label(&NodeInfo::Expression(ExpressionOp::Geq)));
 
-        assert_eq!("If", node_label(&NodeInfo::IfStatement));
-        assert_eq!("Then", node_label(&NodeInfo::Then));
-        assert_eq!("Else", node_label(&NodeInfo::Else));
-        assert_eq!("While", node_label(&NodeInfo::WhileStatement));
-        assert_eq!("Do", node_label(&NodeInfo::Do));
-*/
-    }
+        assert_eq!("42", node_label(&NodeInfo::Constant(42)));
 
+        assert_eq!(
+            "x",
+            node_label(&NodeInfo::Ident(Rc::new(Symbol {
+                name: "x".to_string(),
+                adr: 0,
+                size: 0
+            })))
+        );
+    }
 }
