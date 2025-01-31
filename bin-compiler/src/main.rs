@@ -1,4 +1,4 @@
-use pretty_env_logger;
+
 use risc::instructions::Instruction;
 
 use std::path::PathBuf;

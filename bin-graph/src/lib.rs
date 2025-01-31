@@ -12,7 +12,7 @@ pub fn to_dot(ast: &Ast) -> String {
     let mut s = String::from("digraph G {\n");
 
     let mut grow = vec![]; // Yes, this is stupid
-    push_strings(&mut s, &ast, &mut grow);
+    push_strings(&mut s, ast, &mut grow);
 
     s.push_str("}\n");
 
@@ -21,7 +21,7 @@ pub fn to_dot(ast: &Ast) -> String {
     s.to_string()
 }
 
-fn push_strings(s: &mut String, ast: &Ast, grow: &mut Vec<u32>) -> () {
+fn push_strings(s: &mut String, ast: &Ast, grow: &mut Vec<u32>) {
     match ast.as_ref() {
         Tree::Nil => {}
         Tree::Node(node) => {
@@ -32,7 +32,7 @@ fn push_strings(s: &mut String, ast: &Ast, grow: &mut Vec<u32>) -> () {
 
             if !is_empty(&node.child) {
                 let l = grow.len() as u32;
-                grow.push(l as u32);
+                grow.push(l);
                 push_strings(s, &node.child, grow);
                 s.push_str(format!("node{}->node{};\n", node_id, l + 1).as_str());
             }
@@ -56,77 +56,77 @@ fn node_label(node_info: &NodeInfo) -> String {
             format!("{number}")
         }
         NodeInfo::Term(TermOp::Times) => {
-            format!("*")
+            "*".to_string()
         }
         NodeInfo::Term(TermOp::Div) => {
-            format!("/")
+            "/".to_string()
         }
         NodeInfo::SimpleExpression(::ast::tree::SimpleExpressionOp::Plus) => {
-            format!("+")
+            "+".to_string()
         }
         NodeInfo::SimpleExpression(::ast::tree::SimpleExpressionOp::Minus) => {
-            format!("-")
+            "-".to_string()
         }
 
         NodeInfo::Module => {
-            format!("Module")
+            "Module".to_string()
         }
         NodeInfo::Declaration => {
-            format!("Declaration")
+            "Declaration".to_string()
         }
         NodeInfo::Declarations => {
-            format!("Declarations")
+            "Declarations".to_string()
         }
         NodeInfo::Var => {
-            format!("Var")
+            "Var".to_string()
         }
         NodeInfo::IfStatement => {
-            format!("If")
+            "If".to_string()
         }
 
         NodeInfo::Then => {
-            format!("Then")
+            "Then".to_string()
         }
 
         NodeInfo::Else => {
-            format!("Else")
+            "Else".to_string()
         }
         NodeInfo::WhileStatement => {
-            format!("While")
+            "While".to_string()
         }
         NodeInfo::Do => {
-            format!("Do")
+            "Do".to_string()
         }
         NodeInfo::StatementSequence => {
-            format!("StatSeq")
+            "StatSeq".to_string()
         }
         NodeInfo::Type(VarType::Integer) => {
-            format!("Integer")
+            "Integer".to_string()
         }
         NodeInfo::Type(VarType::Array(n)) => {
             format!("Array[{n}]")
         }
         NodeInfo::Assignement => {
-            format!(":=")
+            ":=".to_string()
         }
 
         NodeInfo::Expression(ExpressionOp::Eql) => {
-            format!("=")
+            "=".to_string()
         }
         NodeInfo::Expression(ExpressionOp::Neq) => {
-            format!("!=")
+            "!=".to_string()
         }
         NodeInfo::Expression(ExpressionOp::Lss) => {
-            format!("<")
+            "<".to_string()
         }
         NodeInfo::Expression(ExpressionOp::Leq) => {
-            format!("<=")
+            "<=".to_string()
         }
         NodeInfo::Expression(ExpressionOp::Gtr) => {
-            format!(">")
+            ">".to_string()
         }
         NodeInfo::Expression(ExpressionOp::Geq) => {
-            format!(">=")
+            ">=".to_string()
         }
 
         NodeInfo::Ident(ident) => {

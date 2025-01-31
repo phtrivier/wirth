@@ -11,7 +11,7 @@ mod codegen;
 pub use ast::parser::ParseError;
 
 pub fn compile(input: &str) -> std::result::Result<Vec<Instruction>, ParseError> {
-    let ast = build_ast(&input)?;
+    let ast = build_ast(input)?;
 
     let mut codegen = codegen::Codegen::new();
     codegen.generate_code(&ast);
